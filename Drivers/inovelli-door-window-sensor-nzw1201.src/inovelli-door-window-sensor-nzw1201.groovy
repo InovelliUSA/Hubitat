@@ -38,6 +38,7 @@ metadata {
         fingerprint mfr:"015D", prod:"2003", model:"C11C", deviceJoinName: "Inovelli Door/Window Sensor"
         fingerprint mfr:"015D", prod:"C100", model:"C100", deviceJoinName: "Inovelli Door/Window Sensor"
         fingerprint mfr:"0312", prod:"C100", model:"C100", deviceJoinName: "Inovelli Door/Window Sensor"
+        fingerprint deviceId: "0x0701", inClusters:"0x5E,0x86,0x72,0x5A,0x73,0x80,0x85,0x59,0x71,0x30,0x31,0x70,0x84"
     }
 
     simulator {
