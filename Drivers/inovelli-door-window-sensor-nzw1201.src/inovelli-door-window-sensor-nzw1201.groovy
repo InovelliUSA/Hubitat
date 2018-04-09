@@ -14,6 +14,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ *  2018-04-09: Updated preferences to work with Hubitat
  *  2018-02-26: Added support for Z-Wave Association Tool SmartApp.
  *              https://github.com/erocm123/SmartThingsPublic/tree/master/smartapps/erocm123/parent/zwave-association-tool.src
  *
@@ -45,7 +46,7 @@ metadata {
     }
     
     preferences {
-        input "tempReportInterval", "enum", title: "Temperature Report Interval\n\nHow often you would like temperature reports to be sent from the sensor. More frequent reports will have a negative impact on battery life.\n", description: "Tap to set", required: false, options:[10: "10 Minutes", 30: "30 Minutes", 60: "1 Hour", 120: "2 Hours", 180: "3 Hours", 240: "4 Hours", 300: "5 Hours", 360: "6 Hours", 720: "12 Hours", 1440: "24 Hours"], defaultValue: 180
+        input "tempReportInterval", "enum", title: "Temperature Report Interval\n\nHow often you would like temperature reports to be sent from the sensor. More frequent reports will have a negative impact on battery life.\n", description: "Tap to set", required: false, options:[[10: "10 Minutes"], [30: "30 Minutes"], [60: "1 Hour"], [120: "2 Hours"], [180: "3 Hours"], [240: "4 Hours"], [300: "5 Hours"], [360: "6 Hours"], [720: "12 Hours"], [1440: "24 Hours"]], defaultValue: 180
         input "tempOffset", "number", title: "Temperature Offset\n\nCalibrate reported temperature by applying a negative or positive offset\nRange: -10 to 10", description: "Tap to set", required: false, range: "-10..10"
     }
 
