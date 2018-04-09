@@ -80,7 +80,7 @@ def updated() {
     cmds << zwave.configurationV1.configurationGet(parameterNumber: 1)
     cmds << zwave.configurationV1.configurationSet(scaledConfigurationValue: autoOff? autoOff.toInteger() : 0, parameterNumber: 2, size: 2)
     cmds << zwave.configurationV1.configurationGet(parameterNumber: 2)
-    response(commands(cmds))
+    commands(cmds)
 }
 
 def parse(description) {
