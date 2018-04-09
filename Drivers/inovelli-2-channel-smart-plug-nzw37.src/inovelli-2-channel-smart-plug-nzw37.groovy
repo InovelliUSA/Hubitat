@@ -150,46 +150,52 @@ def zwaveEvent(hubitat.zwave.Command cmd) {
     // and is recommended for development so you can see every command the device sends
     logging("Unhandled Event: ${cmd}", 2)
 }
-def on() { 
-   delayBetween([
-        zwave.switchAllV1.switchAllOn().format(),
-        zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:1, destinationEndPoint:1, commandClass:37, command:2).format(),
-        zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:1, destinationEndPoint:2, commandClass:37, command:2).format()
-    ], 1000)
+def on() {
+    logging("on()", 1)
+    commands([
+        zwave.switchAllV1.switchAllOn(),
+        encap(zwave.switchBinaryV1.switchBinaryGet(), 1),
+        encap(zwave.switchBinaryV1.switchBinaryGet(), 2)
+    ])
 }
 def off() {
-   delayBetween([
-        zwave.switchAllV1.switchAllOff().format(),
-        zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:1, destinationEndPoint:1, commandClass:37, command:2).format(),
-        zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:1, destinationEndPoint:2, commandClass:37, command:2).format()
-    ], 1000)
+    logging("off()", 1)
+    commands([
+        zwave.switchAllV1.switchAllOff(),
+        encap(zwave.switchBinaryV1.switchBinaryGet(), 1),
+        encap(zwave.switchBinaryV1.switchBinaryGet(), 2)
+    ])
 }
 def on1() {
-    delayBetween([
-        zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:1, destinationEndPoint:1, commandClass:37, command:1, parameter:[255]).format(),
-        zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:1, destinationEndPoint:1, commandClass:37, command:2).format()
-    ], 1000)
+   logging("on1()", 1)
+   commands([
+      encap(zwave.basicV1.basicSet(value: 0xFF), 1),
+	  encap(zwave.switchBinaryV1.switchBinaryGet(), 1)
+   ])
 }
 
 def off1() {
-    delayBetween([
-        zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:1, destinationEndPoint:1, commandClass:37, command:1, parameter:[0]).format(),
-        zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:1, destinationEndPoint:1, commandClass:37, command:2).format()
-    ], 1000)
+   logging("off1()", 1)
+   commands([
+      encap(zwave.basicV1.basicSet(value: 0x00), 1),
+	  encap(zwave.switchBinaryV1.switchBinaryGet(), 1)
+   ])
 }
 
 def on2() {
-    delayBetween([
-        zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:2, destinationEndPoint:2, commandClass:37, command:1, parameter:[255]).format(),
-        zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:2, destinationEndPoint:2, commandClass:37, command:2).format()
-    ], 1000)
+   logging("on2()", 1)
+   commands([
+      encap(zwave.basicV1.basicSet(value: 0xFF), 2),
+	  encap(zwave.switchBinaryV1.switchBinaryGet(), 2)
+   ])
 }
 
 def off2() {
-    delayBetween([
-        zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:2, destinationEndPoint:2, commandClass:37, command:1, parameter:[0]).format(),
-        zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:2, destinationEndPoint:2, commandClass:37, command:2).format()
-    ], 1000)
+   logging("off2()", 1)
+   commands([
+      encap(zwave.basicV1.basicSet(value: 0x00), 2),
+	  encap(zwave.switchBinaryV1.switchBinaryGet(), 2)
+   ])
 }
 
 private encap(cmd, endpoint) {
@@ -225,17 +231,6 @@ def installed() {
 }
 def updated() {
     logging("updated()", 1)
-    if (!childDevices) {
-        createChildDevices()
-    } else if (device.label != state.oldLabel) {
-        childDevices.each {
-            if (it.label == "${state.oldLabel} (CH${channelNumber(it.deviceNetworkId)})") {
-                def newLabel = "${device.displayName} (CH${channelNumber(it.deviceNetworkId)})"
-                it.setLabel(newLabel)
-            }
-        }
-        state.oldLabel = device.label
-    }
     sendEvent(name: "checkInterval", value: 2 * 15 * 60 + 2 * 60, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID])
     sendEvent(name: "needUpdate", value: device.currentValue("needUpdate"), displayed: false, isStateChange: true)
 }
