@@ -20,7 +20,7 @@
  *  2018-03-27: Adapted for Hubitat.
  */
 metadata {
-    definition(name: "Inovelli 2-Channel Smart Plug NZW37", namespace: "erocm123", author: "Eric Maycock") {
+    definition(name: "Inovelli 2-Channel Smart Plug NZW37", namespace: "InovelliUSA", author: "Eric Maycock") {
         capability "Actuator"
         capability "Sensor"
         capability "Switch"
