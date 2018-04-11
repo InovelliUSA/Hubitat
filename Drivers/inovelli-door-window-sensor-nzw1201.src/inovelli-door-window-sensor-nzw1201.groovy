@@ -21,7 +21,7 @@
  */
 
 metadata {
-    definition (name: "Inovelli Door/Window Sensor NZW1201", namespace: "erocm123", author: "Eric Maycock", ocfDeviceType: "x.com.st.d.sensor.contact") {
+    definition (name: "Inovelli Door/Window Sensor NZW1201", namespace: "InovelliUSA", author: "Eric Maycock", ocfDeviceType: "x.com.st.d.sensor.contact") {
         capability "Contact Sensor"
         capability "Sensor"
         capability "Battery"
