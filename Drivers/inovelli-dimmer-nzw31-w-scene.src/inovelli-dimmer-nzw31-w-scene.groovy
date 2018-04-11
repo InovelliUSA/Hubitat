@@ -1,7 +1,7 @@
  /**
  *  Inovelli Dimmer NZW31/NZW31T w/Scene
  *  Author: Eric Maycock (erocm123)
- *  Date: 2018-03-08
+ *  Date: 2018-04-11
  *
  *  Copyright 2018 Eric Maycock
  *
@@ -13,6 +13,9 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2018-04-11: No longer deleting child devices when user toggles the option off. SmartThings was throwing errors.
+ *              User will have to manually delete them.
  *
  *  2018-03-08: Added support for local protection to disable local control. Requires firmware 1.03+.
  *              Also merging handler from NZW31T as they are identical other than the LED indicator.
@@ -34,13 +37,10 @@ metadata {
         capability "Actuator"
         capability "Sensor"
         capability "Health Check"
-        capability "Button"
-        capability "Holdable Button"
-        capability "Indicator"
-        capability "Switch Level"
-        capability "Configuration"
         capability "PushableButton"
         capability "HoldableButton"
+        capability "Switch Level"
+        capability "Configuration"
         
         attribute "lastActivity", "String"
         attribute "lastEvent", "String"
@@ -74,11 +74,11 @@ metadata {
         input "minimumLevel", "number", title: "Minimum Level\n\nMinimum dimming level for attached light\nRange: 1 to 99", description: "Tap to set", required: false, range: "1..99"
         input "dimmingStep", "number", title: "Dimming Step Size\n\nPercentage of step when switch is dimming up or down\nRange: 1 to 99", description: "Tap to set", required: false, range: "1..99"
         input "autoOff", "number", title: "Auto Off\n\nAutomatically turn switch off after this number of seconds\nRange: 0 to 32767", description: "Tap to set", required: false, range: "0..32767"
-        input "ledIndicator", "enum", title: "LED Indicator\n\nTurn LED indicator on when light is: (Paddle Switch Only)", description: "Tap to set", required: false, options:[1: "On", 0: "Off", 2: "Disable", 3: "Always On"], defaultValue: 1
-        input "invert", "enum", title: "Invert Switch\n\nInvert on & off on the physical switch", description: "Tap to set", required: false, options:[0: "No", 1: "Yes"], defaultValue: 0
+        input "ledIndicator", "enum", title: "LED Indicator\n\nTurn LED indicator on when light is: (Paddle Switch Only)", description: "Tap to set", required: false, options:[[1: "On"], [0: "Off"], [2: "Disable"], [3: "Always On"]], defaultValue: 1
+        input "invert", "enum", title: "Invert Switch\n\nInvert on & off on the physical switch", description: "Tap to set", required: false, options:[[0: "No"], [1: "Yes"]], defaultValue: 0
         input "defaultLocal", "number", title: "Default Level (Local)\n\nDefault level when light is turned on at the switch\nRange: 0 to 99\nNote: 0 = Previous Level\n(Firmware 1.02+)", description: "Tap to set", required: false, range: "0..99"
         input "defaultZWave", "number", title: "Default Level (Z-Wave)\n\nDefault level when light is turned on via Z-Wave command\nRange: 0 to 99\nNote: 0 = Previous Level\n(Firmware 1.02+)", description: "Tap to set", required: false, range: "0..99"
-        input "disableLocal", "enum", title: "Disable Local Control\n\nDisable ability to control switch from the wall\n(Firmware 1.03+)", description: "Tap to set", required: false, options:[2: "Yes", 0: "No"], defaultValue: 1
+        input "disableLocal", "enum", title: "Disable Local Control\n\nDisable ability to control switch from the wall\n(Firmware 1.03+)", description: "Tap to set", required: false, options:[[2: "Yes"], [0: "No"]], defaultValue: 1
         input description: "Use the below options to enable child devices for the specified settings. This will allow you to adjust these settings using SmartApps such as Smart Lighting. If any of the options are enabled, make sure you have the appropriate child device handlers installed.\n(Firmware 1.02+)", title: "Child Devices", displayDuringSetup: false, type: "paragraph", element: "paragraph"
         input "enableDefaultLocalChild", "bool", title: "Default Local Level", description: "", required: false
         input "enableDefaultZWaveChild", "bool", title: "Default Z-Wave Level", description: "", required: false
@@ -235,7 +235,7 @@ def updated() {
         log.debug "updated()"
         state.lastRan = now()
         def cmds = initialize()
-        response(commands(cmds))
+        commands(cmds)
     } else {
         log.debug "updated() ran within the last 2 seconds. Skipping execution."
     }
@@ -258,7 +258,8 @@ def initialize() {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep8")}
         try {
-            if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
+            log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
         }
@@ -276,7 +277,8 @@ def initialize() {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep9")}
         try {
-            if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
+            log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
         }
@@ -294,7 +296,8 @@ def initialize() {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep101")}
         try {
-            if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
+            log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
         }
@@ -427,7 +430,6 @@ def zwaveEvent(hubitat.zwave.commands.switchmultilevelv3.SwitchMultilevelReport 
 private dimmerEvents(hubitat.zwave.Command cmd) {
     def value = (cmd.value ? "on" : "off")
     def result = [createEvent(name: "switch", value: value)]
-    state.previousValue = value
     if (cmd.value) {
         result << createEvent(name: "level", value: cmd.value, unit: "%")
     }
@@ -464,7 +466,7 @@ def buttonEvent(button, value, type = "digital") {
         sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Tap '.padRight(button+5, '▼'):' Tap '.padRight(button+5, '▲')}", displayed:false)
     else
         sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Hold ▼':' Hold ▲'}", displayed:false)
-    [name: "button", value: value, data: [buttonNumber: button], descriptionText: "$device.displayName button $button was $value", isStateChange: true, type: type]
+    [name: value, value: button, isStateChange:true]
 }
 
 def zwaveEvent(hubitat.zwave.Command cmd) {
@@ -579,7 +581,6 @@ def holdDown() {
 }
 
 def setDefaultAssociations() {
-    state.associationGroups = 3
     def smartThingsHubID = zwaveHubNodeId.toString().format( '%02x', zwaveHubNodeId )
     state.defaultG1 = [smartThingsHubID]
     state.defaultG2 = []
@@ -604,14 +605,14 @@ def setAssociationGroup(group, nodes, action, endpoint = null){
 def processAssociations(){
    def cmds = []
    setDefaultAssociations()
-   def supportedGroupings = 5
-   if (state.supportedGroupings) {
-       supportedGroupings = state.supportedGroupings
+   def associationGroups = 5
+   if (state.associationGroups) {
+       associationGroups = state.associationGroups
    } else {
        log.debug "Getting supported association groups from device"
        cmds <<  zwave.associationV2.associationGroupingsGet()
    }
-   for (int i = 1; i <= supportedGroupings; i++){
+   for (int i = 1; i <= associationGroups; i++){
       if(state."actualAssociation${i}" != null){
          if(state."desiredAssociation${i}" != null || state."defaultG${i}") {
             def refreshGroup = false
@@ -651,7 +652,7 @@ def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationReport cmd) {
 def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationGroupingsReport cmd) {
     sendEvent(name: "groups", value: cmd.supportedGroupings)
     log.debug "Supported association groups: ${cmd.supportedGroupings}"
-    state.supportedGroupings = cmd.supportedGroupings
+    state.associationGroups = cmd.supportedGroupings
 }
 
 def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
@@ -673,3 +674,4 @@ def zwaveEvent(hubitat.zwave.commands.protectionv2.ProtectionReport cmd) {
         childDevice.sendEvent(name: "switch", value: integerValue > 0 ? "on" : "off")        
     }
 }
+
