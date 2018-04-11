@@ -65,6 +65,8 @@ metadata {
         fingerprint mfr: "015D", prod: "1F00", model: "1F00", deviceJoinName: "Inovelli Dimmer"
         fingerprint mfr: "0312", prod: "1F00", model: "1F00", deviceJoinName: "Inovelli Dimmer"
         fingerprint mfr: "0312", prod: "1F02", model: "1F02", deviceJoinName: "Inovelli Dimmer" // Toggle version NZW31T
+        fingerprint deviceId: "0x1101", inClusters: "0x5E,0x26,0x27,0x70,0x5B,0x75,0x22,0x85,0x8E,0x59,0x55,0x86,0x72,0x5A,0x73,0x6C,0x7A"
+        
     }
 
     simulator {
