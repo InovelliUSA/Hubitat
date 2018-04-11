@@ -19,7 +19,7 @@
  */
  
 metadata {
-    definition (name: "Inovelli Dimmer NZW31", namespace: "erocm123", author: "Eric Maycock") {
+    definition (name: "Inovelli Dimmer NZW31", namespace: "InovelliUSA", author: "Eric Maycock") {
         capability "Switch"
         capability "Refresh"
         capability "Polling"
