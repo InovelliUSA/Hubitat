@@ -1,7 +1,7 @@
  /**
  *  Inovelli Switch NZW30/NZW30T w/Scene
  *  Author: Eric Maycock (erocm123)
- *  Date: 2018-03-08
+ *  Date: 2018-04-11
  *
  *  Copyright 2018 Eric Maycock
  *
@@ -13,6 +13,9 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2018-04-11: No longer deleting child devices when user toggles the option off. SmartThings was throwing errors.
+ *              User will have to manually delete them.
  *
  *  2018-03-08: Added support for local protection to disable local control. Requires firmware 1.03+.
  *              Also merging handler from NZW30T as they are identical other than the LED indicator.
@@ -120,7 +123,6 @@ metadata {
         standardTile("holdDown", "device.button", width: 2, height: 1, decoration: "flat") {
 			state "default", label: "Hold ▼", backgroundColor: "#ffffff", action: "holdDown"
 		}
-        
         valueTile("lastActivity", "device.lastActivity", inactiveLabel: false, decoration: "flat", width: 4, height: 1) {
             state "default", label: 'Last Activity: ${currentValue}',icon: "st.Health & Wellness.health9"
         }
@@ -241,14 +243,14 @@ def initialize() {
     
     def cmds = processAssociations()
     cmds << zwave.versionV1.versionGet()
-    cmds << zwave.configurationV1.configurationSet(configurationValue: [ledIndicator? ledIndicator.toInteger() : 1], parameterNumber: 3, size: 1)
+    cmds << zwave.configurationV1.configurationSet(scaledConfigurationValue: ledIndicator!=null? ledIndicator.toInteger() : 1, parameterNumber: 3, size: 1)
     cmds << zwave.configurationV1.configurationGet(parameterNumber: 3)
-    cmds << zwave.configurationV1.configurationSet(configurationValue: [invert? invert.toInteger() : 0], parameterNumber: 4, size: 1)
+    cmds << zwave.configurationV1.configurationSet(scaledConfigurationValue: invert!=null? invert.toInteger() : 0, parameterNumber: 4, size: 1)
     cmds << zwave.configurationV1.configurationGet(parameterNumber: 4)
-    cmds << zwave.configurationV1.configurationSet(scaledConfigurationValue: autoOff? autoOff.toInteger() : 0, parameterNumber: 5, size: 2)
+    cmds << zwave.configurationV1.configurationSet(scaledConfigurationValue: autoOff!=null? autoOff.toInteger() : 0, parameterNumber: 5, size: 2)
     cmds << zwave.configurationV1.configurationGet(parameterNumber: 5)
 	if (state.disableLocal != settings.disableLocal) {
-        cmds << zwave.protectionV2.protectionSet(localProtectionState : 0, rfProtectionState: 0)
+        cmds << zwave.protectionV2.protectionSet(localProtectionState : disableLocal!=null? disableLocal.toInteger() : 0, rfProtectionState: 0)
         cmds << zwave.protectionV2.protectionGet()
     }
     state.disableLocal = settings.disableLocal
@@ -279,17 +281,14 @@ def parse(description) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd) {
-    log.debug cmd
 	createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "physical")
 }
 
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicSet cmd) {
-log.debug cmd
 	createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "physical")
 }
 
 def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd) {
-    log.debug cmd
 	createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "digital")
 }
 
@@ -439,11 +438,9 @@ def holdDown() {
 }
 
 def setDefaultAssociations() {
-    state.associationGroups = 3
     def smartThingsHubID = zwaveHubNodeId.toString().format( '%02x', zwaveHubNodeId )
     state.defaultG1 = [smartThingsHubID]
     state.defaultG2 = []
-    state.defaultG3 = []
 }
 
 def setAssociationGroup(group, nodes, action, endpoint = null){
@@ -464,14 +461,14 @@ def setAssociationGroup(group, nodes, action, endpoint = null){
 def processAssociations(){
    def cmds = []
    setDefaultAssociations()
-   def supportedGroupings = 5
-   if (state.supportedGroupings) {
-       supportedGroupings = state.supportedGroupings
+   def associationGroups = 5
+   if (state.associationGroups) {
+       associationGroups = state.associationGroups
    } else {
        log.debug "Getting supported association groups from device"
        cmds <<  zwave.associationV2.associationGroupingsGet()
    }
-   for (int i = 1; i <= supportedGroupings; i++){
+   for (int i = 1; i <= associationGroups; i++){
       if(state."actualAssociation${i}" != null){
          if(state."desiredAssociation${i}" != null || state."defaultG${i}") {
             def refreshGroup = false
@@ -511,7 +508,7 @@ def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationReport cmd) {
 def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationGroupingsReport cmd) {
     sendEvent(name: "groups", value: cmd.supportedGroupings)
     log.debug "Supported association groups: ${cmd.supportedGroupings}"
-    state.supportedGroupings = cmd.supportedGroupings
+    state.associationGroups = cmd.supportedGroupings
 }
 
 def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
