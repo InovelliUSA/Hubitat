@@ -14,7 +14,6 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  2018-04-09: Updated preferences to work with Hubitat
  *  2018-02-26: Added support for Z-Wave Association Tool SmartApp.
  *              https://github.com/erocm123/SmartThingsPublic/tree/master/smartapps/erocm123/parent/zwave-association-tool.src
  *
@@ -39,7 +38,6 @@ metadata {
         fingerprint mfr:"015D", prod:"2003", model:"C11C", deviceJoinName: "Inovelli Door/Window Sensor"
         fingerprint mfr:"015D", prod:"C100", model:"C100", deviceJoinName: "Inovelli Door/Window Sensor"
         fingerprint mfr:"0312", prod:"C100", model:"C100", deviceJoinName: "Inovelli Door/Window Sensor"
-        fingerprint deviceId: "0x0701", inClusters:"0x5E,0x86,0x72,0x5A,0x73,0x80,0x85,0x59,0x71,0x30,0x31,0x70,0x84"
     }
 
     simulator {
@@ -125,7 +123,7 @@ def updated() {
         log.debug "updated()"
         state.lastRan = now()
         def cmds = initialize()
-        response(commands(cmds))
+        commands(cmds)
     } else {
         log.debug "updated() ran within the last 2 seconds. Skipping execution."
     }
@@ -136,8 +134,9 @@ def initialize() {
     def cmds = processAssociations()
     cmds << zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:1, scale:1)
     if (state.realTemperature != null) sendEvent(name:"temperature", value: getAdjustedTemp(state.realTemperature))
-    if (!state.MSR) {
-        cmds << zwave.manufacturerSpecificV2.manufacturerSpecificGet()
+    if(!state.needfwUpdate || state.needfwUpdate == "") {
+       log.debug "Requesting device firmware version"
+       cmds << zwave.versionV1.versionGet()
     }
     cmds << zwave.wakeUpV1.wakeUpNoMoreInformation()
 	return cmds
@@ -192,12 +191,11 @@ def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd)
     } else if (cmd.notificationType == 0x07) {
         if (cmd.event == 0x00) {
             result << createEvent(descriptionText: "$device.displayName covering was restored", isStateChange: true)
-            result << response(command(zwave.batteryV1.batteryGet()))
+            result << command(zwave.batteryV1.batteryGet())
         } else if (cmd.event == 0x01 || cmd.event == 0x02) {
             result << sensorValueEvent(1)
         } else if (cmd.event == 0x03) {
             result << createEvent(descriptionText: "$device.displayName covering was removed", isStateChange: true)
-            if(!state.MSR) result << response(command(zwave.manufacturerSpecificV2.manufacturerSpecificGet()))
         }
     } else if (cmd.notificationType) {
         def text = "Notification $cmd.notificationType: event ${([cmd.event] + cmd.eventParameter).join(", ")}"
@@ -213,9 +211,6 @@ def zwaveEvent(hubitat.zwave.commands.wakeupv1.WakeUpNotification cmd)
 {
     log.debug "${device.displayName} woke up"
     def cmds = processAssociations()
-    if (!state.MSR) {
-        cmds << zwave.manufacturerSpecificV2.manufacturerSpecificGet()
-    }
     
     cmds << zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:1, scale:1)
     
@@ -224,14 +219,17 @@ def zwaveEvent(hubitat.zwave.commands.wakeupv1.WakeUpNotification cmd)
         cmds << zwave.wakeUpV1.wakeUpIntervalSet(seconds: tempReportInterval? tempReportInterval.toInteger()*60:10800, nodeid:zwaveHubNodeId)
         cmds << zwave.wakeUpV1.wakeUpIntervalGet()
     }
-
-    if (!state.lastbat || now() - state.lastbat > 53*60*60*1000) {
+    if (!state.lastbat || now() - state.lastbat > 24*60*60*1000) {
         cmds << zwave.batteryV1.batteryGet()
     } 
+    if(!state.needfwUpdate || state.needfwUpdate == "") {
+       log.debug "Requesting device firmware version"
+       cmds << zwave.versionV1.versionGet()
+    }
     
     cmds << zwave.wakeUpV1.wakeUpNoMoreInformation()
 
-    [event, response(commands(cmds))]
+    [event, commands(cmds)]
 }
 
 def zwaveEvent(hubitat.zwave.commands.sensormultilevelv5.SensorMultilevelReport cmd)
@@ -263,25 +261,16 @@ def zwaveEvent(hubitat.zwave.commands.batteryv1.BatteryReport cmd) {
         map.value = cmd.batteryLevel
     }
     state.lastbat = now()
-    [createEvent(map), response(zwave.wakeUpV1.wakeUpNoMoreInformation())]
+    [createEvent(map), zwave.wakeUpV1.wakeUpNoMoreInformation()]
 }
 
-def zwaveEvent(hubitat.zwave.commands.manufacturerspecificv2.ManufacturerSpecificReport cmd) {
-    def result = []
-
-    def msr = String.format("%04X-%04X-%04X", cmd.manufacturerId, cmd.productTypeId, cmd.productId)
-    log.debug "msr: $msr"
-    updateDataValue("MSR", msr)
-
-    result << createEvent(descriptionText: "$device.displayName MSR: $msr", isStateChange: false)
-    result << response(zwave.associationV1.associationSet(groupingIdentifier:1, nodeId:zwaveHubNodeId))
-    if (!device.currentState("battery")) {
-        result << response(zwave.securityV1.securityMessageEncapsulation().encapsulate(zwave.batteryV1.batteryGet()).format())
-    } else {
-        result << response(command(zwave.batteryV1.batteryGet()))
+def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
+    log.debug cmd
+    if(cmd.applicationVersion && cmd.applicationSubVersion) {
+	    def firmware = "${cmd.applicationVersion}.${cmd.applicationSubVersion.toString().padLeft(2,'0')}"
+        state.needfwUpdate = "false"
+        updateDataValue("firmware", firmware)
     }
-
-    result
 }
 
 def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cmd) {
