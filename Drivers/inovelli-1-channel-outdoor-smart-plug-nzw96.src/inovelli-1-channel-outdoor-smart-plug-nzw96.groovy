@@ -14,7 +14,6 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  2018-04-09: Update LED Indicator preference for Hubitat
  */
  
 metadata {
@@ -25,14 +24,12 @@ metadata {
         capability "Actuator"
         capability "Sensor"
         capability "Health Check"
-        capability "Indicator"
         
         attribute "lastActivity", "String"
 
         fingerprint mfr: "015D", prod: "6000", model: "6000", deviceJoinName: "Inovelli Outdoor Smart Plug"
         fingerprint mfr: "0312", prod: "6000", model: "6000", deviceJoinName: "Inovelli Outdoor Smart Plug"
         fingerprint deviceId: "0x1001", inClusters: "0x5E,0x86,0x72,0x5A,0x85,0x59,0x73,0x25,0x27,0x70,0x71,0x8E,0x55,0x6C,0x7A"
-        
     }
 
     simulator {
