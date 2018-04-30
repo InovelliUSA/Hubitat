@@ -31,13 +31,14 @@ metadata {
         attribute "lastActivity", "String"
         attribute "lastEvent", "String"
         
-        command "setAssociationGroup"
+        command "setAssociationGroup", ["number", "enum", "number", "number"] // group number, nodes, action (0 - remove, 1 - add), multi-channel endpoint (optional)
 
         fingerprint mfr:"015D", prod:"2003", model:"B41C", deviceJoinName: "Inovelli Door/Window Sensor"
         fingerprint mfr:"0312", prod:"2003", model:"C11C", deviceJoinName: "Inovelli Door/Window Sensor"
         fingerprint mfr:"015D", prod:"2003", model:"C11C", deviceJoinName: "Inovelli Door/Window Sensor"
         fingerprint mfr:"015D", prod:"C100", model:"C100", deviceJoinName: "Inovelli Door/Window Sensor"
         fingerprint mfr:"0312", prod:"C100", model:"C100", deviceJoinName: "Inovelli Door/Window Sensor"
+        fingerprint deviceId: "0x0701", inClusters:"0x5E,0x86,0x72,0x5A,0x73,0x80,0x85,0x59,0x71,0x30,0x31,0x70,0x84"
     }
 
     simulator {
@@ -78,7 +79,7 @@ metadata {
 }
 
 def parse(String description) {
-    def result = null
+    def result = []
     if (description.startsWith("Err 106")) {
         if (state.sec) {
             log.debug description
@@ -94,9 +95,10 @@ def parse(String description) {
     } else if (description != "updated") {
         def cmd = zwave.parse(description, [0x20: 1, 0x25: 1, 0x30: 1, 0x31: 5, 0x80: 1, 0x84: 1, 0x71: 3, 0x9C: 1])
         if (cmd) {
-            result = zwaveEvent(cmd)
+            result += zwaveEvent(cmd)
         }
     }
+
     def now
     if(location.timeZone)
     now = new Date().format("yyyy MMM dd EEE h:mm:ss a", location.timeZone)
@@ -108,7 +110,7 @@ def parse(String description) {
 
 def installed() {
     log.debug "installed()"
-    def cmds = [zwave.sensorBinaryV2.sensorBinaryGet(sensorType: zwave.sensorBinaryV2.SENSOR_TYPE_DOOR_WINDOW)]
+    def cmds = [zwave.sensorBinaryV2.sensorBinaryGet(sensorType: 10)]
     commands(cmds)
 }
 
@@ -122,6 +124,7 @@ def updated() {
     if (!state.lastRan || now() >= state.lastRan + 2000) {
         log.debug "updated()"
         state.lastRan = now()
+        state.needfwUpdate = ""
         def cmds = initialize()
         commands(cmds)
     } else {
@@ -138,6 +141,10 @@ def initialize() {
        log.debug "Requesting device firmware version"
        cmds << zwave.versionV1.versionGet()
     }
+    if (!state.lastbat || now() - state.lastbat > 24*60*60*1000) {
+        log.debug "Battery report not received in 24 hours. Requesting one now."
+        cmds << zwave.batteryV1.batteryGet()
+    } 
     cmds << zwave.wakeUpV1.wakeUpNoMoreInformation()
 	return cmds
 }
@@ -174,7 +181,7 @@ def zwaveEvent(hubitat.zwave.commands.sensorbinaryv1.SensorBinaryReport cmd)
     sensorValueEvent(cmd.sensorValue)
 }
 
-def zwaveEvent(hubitat.zwave.commands.wakeupv1.WakeUpIntervalReport cmd)
+void zwaveEvent(hubitat.zwave.commands.wakeupv1.WakeUpIntervalReport cmd)
 {
     log.debug "WakeUpIntervalReport ${cmd.toString()}"
     state.wakeInterval = cmd.seconds
@@ -191,7 +198,7 @@ def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd)
     } else if (cmd.notificationType == 0x07) {
         if (cmd.event == 0x00) {
             result << createEvent(descriptionText: "$device.displayName covering was restored", isStateChange: true)
-            result << command(zwave.batteryV1.batteryGet())
+            result << response(command(zwave.batteryV1.batteryGet()))
         } else if (cmd.event == 0x01 || cmd.event == 0x02) {
             result << sensorValueEvent(1)
         } else if (cmd.event == 0x03) {
@@ -214,12 +221,13 @@ def zwaveEvent(hubitat.zwave.commands.wakeupv1.WakeUpNotification cmd)
     
     cmds << zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:1, scale:1)
     
-    if(!state.wakeInterval == null || state.wakeInterval != (tempReportInterval? tempReportInterval.toInteger()*60:10800)){
+    if(!state.wakeInterval || state.wakeInterval != (tempReportInterval? tempReportInterval.toInteger()*60:10800)){
         log.debug "Setting Wake Interval to ${tempReportInterval? tempReportInterval.toInteger()*60:10800}"
         cmds << zwave.wakeUpV1.wakeUpIntervalSet(seconds: tempReportInterval? tempReportInterval.toInteger()*60:10800, nodeid:zwaveHubNodeId)
         cmds << zwave.wakeUpV1.wakeUpIntervalGet()
     }
     if (!state.lastbat || now() - state.lastbat > 24*60*60*1000) {
+        log.debug "Battery report not received in 24 hours. Requesting one now."
         cmds << zwave.batteryV1.batteryGet()
     } 
     if(!state.needfwUpdate || state.needfwUpdate == "") {
@@ -228,8 +236,8 @@ def zwaveEvent(hubitat.zwave.commands.wakeupv1.WakeUpNotification cmd)
     }
     
     cmds << zwave.wakeUpV1.wakeUpNoMoreInformation()
-
-    [event, commands(cmds)]
+    
+    response(commands(cmds))
 }
 
 def zwaveEvent(hubitat.zwave.commands.sensormultilevelv5.SensorMultilevelReport cmd)
@@ -261,10 +269,10 @@ def zwaveEvent(hubitat.zwave.commands.batteryv1.BatteryReport cmd) {
         map.value = cmd.batteryLevel
     }
     state.lastbat = now()
-    [createEvent(map), zwave.wakeUpV1.wakeUpNoMoreInformation()]
+    createEvent(map)
 }
 
-def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
+void zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
     log.debug cmd
     if(cmd.applicationVersion && cmd.applicationSubVersion) {
 	    def firmware = "${cmd.applicationVersion}.${cmd.applicationSubVersion.toString().padLeft(2,'0')}"
@@ -293,7 +301,7 @@ private command(hubitat.zwave.Command cmd) {
     }
 }
 
-private commands(commands, delay=200) {
+private commands(commands, delay=500) {
     delayBetween(commands.collect{ command(it) }, delay)
 }
 
@@ -355,7 +363,7 @@ def processAssociations(){
    return cmds
 }
 
-def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationReport cmd) {
+void zwaveEvent(hubitat.zwave.commands.associationv2.AssociationReport cmd) {
     def temp = []
     if (cmd.nodeId != []) {
        cmd.nodeId.each {
@@ -368,7 +376,7 @@ def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationReport cmd) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationGroupingsReport cmd) {
-    sendEvent(name: "groups", value: cmd.supportedGroupings)
     log.debug "Supported association groups: ${cmd.supportedGroupings}"
     state.supportedGroupings = cmd.supportedGroupings
+    return createEvent(name: "groups", value: cmd.supportedGroupings)
 }
