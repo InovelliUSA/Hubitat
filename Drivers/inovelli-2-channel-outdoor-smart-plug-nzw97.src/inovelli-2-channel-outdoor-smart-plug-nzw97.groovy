@@ -205,27 +205,27 @@ def off() {
     ])
 }
 
-void childOn(String dni) {
+def childOn(String dni) {
     log.debug "childOn($dni)"
     def cmds = []
-    cmds << new hubitat.device.HubAction(command(encap(zwave.basicV1.basicSet(value: 0xFF), channelNumber(dni))))
-    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))))
-    sendHubCommand(cmds, 1000)
+    cmds << new hubitat.device.HubAction(command(encap(zwave.basicV1.basicSet(value: 0xFF), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds
 }
 
-void childOff(String dni) {
+def childOff(String dni) {
     log.debug "childOff($dni)"
     def cmds = []
-    cmds << new hubitat.device.HubAction(command(encap(zwave.basicV1.basicSet(value: 0x00), channelNumber(dni))))
-    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))))
-    sendHubCommand(cmds, 1000)
+    cmds << new hubitat.device.HubAction(command(encap(zwave.basicV1.basicSet(value: 0x00), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds
 }
 
-void childRefresh(String dni) {
+def childRefresh(String dni) {
     log.debug "childRefresh($dni)"
     def cmds = []
-    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))))
-    sendHubCommand(cmds, 1000)
+    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds
 }
 
 def poll() {
@@ -264,7 +264,7 @@ def updated() {
         log.debug "updated()"
         state.lastRan = now()
         def cmds = initialize()
-        response(commands(cmds))
+        commands(cmds)
     } else {
         log.debug "updated() ran within the last 2 seconds. Skipping execution."
     }
