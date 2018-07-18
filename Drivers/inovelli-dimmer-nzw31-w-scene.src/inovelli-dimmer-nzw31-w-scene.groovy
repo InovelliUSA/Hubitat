@@ -1,7 +1,7 @@
  /**
  *  Inovelli Dimmer NZW31/NZW31T w/Scene
  *  Author: Eric Maycock (erocm123)
- *  Date: 2018-04-11
+ *  Date: 2018-06-20
  *
  *  Copyright 2018 Eric Maycock
  *
@@ -14,6 +14,10 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ *  2018-06-20: Modified tile layout. Update firmware version reporting. Bug Fix.
+ * 
+ *  2018-06-08: Remove communication method check from updated().
+ * 
  *  2018-04-23: Added configuration parameters for association group 3.
  *
  *  2018-04-11: No longer deleting child devices when user toggles the option off. SmartThings was throwing errors.
@@ -28,7 +32,7 @@
  *              for adjusting configuration options from other SmartApps. Requires firmware 1.02+.
  *
  *  2018-02-26: Added support for Z-Wave Association Tool SmartApp. Associations require firmware 1.02+.
- *              https://github.com/erocm123/SmartThingsPublic/tree/master/smartapps/erocm123/parent/zwave-association-tool.src
+ *              https://github.com/erocm123/SmartThingsPublic/tree/master/smartapps/erocm123/z-waveat
  */
  
 metadata {
@@ -38,7 +42,7 @@ metadata {
         capability "Polling"
         capability "Actuator"
         capability "Sensor"
-        capability "Health Check"
+        //capability "Health Check"
         capability "PushableButton"
         capability "HoldableButton"
         capability "Switch Level"
@@ -46,6 +50,7 @@ metadata {
         
         attribute "lastActivity", "String"
         attribute "lastEvent", "String"
+        attribute "firmware", "String"
         
         command "pressUpX1"
         command "pressDownX1"
@@ -60,7 +65,11 @@ metadata {
         command "holdUp"
         command "holdDown"
         
-        command "setAssociationGroup"
+        command "setAssociationGroup", ["number", "enum", "number", "number"] // group number, nodes, action (0 - remove, 1 - add), multi-channel endpoint (optional)
+        command "childOn"
+        command "childOff"
+        command "childRefresh"
+        command "childSetLevel"
 
         fingerprint mfr: "015D", prod: "B111", model: "251C", deviceJoinName: "Inovelli Dimmer"
         fingerprint mfr: "051D", prod: "B111", model: "251C", deviceJoinName: "Inovelli Dimmer"
@@ -78,18 +87,18 @@ metadata {
         input "minimumLevel", "number", title: "Minimum Level\n\nMinimum dimming level for attached light\nRange: 1 to 99", description: "Tap to set", required: false, range: "1..99"
         input "dimmingStep", "number", title: "Dimming Step Size\n\nPercentage of step when switch is dimming up or down\nRange: 0 to 99 (0 - Instant)", description: "Tap to set", required: false, range: "0..99"
         input "autoOff", "number", title: "Auto Off\n\nAutomatically turn switch off after this number of seconds\nRange: 0 to 32767", description: "Tap to set", required: false, range: "0..32767"
-        input "ledIndicator", "enum", title: "LED Indicator\n\nTurn LED indicator on when light is: (Paddle Switch Only)", description: "Tap to set", required: false, options:[[1: "On"], [0: "Off"], [2: "Disable"], [3: "Always On"]], defaultValue: 1
-        input "invert", "enum", title: "Invert Switch\n\nInvert on & off on the physical switch", description: "Tap to set", required: false, options:[[0: "No"], [1: "Yes"]], defaultValue: 0
+        input "ledIndicator", "enum", title: "LED Indicator\n\nTurn LED indicator on when light is: (Paddle Switch Only)", description: "Tap to set", required: false, options:[["1": "On"], ["0": "Off"], ["2": "Disable"], ["3": "Always On"]], defaultValue: "1"
+        input "invert", "enum", title: "Invert Switch\n\nInvert on & off on the physical switch", description: "Tap to set", required: false, options:[["0": "No"], ["1": "Yes"]], defaultValue: 0
         input "defaultLocal", "number", title: "Default Level (Local)\n\nDefault level when light is turned on at the switch\nRange: 0 to 99\nNote: 0 = Previous Level\n(Firmware 1.02+)", description: "Tap to set", required: false, range: "0..99"
         input "defaultZWave", "number", title: "Default Level (Z-Wave)\n\nDefault level when light is turned on via Z-Wave command\nRange: 0 to 99\nNote: 0 = Previous Level\n(Firmware 1.02+)", description: "Tap to set", required: false, range: "0..99"
-        input "disableLocal", "enum", title: "Disable Local Control\n\nDisable ability to control switch from the wall\n(Firmware 1.03+)", description: "Tap to set", required: false, options:[[2: "Yes"], [0: "No"]], defaultValue: 1
+        input "disableLocal", "enum", title: "Disable Local Control\n\nDisable ability to control switch from the wall\n(Firmware 1.03+)", description: "Tap to set", required: false, options:[["2": "Yes"], ["0": "No"]], defaultValue: "1"
         input description: "Use the below options to enable child devices for the specified settings. This will allow you to adjust these settings using SmartApps such as Smart Lighting. If any of the options are enabled, make sure you have the appropriate child device handlers installed.\n(Firmware 1.02+)", title: "Child Devices", displayDuringSetup: false, type: "paragraph", element: "paragraph"
         input "enableDefaultLocalChild", "bool", title: "Default Local Level", description: "", required: false
         input "enableDefaultZWaveChild", "bool", title: "Default Z-Wave Level", description: "", required: false
         input "enableDisableLocalChild", "bool", title: "Disable Local Control", description: "", required: false
         input description: "1 pushed - Up 1x click\n2 pushed - Up 2x click\n3 pushed - Up 3x click\n4 pushed - Up 4x click\n5 pushed - Up 5x click\n6 pushed - Up held\n\n1 held - Down 1x click\n2 held - Down 2x click\n3 held - Down 3x click\n4 held - Down 4x click\n5 held - Down 5x click\n6 held - Down held", title: "Button Mappings", displayDuringSetup: false, type: "paragraph", element: "paragraph"
         input description: "Use the \"Z-Wave Association Tool\" SmartApp to set device associations.\n(Firmware 1.02+)\n\nGroup 2: Sends on/off commands to associated devices when switch is pressed (BASIC_SET).\n\nGroup 3: Sends dim/brighten commands to associated devices when switch is pressed (SWITCH_MULTILEVEL_SET).", title: "Associations", displayDuringSetup: false, type: "paragraph", element: "paragraph"
-        input "group3Setting", "enum", title: "Association Group 3 Behavior\n\nChange how devices respond when associated in group 3", description: "Tap to set", required: false, options:[[1: "Keep in Sync"], [0: "Dim up/down"]], defaultValue: 0
+        input "group3Setting", "enum", title: "Association Group 3 Behavior\n\nChange how devices respond when associated in group 3", description: "Tap to set", required: false, options:[["1": "Keep in Sync"], ["0": "Dim up/down"]], defaultValue: "0"
         input description: "When should the switch send commands to associated devices?", title: "Association Behavior", displayDuringSetup: false, type: "paragraph", element: "paragraph"
         input "group3local", "bool", title: "Send command on local action", description: "", required: false, value: true
         input "group3remote", "bool", title: "Send command on z-wave action", description: "", required: false
@@ -113,8 +122,28 @@ metadata {
             }
         }
         
-        standardTile("refresh", "device.switch", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
+        valueTile("lastActivity", "device.lastActivity", inactiveLabel: false, decoration: "flat", width: 4, height: 1) {
+            state "default", label: 'Last Activity: ${currentValue}',icon: "st.Health & Wellness.health9"
+        }
+        
+        valueTile("firmware", "device.firmware", inactiveLabel: false, decoration: "flat", width: 2, height: 1) {
+            state "default", label: 'fw: ${currentValue}', icon: ""
+        }
+        
+        valueTile("info", "device.info", inactiveLabel: false, decoration: "flat", width: 3, height: 1) {
+            state "default", label: 'Tap on the buttons below to test scenes (ie: Tap ▲ 1x, ▲▲ 2x, etc depending on the button)'
+        }
+        
+        valueTile("icon", "device.icon", inactiveLabel: false, decoration: "flat", width: 2, height: 1) {
+            state "default", label: '', icon: "https://inovelli.com/wp-content/uploads/Device-Handler/Inovelli-Device-Handler-Logo.png"
+        }
+        
+        standardTile("refresh", "device.switch", inactiveLabel: false, decoration: "flat", width: 1, height: 1) {
             state "default", label: "", action: "refresh.refresh", icon: "st.secondary.refresh"
+        }
+        
+        standardTile("pressUpX1", "device.button", width: 2, height: 1, decoration: "flat") {
+            state "default", label: "Tap ▲", backgroundColor: "#ffffff", action: "pressUpX1"
         }
         
         standardTile("pressUpX2", "device.button", width: 2, height: 1, decoration: "flat") {
@@ -125,16 +154,16 @@ metadata {
             state "default", label: "Tap ▲▲▲", backgroundColor: "#ffffff", action: "pressUpX3"
         }
         
+        standardTile("pressDownX1", "device.button", width: 2, height: 1, decoration: "flat") {
+            state "default", label: "Tap ▼", backgroundColor: "#ffffff", action: "pressDownX1"
+        }
+        
         standardTile("pressDownX2", "device.button", width: 2, height: 1, decoration: "flat") {
             state "default", label: "Tap ▼▼", backgroundColor: "#ffffff", action: "pressDownX2"
         }
         
         standardTile("pressDownX3", "device.button", width: 2, height: 1, decoration: "flat") {
             state "default", label: "Tap ▼▼▼", backgroundColor: "#ffffff", action: "pressDownX3"
-        }
-        
-        valueTile("level", "device.level", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
-            state "default", label: '${currentValue}%', icon: ""
         }
         
         standardTile("pressUpX4", "device.button", width: 2, height: 1, decoration: "flat") {
@@ -145,6 +174,10 @@ metadata {
             state "default", label: "Tap ▲▲▲▲▲", backgroundColor: "#ffffff", action: "pressUpX5"
         }
         
+        standardTile("holdUp", "device.button", width: 2, height: 1, decoration: "flat") {
+			state "default", label: "Hold ▲", backgroundColor: "#ffffff", action: "holdUp"
+		}
+        
         standardTile("pressDownX4", "device.button", width: 2, height: 1, decoration: "flat") {
             state "default", label: "Tap ▼▼▼▼", backgroundColor: "#ffffff", action: "pressDownX4"
         }
@@ -153,21 +186,10 @@ metadata {
             state "default", label: "Tap ▼▼▼▼▼", backgroundColor: "#ffffff", action: "pressDownX5"
         }
         
-        valueTile("lastActivity", "device.lastActivity", inactiveLabel: false, decoration: "flat", width: 4, height: 1) {
-            state "default", label: 'Last Activity: ${currentValue}',icon: "st.Health & Wellness.health9"
-        }
+        standardTile("holdDown", "device.button", width: 2, height: 1, decoration: "flat") {
+			state "default", label: "Hold ▼", backgroundColor: "#ffffff", action: "holdDown"
+		}
         
-        valueTile("status", "device.status", inactiveLabel: false, decoration: "flat", width: 2, height: 1) {
-            state "default", label: '${currentValue}', icon: ""
-        }
-        
-        valueTile("info", "device.info", inactiveLabel: false, decoration: "flat", width: 3, height: 1) {
-            state "default", label: 'Tap on the buttons above to test scenes (ie: Tap ▲ 1x, ▲▲ 2x, etc depending on the button)'
-        }
-        
-        valueTile("icon", "device.icon", inactiveLabel: false, decoration: "flat", width: 3, height: 1) {
-            state "default", label: '', icon: "https://inovelli.com/wp-content/uploads/Device-Handler/Inovelli-Device-Handler-Logo.png"
-        }
     }
 }
 
@@ -185,40 +207,41 @@ private sendAlert(data) {
     )
 }
 
-void childSetLevel(String dni, value) {
+def childSetLevel(String dni, value) {
     def valueaux = value as Integer
     def level = Math.max(Math.min(valueaux, 99), 0)    
     def cmds = []
     switch (channelNumber(dni)) {
         case 8:
-            cmds << new hubitat.device.HubAction(command(zwave.configurationV1.configurationSet(scaledConfigurationValue: value, parameterNumber: channelNumber(dni), size: 1) ))
-            cmds << new hubitat.device.HubAction(command(zwave.configurationV1.configurationGet(parameterNumber: channelNumber(dni) )))
+            cmds << new hubitat.device.HubAction(command(zwave.configurationV1.configurationSet(scaledConfigurationValue: value, parameterNumber: channelNumber(dni), size: 1) ), hubitat.device.Protocol.ZWAVE)
+            cmds << new hubitat.device.HubAction(command(zwave.configurationV1.configurationGet(parameterNumber: channelNumber(dni) )), hubitat.device.Protocol.ZWAVE)
         break
         case 9:
-            cmds << new hubitat.device.HubAction(command(zwave.configurationV1.configurationSet(scaledConfigurationValue: value, parameterNumber: channelNumber(dni), size: 1) ))
-            cmds << new hubitat.device.HubAction(command(zwave.configurationV1.configurationGet(parameterNumber: channelNumber(dni) )))
+            cmds << new hubitat.device.HubAction(command(zwave.configurationV1.configurationSet(scaledConfigurationValue: value, parameterNumber: channelNumber(dni), size: 1) ), hubitat.device.Protocol.ZWAVE)
+            cmds << new hubitat.device.HubAction(command(zwave.configurationV1.configurationGet(parameterNumber: channelNumber(dni) )), hubitat.device.Protocol.ZWAVE)
         break
         case 101:
-            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionSet(localProtectionState : level > 0 ? 2 : 0, rfProtectionState: 0) ))
-            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionGet() ))
+            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionSet(localProtectionState : level > 0 ? 2 : 0, rfProtectionState: 0) ), hubitat.device.Protocol.ZWAVE)
+            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionGet() ), hubitat.device.Protocol.ZWAVE)
         break
     }
-	sendHubCommand(cmds, 1000)
+	cmds
 }
 
-void childOn(String dni) {
+def childOn(String dni) {
     log.debug "childOn($dni)"
     childSetLevel(dni, 99)
 }
 
-void childOff(String dni) {
+def childOff(String dni) {
     log.debug "childOff($dni)"
     childSetLevel(dni, 0)
 }
 
-void childRefresh(String dni) {
+def childRefresh(String dni) {
     log.debug "childRefresh($dni)"
 }
+
 
 def childExists(ep) {
     def children = childDevices
@@ -257,7 +280,7 @@ def initialize() {
     
     if (enableDefaultLocalChild && !childExists("ep8")) {
     try {
-        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep8", null,
+        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep8", 
                 [completedSetup: true, label: "${device.displayName} (Default Local Level)",
                 isComponent: true, componentName: "ep8", componentLabel: "Default Local Level"])
     } catch (e) {
@@ -276,7 +299,7 @@ def initialize() {
     }
     if (enableDefaultZWaveChild && !childExists("ep9")) {
     try {
-        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep9", null,
+        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep9", 
                 [completedSetup: true, label: "${device.displayName} (Default Z-Wave Level)",
                 isComponent: true, componentName: "ep9", componentLabel: "Default Z-Wave Level"])
     } catch (e) {
@@ -295,7 +318,7 @@ def initialize() {
     }
     if (enableDisableLocalChild && !childExists("ep101")) {
     try {
-        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep101", null,
+        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep101", 
                 [completedSetup: true, label: "${device.displayName} (Disable Local Control)",
                 isComponent: true, componentName: "ep101", componentLabel: "Disable Local Control"])
     } catch (e) {
@@ -433,7 +456,9 @@ def parse(description) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd) {
-    dimmerEvents(cmd)
+    // Since SmartThings isn't filtering duplicate events, we are skipping these
+    // Switch is sending SwitchMultilevelReport as well (which we will use)
+    //dimmerEvents(cmd)
 }
 
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicSet cmd) {
@@ -445,9 +470,7 @@ def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.switchmultilevelv3.SwitchMultilevelReport cmd) {
-    // Since SmartThings isn't filtering duplicate events, we are skipping these
-    // Switch is sending BasicReport as well (which we will use)
-    //dimmerEvents(cmd)
+    dimmerEvents(cmd)
 }
 
 private dimmerEvents(hubitat.zwave.Command cmd) {
@@ -604,7 +627,7 @@ def holdDown() {
 }
 
 def setDefaultAssociations() {
-    def smartThingsHubID = zwaveHubNodeId.toString().format( '%02x', zwaveHubNodeId )
+    def smartThingsHubID = (zwaveHubNodeId.toString().format( '%02x', zwaveHubNodeId )).toUppercase()
     state.defaultG1 = [smartThingsHubID]
     state.defaultG2 = []
     state.defaultG3 = []
@@ -683,8 +706,7 @@ def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
     if(cmd.applicationVersion && cmd.applicationSubVersion) {
 	    def firmware = "${cmd.applicationVersion}.${cmd.applicationSubVersion.toString().padLeft(2,'0')}"
         state.needfwUpdate = "false"
-        sendEvent(name: "status", value: "fw: ${firmware}")
-        updateDataValue("firmware", firmware)
+        createEvent(name: "firmware", value: "${firmware}")
     }
 }
 
