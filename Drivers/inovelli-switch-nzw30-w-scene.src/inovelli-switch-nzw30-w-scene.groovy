@@ -1,7 +1,7 @@
  /**
  *  Inovelli Switch NZW30/NZW30T w/Scene
  *  Author: Eric Maycock (erocm123)
- *  Date: 2018-06-20
+ *  Date: 2018-12-04
  *
  *  Copyright 2018 Eric Maycock
  *
@@ -13,6 +13,10 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2018-12-04: Added option to "Disable Remote Control" and to send button events 1,pushed / 1,held for on / off.
+ *
+ *  2018-08-03: Added the ability to change the label on scenes.
  *
  *  2018-06-20: Modified tile layout. Update firmware version reporting. Bug Fix.
  * 
@@ -31,7 +35,7 @@
  */
  
 metadata {
-	definition (name: "Inovelli Switch NZW30 w/Scene", namespace: "InovelliUSA", author: "Eric Maycock") {
+	definition (name: "Inovelli Switch NZW30 w/Scene", namespace: "InovelliUSA", author: "Eric Maycock", vid: "generic-switch") {
 		capability "Switch"
 		capability "Refresh"
 		capability "Polling"
@@ -76,14 +80,30 @@ metadata {
 	}
     
     preferences {
-        input "autoOff", "number", title: "Auto Off\n\nAutomatically turn switch off after this number of seconds\nRange: 0 to 32767", description: "Tap to set", required: false, range: "0..32767"
-        input "ledIndicator", "enum", title: "LED Indicator\n\nTurn LED indicator on when light is: (Paddle Switch Only)\n", description: "Tap to set", required: false, options:[["1": "On"], ["0": "Off"], ["2": "Disable"], ["3": "Always On"]], defaultValue: "1"
+        input "autoOff", "number", title: "Auto Off\n\nAutomatically turn switch off after this number of seconds\nRange: 0 to 32767", description: "Tap to set", required: false, range: "0..32767", defaultValue: "0"
+        input "ledIndicator", "enum", title: "LED Indicator\n\nTurn LED indicator on when light is: (Paddle Switch Only)\n", description: "Tap to set", required: false, options:[["1": "On"], ["0": "Off"], ["2": "Disable"], ["3": "Always On"]], defaultValue: "0"
         input "invert", "enum", title: "Invert Switch\n\nInvert on & off on the physical switch", description: "Tap to set", required: false, options:[["0": "No"], ["1": "Yes"]], defaultValue: "0"
-        input "disableLocal", "enum", title: "Disable Local Control\n\nDisable ability to control switch from the wall\n(Firmware 1.02+)", description: "Tap to set", required: false, options:[["2": "Yes"], ["0": "No"]], defaultValue: "1"
+        input "disableLocal", "enum", title: "Disable Local Control\n\nDisable ability to control switch from the wall\n(Firmware 1.02+)", description: "Tap to set", required: false, options:[["2": "Yes"], ["0": "No"]], defaultValue: "0"
+        input "disableRemote", "enum", title: "Disable Remote Control\n\nDisable ability to control switch from inside SmartThings", description: "Tap to set", required: false, options:[["2": "Yes"], ["0": "No"]], defaultValue: "0"
+        input "buttonOn", "enum", title: "Send Button Event On\n\nSend the button 1 pushed event when switch turned on from inside SmartThings", description: "Tap to set", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
+        input "buttonOff", "enum", title: "Send Button Event Off\n\nSend the button 1 held event when switch turned off from inside SmartThings", description: "Tap to set", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
         input description: "Use the below options to enable child devices for the specified settings. This will allow you to adjust these settings using SmartApps such as Smart Lighting. If any of the options are enabled, make sure you have the appropriate child device handlers installed.\n(Firmware 1.02+)", title: "Child Devices", displayDuringSetup: false, type: "paragraph", element: "paragraph"
         input "enableDisableLocalChild", "bool", title: "Disable Local Control", description: "", required: false
         input description: "1 pushed - Up 1x click\n2 pushed - Up 2x click\n3 pushed - Up 3x click\n4 pushed - Up 4x click\n5 pushed - Up 5x click\n6 pushed - Up held\n\n1 held - Down 1x click\n2 held - Down 2x click\n3 held - Down 3x click\n4 held - Down 4x click\n5 held - Down 5x click\n6 held - Down held", title: "Button Mappings", displayDuringSetup: false, type: "paragraph", element: "paragraph"
         input description: "Use the \"Z-Wave Association Tool\" SmartApp to set device associations. (Firmware 1.02+)\n\nGroup 2: Sends on/off commands to associated devices when switch is pressed (BASIC_SET).", title: "Associations", displayDuringSetup: false, type: "paragraph", element: "paragraph"
+        input description: "Below you can change the labels that appear for the various tap sequences.", title: "Scene Labels", displayDuringSetup: false, type: "paragraph", element: "paragraph"
+        input "pressUpX1Label", "text", title: "Label for \"Tap ▲\"", description: "Tap to set", required: false
+        input "pressDownX1Label", "text", title: "Label for \"Tap ▼\"", description: "Tap to set", required: false
+        input "pressUpX2Label", "text", title: "Label for \"Tap ▲▲\"", description: "Tap to set", required: false
+        input "pressDownX2Label", "text", title: "Label for \"Tap ▼▼\"", description: "Tap to set", required: false
+        input "pressUpX3Label", "text", title: "Label for \"Tap ▲▲▲\"", description: "Tap to set", required: false
+        input "pressDownX3Label", "text", title: "Label for \"Tap ▼▼▼\"", description: "Tap to set", required: false
+        input "pressUpX4Label", "text", title: "Label for \"Tap ▲▲▲▲\"", description: "Tap to set", required: false
+        input "pressDownX4Label", "text", title: "Label for \"Tap ▼▼▼▼\"", description: "Tap to set", required: false
+        input "pressUpX5Label", "text", title: "Label for \"Tap ▲▲▲▲▲\"", description: "Tap to set", required: false
+        input "pressDownX5Label", "text", title: "Label for \"Tap ▼▼▼▼▼\"", description: "Tap to set", required: false
+        input "pressHoldUpLabel", "text", title: "Label for \"Hold ▲\"", description: "Tap to set", required: false
+        input "pressHoldDownLabel", "text", title: "Label for \"Hold ▼\"", description: "Tap to set", required: false
     }
     
     tiles {
@@ -119,52 +139,52 @@ metadata {
             state "default", label: "", action: "refresh.refresh", icon: "st.secondary.refresh"
         }
         
-        standardTile("pressUpX1", "device.button", width: 2, height: 1, decoration: "flat") {
-            state "default", label: "Tap ▲", backgroundColor: "#ffffff", action: "pressUpX1"
+        standardTile("pressUpX1", "device.pressUpX1", width: 2, height: 1, decoration: "flat") {
+            state "default", label: '${currentValue}', backgroundColor: "#ffffff", action: "pressUpX1"
         }
         
-        standardTile("pressUpX2", "device.button", width: 2, height: 1, decoration: "flat") {
-            state "default", label: "Tap ▲▲", backgroundColor: "#ffffff", action: "pressUpX2"
+        standardTile("pressUpX2", "device.pressUpX2", width: 2, height: 1, decoration: "flat") {
+            state "default", label: '${currentValue}', backgroundColor: "#ffffff", action: "pressUpX2"
         }
         
-        standardTile("pressUpX3", "device.button", width: 2, height: 1, decoration: "flat") {
-            state "default", label: "Tap ▲▲▲", backgroundColor: "#ffffff", action: "pressUpX3"
+        standardTile("pressUpX3", "device.pressUpX3", width: 2, height: 1, decoration: "flat") {
+            state "default", label: '${currentValue}', backgroundColor: "#ffffff", action: "pressUpX3"
         }
         
-        standardTile("pressDownX1", "device.button", width: 2, height: 1, decoration: "flat") {
-            state "default", label: "Tap ▼", backgroundColor: "#ffffff", action: "pressDownX1"
+        standardTile("pressDownX1", "device.pressDownX1", width: 2, height: 1, decoration: "flat") {
+            state "default", label: '${currentValue}', backgroundColor: "#ffffff", action: "pressDownX1"
         }
         
-        standardTile("pressDownX2", "device.button", width: 2, height: 1, decoration: "flat") {
-            state "default", label: "Tap ▼▼", backgroundColor: "#ffffff", action: "pressDownX2"
+        standardTile("pressDownX2", "device.pressDownX2", width: 2, height: 1, decoration: "flat") {
+            state "default", label: '${currentValue}', backgroundColor: "#ffffff", action: "pressDownX2"
         }
         
-        standardTile("pressDownX3", "device.button", width: 2, height: 1, decoration: "flat") {
-            state "default", label: "Tap ▼▼▼", backgroundColor: "#ffffff", action: "pressDownX3"
+        standardTile("pressDownX3", "device.pressDownX3", width: 2, height: 1, decoration: "flat") {
+            state "default", label: '${currentValue}', backgroundColor: "#ffffff", action: "pressDownX3"
         }
         
-        standardTile("pressUpX4", "device.button", width: 2, height: 1, decoration: "flat") {
-            state "default", label: "Tap ▲▲▲▲", backgroundColor: "#ffffff", action: "pressUpX4"
+        standardTile("pressUpX4", "device.pressUpX4", width: 2, height: 1, decoration: "flat") {
+            state "default", label: '${currentValue}', backgroundColor: "#ffffff", action: "pressUpX4"
         }
         
-        standardTile("pressUpX5", "device.button", width: 2, height: 1, decoration: "flat") {
-            state "default", label: "Tap ▲▲▲▲▲", backgroundColor: "#ffffff", action: "pressUpX5"
+        standardTile("pressUpX5", "device.pressUpX5", width: 2, height: 1, decoration: "flat") {
+            state "default", label: '${currentValue}', backgroundColor: "#ffffff", action: "pressUpX5"
         }
         
-        standardTile("holdUp", "device.button", width: 2, height: 1, decoration: "flat") {
-			state "default", label: "Hold ▲", backgroundColor: "#ffffff", action: "holdUp"
+        standardTile("holdUp", "device.holdUp", width: 2, height: 1, decoration: "flat") {
+			state "default", label: '${currentValue}', backgroundColor: "#ffffff", action: "holdUp"
 		}
         
-        standardTile("pressDownX4", "device.button", width: 2, height: 1, decoration: "flat") {
-            state "default", label: "Tap ▼▼▼▼", backgroundColor: "#ffffff", action: "pressDownX4"
+        standardTile("pressDownX4", "device.pressDownX4", width: 2, height: 1, decoration: "flat") {
+            state "default", label: '${currentValue}', backgroundColor: "#ffffff", action: "pressDownX4"
         }
         
-        standardTile("pressDownX5", "device.button", width: 2, height: 1, decoration: "flat") {
-            state "default", label: "Tap ▼▼▼▼▼", backgroundColor: "#ffffff", action: "pressDownX5"
+        standardTile("pressDownX5", "device.pressDownX5", width: 2, height: 1, decoration: "flat") {
+            state "default", label: '${currentValue}', backgroundColor: "#ffffff", action: "pressDownX5"
         }
         
-        standardTile("holdDown", "device.button", width: 2, height: 1, decoration: "flat") {
-			state "default", label: "Hold ▼", backgroundColor: "#ffffff", action: "holdDown"
+        standardTile("holdDown", "device.holdDown", width: 2, height: 1, decoration: "flat") {
+			state "default", label: '${currentValue}', backgroundColor: "#ffffff", action: "holdDown"
 		}
     }
 }
@@ -247,7 +267,7 @@ def initialize() {
     sendEvent(name: "numberOfButtons", value: 6, displayed: true)
     if (enableDisableLocalChild && !childExists("ep101")) {
     try {
-        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep101", 
+        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep101",
                 [completedSetup: true, label: "${device.displayName} (Disable Local Control)",
                 isComponent: true, componentName: "ep101", componentLabel: "Disable Local Control"])
     } catch (e) {
@@ -272,18 +292,33 @@ def initialize() {
         state.oldLabel = device.label
     }
     
+    sendEvent([name:"pressUpX1", value:pressUpX1Label? "${pressUpX1Label} ▲" : "Tap ▲", displayed: false])
+    sendEvent([name:"pressDownX1", value:pressDownX1Label? "${pressDownX1Label} ▼" : "Tap ▼", displayed: false])
+    sendEvent([name:"pressUpX2", value:pressUpX2Label? "${pressUpX2Label} ▲▲" : "Tap ▲▲", displayed: false])
+    sendEvent([name:"pressDownX2", value:pressDownX2Label? "${pressDownX2Label} ▼▼" : "Tap ▼▼", displayed: false])
+    sendEvent([name:"pressUpX3", value:pressUpX3Label? "${pressUpX3Label} ▲▲▲" : "Tap ▲▲▲", displayed: false])
+    sendEvent([name:"pressDownX3", value:pressDownX3Label? "${pressDownX3Label} ▼▼▼" : "Tap ▼▼▼", displayed: false])
+    sendEvent([name:"pressUpX4", value:pressUpX4Label? "${pressUpX4Label} ▲▲▲▲" : "Tap ▲▲▲▲", displayed: false])
+    sendEvent([name:"pressDownX4", value:pressDownX4Label? "${pressDownX4Label} ▼▼▼▼" : "Tap ▼▼▼▼", displayed: false])
+    sendEvent([name:"pressUpX5", value:pressUpX5Label? "${pressUpX5Label} ▲▲▲▲▲" : "Tap ▲▲▲▲▲", displayed: false])
+    sendEvent([name:"pressDownX5", value:pressDownX5Label? "${pressDownX5Label} ▼▼▼▼▼" : "Tap ▼▼▼▼▼", displayed: false])
+    sendEvent([name:"holdUp", value:pressHoldUpLabel? "${pressHoldUpLabel} ▲" : "Hold ▲", displayed: false])
+    sendEvent([name:"holdDown", value:pressHoldDownLabel? "${pressHoldDownLabel} ▼" : "Hold ▼", displayed: false])
+    
     def cmds = processAssociations()
     cmds << zwave.versionV1.versionGet()
-    cmds << zwave.configurationV1.configurationSet(scaledConfigurationValue: ledIndicator!=null? ledIndicator.toInteger() : 1, parameterNumber: 3, size: 1)
+    cmds << zwave.configurationV1.configurationSet(scaledConfigurationValue: ledIndicator!=null? ledIndicator.toInteger() : 0, parameterNumber: 3, size: 1)
     cmds << zwave.configurationV1.configurationGet(parameterNumber: 3)
     cmds << zwave.configurationV1.configurationSet(scaledConfigurationValue: invert!=null? invert.toInteger() : 0, parameterNumber: 4, size: 1)
     cmds << zwave.configurationV1.configurationGet(parameterNumber: 4)
     cmds << zwave.configurationV1.configurationSet(scaledConfigurationValue: autoOff!=null? autoOff.toInteger() : 0, parameterNumber: 5, size: 2)
     cmds << zwave.configurationV1.configurationGet(parameterNumber: 5)
+
 	if (state.disableLocal != settings.disableLocal) {
         cmds << zwave.protectionV2.protectionSet(localProtectionState : disableLocal!=null? disableLocal.toInteger() : 0, rfProtectionState: 0)
         cmds << zwave.protectionV2.protectionGet()
     }
+    
     state.disableLocal = settings.disableLocal
     return cmds
 }
@@ -383,18 +418,37 @@ def zwaveEvent(hubitat.zwave.Command cmd) {
 }
 
 def on() {
-	commands([
+    if (buttonOn == "1") {
+        sendEvent([name: "pushed", value: 1, isStateChange:true])
+    }
+    if (disableRemote != "2") {
+    commands([
 		zwave.basicV1.basicSet(value: 0xFF),
 		zwave.basicV1.basicGet()
 	])
+    } else {
+    commands([
+        zwave.basicV1.basicGet()
+    ])
+    }
 }
 
 def off() {
-	commands([
+    if (buttonOff == "1") {
+        sendEvent([name: "held", value: 1, isStateChange:true])
+    }
+    if (disableRemote != "2") {
+    commands([
 		zwave.basicV1.basicSet(value: 0x00),
 		zwave.basicV1.basicGet()
 	])
+    } else {
+    commands([
+        zwave.basicV1.basicGet()
+    ])
+    }
 }
+
 
 def ping() {
     refresh()
@@ -528,7 +582,7 @@ def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationReport cmd) {
     def temp = []
     if (cmd.nodeId != []) {
        cmd.nodeId.each {
-          temp += it.toString().format( '%02x', it.toInteger() ).toUpperCase()
+          temp += it.toString().format( '%02x', it.toInteger() )
        }
     } 
     state."actualAssociation${cmd.groupingIdentifier}" = temp
