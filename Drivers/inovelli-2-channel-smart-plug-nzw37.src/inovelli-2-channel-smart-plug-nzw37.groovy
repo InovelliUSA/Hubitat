@@ -46,6 +46,7 @@ metadata {
         fingerprint mfr: "0312", prod: "B221", model: "251C"
         fingerprint deviceId: "0x1001", inClusters: "0x5E,0x85,0x59,0x5A,0x72,0x60,0x8E,0x73,0x27,0x25,0x86"
         fingerprint deviceId: "0x1001", inClusters: "0x5E,0x25,0x27,0x85,0x8E,0x59,0x55,0x86,0x72,0x5A,0x73,0x70,0x5B,0x9F,0x60,0x6C,0x7A"
+        fingerprint deviceId: "0x1001", inClusters: "0x5E,0x25,0x27,0x85,0x8E,0x59,0x55,0x86,0x72,0x5A,0x73,0x70,0x5B,0x60,0x6C"
     }
     
     simulator {}
@@ -116,8 +117,9 @@ def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd, ep = null) {
         } else {
             def allOff = true
             childDevices.each {
-                n ->
-                    if (n.currentState("switch").value != "off") allOff = false
+                childDevice ->
+				    if (childDevice.deviceNetworkId != "$device.deviceNetworkId-ep$ep") 
+                       if (childDevice.currentState("switch").value != "off") allOff = false
             }
             if (allOff) {
                 event = [createEvent([name: "switch", value: "off"])]
@@ -205,8 +207,8 @@ def on() {
     log.debug "on()"
     commands([
             zwave.switchAllV1.switchAllOn(),
-            encap(zwave.switchBinaryV1.switchBinaryGet(), 1),
-            encap(zwave.switchBinaryV1.switchBinaryGet(), 2)
+            encap(zwave.basicV1.basicGet(), 1),
+            encap(zwave.basicV1.basicGet(), 2)
     ])
 }
 
@@ -214,47 +216,49 @@ def off() {
     log.debug "off()"
     commands([
             zwave.switchAllV1.switchAllOff(),
-            encap(zwave.switchBinaryV1.switchBinaryGet(), 1),
-            encap(zwave.switchBinaryV1.switchBinaryGet(), 2)
+            encap(zwave.basicV1.basicGet(), 1),
+            encap(zwave.basicV1.basicGet(), 2)
     ])
 }
 
 def childOn(String dni) {
     log.debug "childOn($dni)"
     def cmds = []
-    cmds << new hubitat.device.HubAction(command(encap(zwave.basicV1.basicSet(value: 0xFF), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
-    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
-    cmds
+    commands([
+		encap(zwave.basicV1.basicSet(value: 0xFF), channelNumber(dni)),
+        encap(zwave.basicV1.basicGet(), channelNumber(dni))
+    ])
 }
 
 def childOff(String dni) {
     log.debug "childOff($dni)"
     def cmds = []
-    cmds << new hubitat.device.HubAction(command(encap(zwave.basicV1.basicSet(value: 0x00), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
-    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
-    cmds
+    commands([
+		encap(zwave.basicV1.basicSet(value: 0x00), channelNumber(dni)),
+        encap(zwave.basicV1.basicGet(), channelNumber(dni))
+    ])
 }
 
 def childRefresh(String dni) {
     log.debug "childRefresh($dni)"
     def cmds = []
-    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds << new hubitat.device.HubAction(command(encap(zwave.basicV1.basicGet(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
     cmds
 }
 
 def poll() {
     log.debug "poll()"
     commands([
-            encap(zwave.switchBinaryV1.switchBinaryGet(), 1),
-            encap(zwave.switchBinaryV1.switchBinaryGet(), 2),
+            encap(zwave.basicV1.basicGet(), 1),
+            encap(zwave.basicV1.basicGet(), 2),
     ])
 }
 
 def refresh() {
     log.debug "refresh()"
     commands([
-            encap(zwave.switchBinaryV1.switchBinaryGet(), 1),
-            encap(zwave.switchBinaryV1.switchBinaryGet(), 2),
+            encap(zwave.basicV1.basicGet(), 1),
+            encap(zwave.basicV1.basicGet(), 2),
     ])
 }
 
@@ -355,6 +359,8 @@ def setDefaultAssociations() {
 }
 
 def setAssociationGroup(group, nodes, action, endpoint = null){
+	log.debug nodes
+	log.debug action
     if (!state."desiredAssociation${group}") {
         state."desiredAssociation${group}" = nodes
     } else {
@@ -363,6 +369,7 @@ def setAssociationGroup(group, nodes, action, endpoint = null){
                 state."desiredAssociation${group}" = state."desiredAssociation${group}" - nodes
             break
             case 1:
+			    log.debug nodes
                 state."desiredAssociation${group}" = state."desiredAssociation${group}" + nodes
             break
         }
