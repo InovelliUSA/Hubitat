@@ -259,6 +259,36 @@ def configure() {
     commands(cmds)
 }
 
+def integer2Cmd(value, size) {
+    try{
+	switch(size) {
+	case 1:
+		[value]
+    break
+	case 2:
+    	def short value1   = value & 0xFF
+        def short value2 = (value >> 8) & 0xFF
+        [value2, value1]
+    break
+    case 3:
+    	def short value1   = value & 0xFF
+        def short value2 = (value >> 8) & 0xFF
+        def short value3 = (value >> 16) & 0xFF
+        [value3, value2, value1]
+    break
+	case 4:
+    	def short value1 = value & 0xFF
+        def short value2 = (value >> 8) & 0xFF
+        def short value3 = (value >> 16) & 0xFF
+        def short value4 = (value >> 24) & 0xFF
+		[value4, value3, value2, value1]
+	break
+	}
+    } catch (e) {
+        log.debug "Error: integer2Cmd $e Value: $value"
+    }
+}
+
 def updated() {
     if (!state.lastRan || now() >= state.lastRan + 2000) {
         log.debug "updated()"
@@ -288,9 +318,9 @@ def initialize() {
     def cmds = processAssociations()
     cmds << zwave.configurationV1.configurationSet(scaledConfigurationValue: ledIndicator!=null? ledIndicator.toInteger() : 0, parameterNumber: 1, size: 1)
     cmds << zwave.configurationV1.configurationGet(parameterNumber: 1)
-    cmds << zwave.configurationV1.configurationSet(scaledConfigurationValue: autoOff1!=null? autoOff1.toInteger() : 0, parameterNumber: 2, size: 2)
+    cmds << zwave.configurationV1.configurationSet(configurationValue: autoOff1!=null? integer2Cmd(autoOff1.toInteger(), 2) : integer2Cmd(0,2), parameterNumber: 2, size: 2)
     cmds << zwave.configurationV1.configurationGet(parameterNumber: 2)
-    cmds << zwave.configurationV1.configurationSet(scaledConfigurationValue: autoOff2!=null? autoOff2.toInteger() : 0, parameterNumber: 3, size: 2)
+    cmds << zwave.configurationV1.configurationSet(configurationValue: autoOff2!=null? integer2Cmd(autoOff2.toInteger(), 2) : integer2Cmd(0,2), parameterNumber: 3, size: 2)
     cmds << zwave.configurationV1.configurationGet(parameterNumber: 3)
     return cmds
 }
