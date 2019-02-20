@@ -1,6 +1,6 @@
 /**
  *
- *  Hubitat Import URL: https://github.com/InovelliUSA/Hubitat/raw/master/Drivers/inovelli-door-window-sensor-nzw1201.src/inovelli-door-window-sensor-nzw1201.groovy
+ *  Hubitat Import URL: https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-door-window-sensor-nzw1201.src/inovelli-door-window-sensor-nzw1201.groovy
  *
  *  Inovelli Door/Window Sensor NZW1201
  *  Author: Eric Maycock (erocm123)
