@@ -1,4 +1,7 @@
- /**
+/**
+ *
+ *  Hubitat Import URL: https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-nzw30-w-scene.src/inovelli-switch-nzw30-w-scene.groovy
+ *
  *  Inovelli Switch NZW30/NZW30T w/Scene
  *  Author: Eric Maycock (erocm123)
  *  Date: 2018-12-04
