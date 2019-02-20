@@ -1,4 +1,7 @@
  /**
+ *
+ *  Hubitat Import URL: https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-nzw31-w-scene.src/inovelli-dimmer-nzw31-w-scene.groovy
+ *
  *  Inovelli Dimmer NZW31/NZW31T w/Scene
  *  Author: Eric Maycock (erocm123)
  *  Date: 2018-12-04
