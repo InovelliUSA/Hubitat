@@ -1,4 +1,7 @@
 /**
+ *
+ *  Hubitat Import URL: https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-2-channel-outdoor-smart-plug-nzw97.src/inovelli-2-channel-outdoor-smart-plug-nzw97.groovy
+ *
  *  Inovelli 2-Channel Outdoor Smart Plug NZW97
  *  Author: Eric Maycock (erocm123)
  *  Date: 2018-05-02
