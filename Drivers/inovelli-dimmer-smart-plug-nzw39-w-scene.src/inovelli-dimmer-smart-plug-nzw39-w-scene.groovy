@@ -1,4 +1,7 @@
 /**
+ *
+ *  Hubitat Import URL: https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-smart-plug-nzw39-w-scene.src/inovelli-dimmer-smart-plug-nzw39-w-scene.groovy
+ *
  *  Inovelli Dimmer Smart Plug NZW39 w/Scene
  *  Author: Eric Maycock (erocm123)
  *  Date: 2017-10-18
