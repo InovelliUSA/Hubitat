@@ -1,4 +1,7 @@
 /**
+ *
+ *  Hubitat Import URL: https://github.com/InovelliUSA/Hubitat/raw/master/Drivers/inovelli-dimmer-smart-plug-nzw39.src/inovelli-dimmer-smart-plug-nzw39.groovy
+ *
  *  Copyright 2015 SmartThings
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
