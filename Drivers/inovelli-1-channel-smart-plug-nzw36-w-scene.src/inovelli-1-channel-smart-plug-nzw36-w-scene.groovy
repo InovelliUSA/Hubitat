@@ -1,4 +1,7 @@
- /**
+/**
+ *
+ *  Hubitat Import URL: https://github.com/InovelliUSA/Hubitat/raw/master/Drivers/inovelli-1-channel-smart-plug-nzw36-w-scene.src/inovelli-1-channel-smart-plug-nzw36-w-scene.groovy
+ *
  *  Inovelli 1-Channel Smart Plug NZW36 w/Scene
  *  Author: Eric Maycock (erocm123)
  *  Date: 2017-09-19
