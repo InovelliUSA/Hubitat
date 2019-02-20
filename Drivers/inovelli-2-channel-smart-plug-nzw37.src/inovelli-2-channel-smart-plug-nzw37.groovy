@@ -1,5 +1,7 @@
 /**
  *
+ *  Hubitat Import URL: https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-2-channel-smart-plug-nzw37.src/inovelli-2-channel-smart-plug-nzw37.groovy
+ *
  *  Inovelli 2-Channel Smart Plug NZW37
  *   
  *  github: Eric Maycock (erocm123)
