@@ -17,6 +17,8 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ *  2019-07-09: Removed unused simulator and tiles sections
+ *
  *  2018-12-04: Added option to "Disable Remote Control" and to send button events 1,pushed / 1,held for on / off.
  *
  *  2018-06-20: Modified tile layout. Update firmware version reporting. Bug fix.
@@ -68,9 +70,6 @@ metadata {
         fingerprint deviceId: "0x1101", inClusters: "0x5E,0x26,0x27,0x70,0x75,0x22,0x85,0x8E,0x59,0x55,0x86,0x72,0x5A,0x73,0x6C,0x7A"
     }
 
-    simulator {
-    }
-    
     preferences {
         input "minimumLevel", "number", title: "Minimum Level\n\nMinimum dimming level for attached light\nRange: 1 to 40", description: "Tap to set", required: false, range: "1..40", defaultValue: "1"
         input "dimmingStep", "number", title: "Dimming Step Size\n\nPercentage of step when switch is dimming up or down\nRange: 0 to 99 (0 - Instant)", description: "Tap to set", required: false, range: "0..99", defaultValue: "3"
@@ -94,59 +93,29 @@ metadata {
         input "group3remote", "bool", title: "Send command on z-wave action", description: "", required: false, defaultValue: true
         input "group3way", "bool", title: "Send command on 3-way action", description: "", required: false, defaultValue: true
         input "group3timer", "bool", title: "Send command on auto off timer", description: "", required: false, defaultValue: true
-    }
-    
-    tiles {
-        multiAttributeTile(name: "switch", type: "lighting", width: 6, height: 4, canChangeIcon: true) {
-            tileAttribute("device.switch", key: "PRIMARY_CONTROL") {
-                attributeState "off", label: '${name}', action: "switch.on", icon: "st.switches.switch.off", backgroundColor: "#ffffff", nextState: "turningOn"
-                attributeState "on", label: '${name}', action: "switch.off", icon: "st.switches.switch.on", backgroundColor: "#00a0dc", nextState: "turningOff"
-                attributeState "turningOff", label: '${name}', action: "switch.on", icon: "st.switches.switch.off", backgroundColor: "#ffffff", nextState: "turningOn"
-                attributeState "turningOn", label: '${name}', action: "switch.off", icon: "st.switches.switch.on", backgroundColor: "#00a0dc", nextState: "turningOff"
-            }
-            tileAttribute ("device.level", key: "SLIDER_CONTROL") {
-                attributeState "level", action:"switch level.setLevel"
-            }
-            tileAttribute("device.lastEvent", key: "SECONDARY_CONTROL") {
-                attributeState("default", label:'${currentValue}')
-            }
-        }
-        
-        valueTile("lastActivity", "device.lastActivity", inactiveLabel: false, decoration: "flat", width: 4, height: 1) {
-            state "default", label: 'Last Activity: ${currentValue}',icon: "st.Health & Wellness.health9"
-        }
-        valueTile("firmware", "device.firmware", inactiveLabel: false, decoration: "flat", width: 2, height: 1) {
-            state "default", label: 'fw: ${currentValue}', icon: ""
-        }
-        
-        valueTile("icon", "device.icon", inactiveLabel: false, decoration: "flat", width: 5, height: 1) {
-            state "default", label: '', icon: "https://inovelli.com/wp-content/uploads/Device-Handler/Inovelli-Device-Handler-Logo.png"
-        }
-        standardTile("refresh", "device.switch", inactiveLabel: false, decoration: "flat", width: 1, height: 1) {
-            state "default", label: "", action: "refresh.refresh", icon: "st.secondary.refresh"
-        }
+	input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true, required: true
     }
 }
 
 def installed() {
-    log.debug "installed()"
+    if (logEnabled) log.debug "installed()"
     refresh()
 }
 
 def configure() {
-    log.debug "configure()"
+    if (logEnabled) log.debug "configure()"
     def cmds = initialize()
     commands(cmds)
 }
 
 def updated() {
     if (!state.lastRan || now() >= state.lastRan + 2000) {
-        log.debug "updated()"
+        if (logEnabled) log.debug "updated()"
         state.lastRan = now()
         def cmds = initialize()
         commands(cmds)
     } else {
-        log.debug "updated() ran within the last 2 seconds. Skipping execution."
+        if (logEnabled) log.debug "updated() ran within the last 2 seconds. Skipping execution."
     }
 }
 
@@ -176,7 +145,7 @@ def integer2Cmd(value, size) {
 	break
 	}
     } catch (e) {
-        log.debug "Error: integer2Cmd $e Value: $value"
+        if (logEnabled) log.debug "Error: integer2Cmd $e Value: $value"
     }
 }
 
@@ -191,11 +160,11 @@ def initialize() {
         runIn(3, "sendAlert", [data: [message: "Child device creation failed. Make sure the device handler for \"Switch Level Child Device\" is installed"]])
     }
     } else if (!enableDefaultLocalChild && childExists("ep8")) {
-        log.debug "Trying to delete child device ep8. If this fails it is likely that there is a SmartApp using the child device in question."
+        if (logEnabled) log.debug "Trying to delete child device ep8. If this fails it is likely that there is a SmartApp using the child device in question."
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep8")}
         try {
-            log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            if (logEnabled) log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
             //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
@@ -210,11 +179,11 @@ def initialize() {
         runIn(3, "sendAlert", [data: [message: "Child device creation failed. Make sure the device handler for \"Switch Level Child Device\" is installed"]])
     }
     } else if (!enableDefaultLocalChild && childExists("ep9")) {
-        log.debug "Trying to delete child device ep9. If this fails it is likely that there is a SmartApp using the child device in question."
+        if (logEnabled) log.debug "Trying to delete child device ep9. If this fails it is likely that there is a SmartApp using the child device in question."
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep9")}
         try {
-            log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            if (logEnabled) log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
             //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
@@ -229,11 +198,11 @@ def initialize() {
         runIn(3, "sendAlert", [data: [message: "Child device creation failed. Make sure the device handler for \"Switch Level Child Device\" is installed"]])
     }
     } else if (!enableDisableLocalChild && childExists("ep101")) {
-        log.debug "Trying to delete child device ep101. If this fails it is likely that there is a SmartApp using the child device in question."
+        if (logEnabled) log.debug "Trying to delete child device ep101. If this fails it is likely that there is a SmartApp using the child device in question."
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep101")}
         try {
-            log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            if (logEnabled) log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
             //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
@@ -305,9 +274,9 @@ def parse(description) {
         def cmd = zwave.parse(description, [0x20: 1, 0x25: 1, 0x70: 1, 0x98: 1])
         if (cmd) {
             result = zwaveEvent(cmd)
-            log.debug("'$description' parsed to $result")
+            if (logEnabled) log.debug("'$description' parsed to $result")
         } else {
-            log.debug("Couldn't zwave.parse '$description'")
+            if (logEnabled) log.debug("Couldn't zwave.parse '$description'")
         }
     }
     def now
@@ -347,7 +316,7 @@ private dimmerEvents(hubitat.zwave.Command cmd) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.configurationv1.ConfigurationReport cmd) {
-    log.debug "${device.displayName} parameter '${cmd.parameterNumber}' with a byte size of '${cmd.size}' is set to '${cmd2Integer(cmd.configurationValue)}'"
+    if (logEnabled) log.debug "${device.displayName} parameter '${cmd.parameterNumber}' with a byte size of '${cmd.size}' is set to '${cmd2Integer(cmd.configurationValue)}'"
     def integerValue = cmd2Integer(cmd.configurationValue)
     switch (cmd.parameterNumber) {
         case 8:
@@ -378,7 +347,7 @@ def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cm
 }
 
 def zwaveEvent(hubitat.zwave.Command cmd) {
-    log.debug "Unhandled: $cmd"
+    if (logEnabled) log.debug "Unhandled: $cmd"
     null
 }
 
@@ -443,17 +412,17 @@ def setLevel(value, duration) {
 
 
 def childOn(String dni) {
-    log.debug "childOn($dni)"
+    if (logEnabled) log.debug "childOn($dni)"
     childSetLevel(dni, 99)
 }
 
 def childOff(String dni) {
-    log.debug "childOff($dni)"
+    if (logEnabled) log.debug "childOff($dni)"
     childSetLevel(dni, 0)
 }
 
 def childRefresh(String dni) {
-    log.debug "childRefresh($dni)"
+    if (logEnabled) log.debug "childRefresh($dni)"
 }
 
 def childSetLevel(String dni, value) {
@@ -508,17 +477,17 @@ def childExists(ep) {
 }
 
 def ping() {
-    log.debug "ping()"
+    if (logEnabled) log.debug "ping()"
     refresh()
 }
 
 def poll() {
-    log.debug "poll()"
+    if (logEnabled) log.debug "poll()"
     refresh()
 }
 
 def refresh() {
-    log.debug "refresh()"
+    if (logEnabled) log.debug "refresh()"
     commands([zwave.switchBinaryV1.switchBinaryGet(),
               zwave.switchMultilevelV1.switchMultilevelGet()
     ])
@@ -565,7 +534,7 @@ def processAssociations(){
    if (state.associationGroups) {
        associationGroups = state.associationGroups
    } else {
-       log.debug "Getting supported association groups from device"
+       if (logEnabled) log.debug "Getting supported association groups from device"
        cmds <<  zwave.associationV2.associationGroupingsGet()
    }
    for (int i = 1; i <= associationGroups; i++){
@@ -573,17 +542,17 @@ def processAssociations(){
          if(state."desiredAssociation${i}" != null || state."defaultG${i}") {
             def refreshGroup = false
             ((state."desiredAssociation${i}"? state."desiredAssociation${i}" : [] + state."defaultG${i}") - state."actualAssociation${i}").each {
-                log.debug "Adding node $it to group $i"
+                if (logEnabled) log.debug "Adding node $it to group $i"
                 cmds << zwave.associationV2.associationSet(groupingIdentifier:i, nodeId:Integer.parseInt(it,16))
                 refreshGroup = true
             }
             ((state."actualAssociation${i}" - state."defaultG${i}") - state."desiredAssociation${i}").each {
-                log.debug "Removing node $it from group $i"
+                if (logEnabled) log.debug "Removing node $it from group $i"
                 cmds << zwave.associationV2.associationRemove(groupingIdentifier:i, nodeId:Integer.parseInt(it,16))
                 refreshGroup = true
             }
             if (refreshGroup == true) cmds << zwave.associationV2.associationGet(groupingIdentifier:i)
-            else log.debug "There are no association actions to complete for group $i"
+            else if (logEnabled) log.debug "There are no association actions to complete for group $i"
          }
       } else {
          log.debug "Association info not known for group $i. Requesting info from device."
@@ -601,18 +570,18 @@ def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationReport cmd) {
        }
     } 
     state."actualAssociation${cmd.groupingIdentifier}" = temp
-    log.debug "Associations for Group ${cmd.groupingIdentifier}: ${temp}"
+    if (logEnabled) log.debug "Associations for Group ${cmd.groupingIdentifier}: ${temp}"
     updateDataValue("associationGroup${cmd.groupingIdentifier}", "$temp")
 }
 
 def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationGroupingsReport cmd) {
     sendEvent(name: "groups", value: cmd.supportedGroupings)
-    log.debug "Supported association groups: ${cmd.supportedGroupings}"
+    if (logEnabled) log.debug "Supported association groups: ${cmd.supportedGroupings}"
     state.associationGroups = cmd.supportedGroupings
 }
 
 def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
-    log.debug cmd
+    if (logEnabled) log.debug cmd
     if(cmd.applicationVersion && cmd.applicationSubVersion) {
 	    def firmware = "${cmd.applicationVersion}.${cmd.applicationSubVersion.toString().padLeft(2,'0')}"
         state.needfwUpdate = "false"
@@ -621,7 +590,7 @@ def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.protectionv2.ProtectionReport cmd) {
-    log.debug cmd
+    if (logEnabled) log.debug cmd
     def integerValue = cmd.localProtectionState
     def children = childDevices
     def childDevice = children.find{it.deviceNetworkId.endsWith("ep101")}
