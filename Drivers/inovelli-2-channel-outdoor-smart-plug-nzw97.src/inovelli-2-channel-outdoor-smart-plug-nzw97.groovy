@@ -127,16 +127,6 @@ def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd, ep = null) {
     }
 }
 
-def zwaveEvent(hubitat.zwave.commands.basicv1.BasicSet cmd) {
-    log.debug "BasicSet ${cmd}"
-    def result = createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "digital")
-    def cmds = []
-    cmds << encap(zwave.switchBinaryV1.switchBinaryGet(), 1)
-    cmds << encap(zwave.switchBinaryV1.switchBinaryGet(), 2)
-    //return [result, response(commands(cmds))] // returns the result of reponse()
-    return response(commands(cmds)) // returns the result of reponse()
-}
-
 def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd, ep = null) {
     log.debug "SwitchBinaryReport ${cmd} - ep ${ep}"
     if (ep) {
