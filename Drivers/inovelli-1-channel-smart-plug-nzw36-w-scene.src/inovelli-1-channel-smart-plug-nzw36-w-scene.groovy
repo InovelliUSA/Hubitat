@@ -1,7 +1,4 @@
 /**
- *
- *  Hubitat Import URL: https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-1-channel-smart-plug-nzw36-w-scene.src/inovelli-1-channel-smart-plug-nzw36-w-scene.groovy
- *
  *  Inovelli 1-Channel Smart Plug NZW36 w/Scene
  *  Author: Eric Maycock (erocm123)
  *  Date: 2017-09-19
@@ -20,7 +17,12 @@
  */
  
 metadata {
-    definition (name: "Inovelli 1-Channel Smart Plug NZW36 w/Scene", namespace: "InovelliUSA", author: "Eric Maycock") {
+    definition (
+        name: "Inovelli 1-Channel Smart Plug NZW36 w/Scene", 
+        namespace: "InovelliUSA", 
+        author: "Eric Maycock",
+        importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-1-channel-smart-plug-nzw36-w-scene.src/inovelli-1-channel-smart-plug-nzw36-w-scene.groovy"
+    ) {
         capability "Switch"
         capability "Refresh"
         capability "Polling"
