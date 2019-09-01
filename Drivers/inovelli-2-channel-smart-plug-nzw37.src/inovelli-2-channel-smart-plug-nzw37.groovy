@@ -1,7 +1,4 @@
 /**
- *
- *  Hubitat Import URL: https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-2-channel-smart-plug-nzw37.src/inovelli-2-channel-smart-plug-nzw37.groovy
- *
  *  Inovelli 2-Channel Smart Plug NZW37
  *   
  *  github: Eric Maycock (erocm123)
@@ -26,7 +23,12 @@
  */
 
 metadata {
-    definition(name: "Inovelli 2-Channel Smart Plug NZW37", namespace: "InovelliUSA", author: "Eric Maycock") {
+    definition(
+        name: "Inovelli 2-Channel Smart Plug NZW37", 
+        namespace: "InovelliUSA", 
+        author: "Eric Maycock",
+        importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-2-channel-smart-plug-nzw37.src/inovelli-2-channel-smart-plug-nzw37.groovy"
+    ) {
         capability "Actuator"
         capability "Sensor"
         capability "Switch"

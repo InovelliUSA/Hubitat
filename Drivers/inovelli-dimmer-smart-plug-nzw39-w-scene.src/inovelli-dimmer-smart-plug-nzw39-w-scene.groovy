@@ -1,7 +1,4 @@
 /**
- *
- *  Hubitat Import URL: https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-smart-plug-nzw39-w-scene.src/inovelli-dimmer-smart-plug-nzw39-w-scene.groovy
- *
  *  Inovelli Dimmer Smart Plug NZW39 w/Scene
  *  Author: Eric Maycock (erocm123)
  *  Date: 2017-10-18
@@ -20,7 +17,12 @@
  */
  
 metadata {
-    definition (name: "Inovelli Dimmer Smart Plug NZW39 w/Scene", namespace: "InovelliUSA", author: "Eric Maycock") {
+    definition (
+        name: "Inovelli Dimmer Smart Plug NZW39 w/Scene", 
+        namespace: "InovelliUSA", 
+        author: "Eric Maycock",
+        importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-smart-plug-nzw39-w-scene.src/inovelli-dimmer-smart-plug-nzw39-w-scene.groovy"
+    ) {
         capability "Switch"
         capability "Refresh"
         capability "Polling"

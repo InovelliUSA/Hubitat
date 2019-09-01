@@ -1,7 +1,4 @@
 /**
- *
- *  Hubitat Import URL: https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-2-channel-outdoor-smart-plug-nzw97.src/inovelli-2-channel-outdoor-smart-plug-nzw97.groovy
- *
  *  Inovelli 2-Channel Outdoor Smart Plug NZW97
  *  Author: Eric Maycock (erocm123)
  *  Date: 2018-05-02
@@ -22,7 +19,12 @@
  */
  
 metadata {
-    definition(name: "Inovelli 2-Channel Outdoor Smart Plug NZW97", namespace: "InovelliUSA", author: "Eric Maycock") {
+    definition(
+        name: "Inovelli 2-Channel Outdoor Smart Plug NZW97", 
+        namespace: "InovelliUSA", 
+        author: "Eric Maycock",
+        importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-2-channel-outdoor-smart-plug-nzw97.src/inovelli-2-channel-outdoor-smart-plug-nzw97.groovy"
+    ) {
         capability "Actuator"
         capability "Sensor"
         capability "Switch"
@@ -125,16 +127,6 @@ def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd, ep = null) {
         }
         return event
     }
-}
-
-def zwaveEvent(hubitat.zwave.commands.basicv1.BasicSet cmd) {
-    log.debug "BasicSet ${cmd}"
-    def result = createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "digital")
-    def cmds = []
-    cmds << encap(zwave.switchBinaryV1.switchBinaryGet(), 1)
-    cmds << encap(zwave.switchBinaryV1.switchBinaryGet(), 2)
-    //return [result, response(commands(cmds))] // returns the result of reponse()
-    return response(commands(cmds)) // returns the result of reponse()
 }
 
 def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd, ep = null) {

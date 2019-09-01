@@ -1,7 +1,4 @@
  /**
- *
- *  Hubitat Import URL: https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-nzw31-w-scene.src/inovelli-dimmer-nzw31-w-scene.groovy
- *
  *  Inovelli Dimmer NZW31/NZW31T w/Scene
  *  Author: Eric Maycock (erocm123)
  *  Date: 2018-12-04
@@ -43,7 +40,13 @@
  */
  
 metadata {
-    definition (name: "Inovelli Dimmer NZW31 w/Scene", namespace: "InovelliUSA", author: "Eric Maycock", vid: "generic-dimmer") {
+    definition (
+        name: "Inovelli Dimmer NZW31 w/Scene", 
+        namespace: "InovelliUSA", 
+        author: "Eric Maycock", 
+        vid: "generic-dimmer",
+        importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-nzw31-w-scene.src/inovelli-dimmer-nzw31-w-scene.groovy"
+    ) {
         capability "Switch"
         capability "Refresh"
         capability "Polling"

@@ -1,7 +1,4 @@
 /**
- *
- *  Hubitat Import URL: https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-nzw30.src/inovelli-switch-nzw30.groovy
- *
  *  Inovelli Switch NZW30
  *  Author: Eric Maycock (erocm123)
  *  Date: 2018-12-04
@@ -35,7 +32,13 @@
  */
  
 metadata {
-	definition (name: "Inovelli Switch NZW30", namespace: "InovelliUSA", author: "Eric Maycock", vid: "generic-switch") {
+	definition (
+        name: "Inovelli Switch NZW30", 
+        namespace: "InovelliUSA", 
+        author: "Eric Maycock", 
+        vid: "generic-switch",
+        importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-nzw30.src/inovelli-switch-nzw30.groovy"
+    ) {
 		capability "Switch"
 		capability "Refresh"
 		capability "Polling"
