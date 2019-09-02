@@ -601,7 +601,6 @@ def buttonEvent(button, value, type = "digital") {
     else
         sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Hold ▼':' Hold ▲'}", displayed:false)
     [name: value, value: button, isStateChange:true]
-    [name: value, value: button, isStateChange:true]
 }
 
 def zwaveEvent(hubitat.zwave.Command cmd) {
