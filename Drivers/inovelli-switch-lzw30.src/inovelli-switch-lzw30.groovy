@@ -42,6 +42,10 @@ metadata {
         command "holdDown"
         command "pressConfig"
         
+        command "childOn"
+        command "childOff"
+        command "childRefresh"
+        
         command "setAssociationGroup", ["number", "enum", "number", "number"] // group number, nodes, action (0 - remove, 1 - add), multi-channel endpoint (optional)
 
         fingerprint mfr: "031E", prod: "0004", model: "0001", deviceJoinName: "Inovelli Switch"
@@ -150,7 +154,7 @@ private sendAlert(data) {
     )
 }
 
-void childSetLevel(String dni, value) {
+def childSetLevel(String dni, value) {
     def valueaux = value as Integer
     def level = Math.max(Math.min(valueaux, 99), 0)    
     def cmds = []
@@ -160,7 +164,7 @@ void childSetLevel(String dni, value) {
             cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionGet() ))
         break
     }
-	sendHubCommand(cmds, 1000)
+	return cmds
 }
 
 private toggleTiles(number, value) {
@@ -179,31 +183,31 @@ private toggleTiles(number, value) {
    }
 }
 
-void childOn(String dni) {
+def childOn(String dni) {
     log.debug "childOn($dni)"
     def cmds = []
     if(channelNumber(dni).toInteger() <= 5) {
         toggleTiles("${channelNumber(dni)}", "on")
         cmds << new hubitat.device.HubAction(command(setParameter(8, calculateParameter("8-${channelNumber(dni)}"), 4)) )
-        sendHubCommand(cmds, 1000)
+        return cmds
     } else {
         childSetLevel(dni, 99)
     }
 }
 
-void childOff(String dni) {
+def childOff(String dni) {
     log.debug "childOff($dni)"
     def cmds = []
     if(channelNumber(dni).toInteger() <= 5) {
         toggleTiles("${channelNumber(dni)}", "off")
         cmds << new hubitat.device.HubAction(command(setParameter(8, 0, 4)) )
-        sendHubCommand(cmds, 1000)
+        return cmds
     } else {
         childSetLevel(dni, 99)
     }
 }
 
-void childRefresh(String dni) {
+def childRefresh(String dni) {
     log.debug "childRefresh($dni)"
 }
 
@@ -247,7 +251,7 @@ def initialize() {
     
     if (enableDisableLocalChild && !childExists("ep101")) {
     try {
-        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep101", null,
+        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep101",
                 [completedSetup: true, label: "${device.displayName} (Disable Local Control)",
                 isComponent: true, componentName: "ep101", componentLabel: "Disable Local Control"])
     } catch (e) {
@@ -268,7 +272,7 @@ def initialize() {
     [1,2,3,4,5].each { i ->
     if ((settings."parameter8-${i}a"!=null && settings."parameter8-${i}b"!=null && settings."parameter8-${i}c"!=null && settings."parameter8-${i}d"!=null) && !childExists("ep${i}")) {
     try {
-        addChildDevice("Switch Child Device", "${device.deviceNetworkId}-ep${i}", null,
+        addChildDevice("Switch Child Device", "${device.deviceNetworkId}-ep${i}",
                 [completedSetup: true, label: "${device.displayName} (Notification ${i})",
                 isComponent: true, componentName: "ep${i}", componentLabel: "Notification ${i}"])
     } catch (e) {

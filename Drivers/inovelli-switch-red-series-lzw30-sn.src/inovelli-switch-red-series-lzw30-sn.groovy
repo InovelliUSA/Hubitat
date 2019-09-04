@@ -17,7 +17,7 @@
  */
  
 metadata {
-    definition (name: "Inovelli Switch Red Series LZW30-SN", namespace: "inovelliUSA", author: "Eric Maycock", vid: "generic-switch", importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-red-series-lzw30-sn.src/inovelli-switch-red-series-lzw30-sn.groovy") {
+    definition (name: "Inovelli Switch Red Series LZW30-SN", namespace: "InovelliUSA", author: "Eric Maycock", vid: "generic-switch", importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-red-series-lzw30-sn.src/inovelli-switch-red-series-lzw30-sn.groovy") {
         capability "Switch"
         capability "Refresh"
         capability "Actuator"
@@ -45,6 +45,10 @@ metadata {
         command "holdUp"
         command "holdDown"
         command "pressConfig"
+        
+        command "childOn"
+        command "childOff"
+        command "childRefresh"
         
         command "setAssociationGroup", ["number", "enum", "number", "number"] // group number, nodes, action (0 - remove, 1 - add), multi-channel endpoint (optional)
 
@@ -183,25 +187,25 @@ private toggleTiles(number, value) {
    }
 }
 
-void childOn(String dni) {
+def childOn(String dni) {
     log.debug "childOn($dni)"
     def cmds = []
     if(channelNumber(dni).toInteger() <= 5) {
         toggleTiles("${channelNumber(dni)}", "on")
-        cmds << new hubitat.device.HubAction(command(setParameter(8, calculateParameter("8-${channelNumber(dni)}"), 4)) )
-        sendHubCommand(cmds, 1000)
+        cmds << new hubitat.device.HubAction(command(setParameter(8, calculateParameter("8-${channelNumber(dni)}"), 4)), hubitat.device.Protocol.ZWAVE )
+        return cmds
     } else {
         childSetLevel(dni, 99)
     }
 }
 
-void childOff(String dni) {
+def childOff(String dni) {
     log.debug "childOff($dni)"
     def cmds = []
     if(channelNumber(dni).toInteger() <= 5) {
         toggleTiles("${channelNumber(dni)}", "off")
-        cmds << new hubitat.device.HubAction(command(setParameter(8, 0, 4)) )
-        sendHubCommand(cmds, 1000)
+        cmds << new hubitat.device.HubAction(command(setParameter(8, 0, 4)), hubitat.device.Protocol.ZWAVE )
+        return cmds
     } else {
         childSetLevel(dni, 99)
     }
@@ -251,7 +255,7 @@ def initialize() {
     
     if (enableDisableLocalChild && !childExists("ep101")) {
     try {
-        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep101", null,
+        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep101",
                 [completedSetup: true, label: "${device.displayName} (Disable Local Control)",
                 isComponent: true, componentName: "ep101", componentLabel: "Disable Local Control"])
     } catch (e) {
@@ -272,7 +276,7 @@ def initialize() {
     [1,2,3,4,5].each { i ->
     if ((settings."parameter8-${i}a"!=null && settings."parameter8-${i}b"!=null && settings."parameter8-${i}c"!=null && settings."parameter8-${i}d"!=null) && !childExists("ep${i}")) {
     try {
-        addChildDevice("Switch Child Device", "${device.deviceNetworkId}-ep${i}", null,
+        addChildDevice("Switch Child Device", "${device.deviceNetworkId}-ep${i}",
                 [completedSetup: true, label: "${device.displayName} (Notification ${i})",
                 isComponent: true, componentName: "ep${i}", componentLabel: "Notification ${i}"])
     } catch (e) {
@@ -577,16 +581,16 @@ def zwaveEvent(hubitat.zwave.commands.centralscenev1.CentralSceneNotification cm
     switch (cmd.keyAttributes) {
        case 0:
        if (cmd.sceneNumber == 3) createEvent(buttonEvent(7, "pushed", "physical"))
-       else createEvent(buttonEvent(cmd.keyAttributes + 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical"))
+       else createEvent(buttonEvent(cmd.keyAttributes + 1, (cmd.sceneNumber == 1? "pushed" : "held"), "physical"))
        break
        case 1:
-       createEvent(buttonEvent(6, (cmd.sceneNumber == 2? "pushed" : "held"), "physical"))
+       createEvent(buttonEvent(6, (cmd.sceneNumber == 1? "pushed" : "held"), "physical"))
        break
        case 2:
        null
        break
        default:
-       createEvent(buttonEvent(cmd.keyAttributes - 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical"))
+       createEvent(buttonEvent(cmd.keyAttributes - 1, (cmd.sceneNumber == 1? "pushed" : "held"), "physical"))
        break
     }
 }
