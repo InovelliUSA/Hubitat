@@ -49,6 +49,7 @@ metadata {
         input "autoOff", "number", title: "Auto Off\n\nAutomatically turn switch off after this number of seconds\nRange: 0 to 32767", description: "Tap to set", required: false, range: "0..32767"
         input "ledIndicator", "enum", title: "LED Indicator\n\nTurn LED indicator on when light is:\n", description: "Tap to set", required: false, options:[[1: "On"], [0: "Off"], [2: "Disable"]], defaultValue: 1     
         input description: "1 pushed - Button 2x click", title: "Button Mappings", displayDuringSetup: false, type: "paragraph", element: "paragraph"
+	input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true	    
     }
     
     tiles {
@@ -119,7 +120,7 @@ def integer2Cmd(value, size) {
 	break
 	}
     } catch (e) {
-        log.debug "Error: integer2Cmd $e Value: $value"
+        if (logEnable) log.debug "Error: integer2Cmd $e Value: $value"
     }
 }
 
@@ -147,9 +148,9 @@ def parse(description) {
         def cmd = zwave.parse(description, [0x20: 1, 0x25: 1, 0x70: 1, 0x98: 1])
         if (cmd) {
             result = zwaveEvent(cmd)
-            log.debug("'$description' parsed to $result")
+            if (logEnable) log.debug("'$description' parsed to $result")
         } else {
-            log.debug("Couldn't zwave.parse '$description'")
+            if (logEnable) log.debug("Couldn't zwave.parse '$description'")
         }
     }
     def now
@@ -208,7 +209,7 @@ def buttonEvent(button, value, type = "digital") {
 }
 
 def zwaveEvent(hubitat.zwave.Command cmd) {
-    log.debug "Unhandled: $cmd"
+    if (logEnable) log.debug "Unhandled: $cmd"
     null
 }
 
@@ -242,17 +243,17 @@ def setLevel(value, duration) {
 }
 
 def ping() {
-    log.debug "ping()"
+    if (logEnable) log.debug "ping()"
     refresh()
 }
 
 def poll() {
-    log.debug "poll()"
+    if (logEnable) log.debug "poll()"
     refresh()
 }
 
 def refresh() {
-    log.debug "refresh()"
+    if (logEnable) log.debug "refresh()"
     commands([zwave.switchBinaryV1.switchBinaryGet(),
               zwave.switchMultilevelV1.switchMultilevelGet()
     ])
