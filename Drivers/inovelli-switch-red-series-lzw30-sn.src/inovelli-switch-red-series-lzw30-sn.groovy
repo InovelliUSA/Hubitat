@@ -582,16 +582,16 @@ def zwaveEvent(hubitat.zwave.commands.centralscenev1.CentralSceneNotification cm
     switch (cmd.keyAttributes) {
        case 0:
        if (cmd.sceneNumber == 3) createEvent(buttonEvent(7, "pushed", "physical"))
-       else createEvent(buttonEvent(cmd.keyAttributes + 1, (cmd.sceneNumber == 1? "pushed" : "held"), "physical"))
+       else createEvent(buttonEvent(cmd.keyAttributes + 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical"))
        break
        case 1:
-       createEvent(buttonEvent(6, (cmd.sceneNumber == 1? "pushed" : "held"), "physical"))
+       createEvent(buttonEvent(6, (cmd.sceneNumber == 2? "pushed" : "held"), "physical"))
        break
        case 2:
        null
        break
        default:
-       createEvent(buttonEvent(cmd.keyAttributes - 1, (cmd.sceneNumber == 1? "pushed" : "held"), "physical"))
+       createEvent(buttonEvent(cmd.keyAttributes - 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical"))
        break
     }
 }
