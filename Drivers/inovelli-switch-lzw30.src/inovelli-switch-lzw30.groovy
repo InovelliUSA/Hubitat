@@ -549,14 +549,17 @@ def parse(description) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd) {
+    if (logEnable) log.debug cmd
 	createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "physical")
 }
 
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicSet cmd) {
+    if (logEnable) log.debug cmd
 	createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "physical")
 }
 
 def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd) {
+    if (logEnable) log.debug cmd
 	createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "digital")
 }
 
@@ -669,6 +672,7 @@ def processAssociations(){
 }
 
 def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationReport cmd) {
+    if (logEnable) log.debug cmd
     def temp = []
     if (cmd.nodeId != []) {
        cmd.nodeId.each {
@@ -681,6 +685,7 @@ def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationReport cmd) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationGroupingsReport cmd) {
+    if (logEnable) log.debug cmd
     sendEvent(name: "groups", value: cmd.supportedGroupings)
     if (logEnable) log.debug "Supported association groups: ${cmd.supportedGroupings}"
     state.associationGroups = cmd.supportedGroupings
