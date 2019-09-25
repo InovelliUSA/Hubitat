@@ -38,10 +38,6 @@ metadata {
         fingerprint mfr: "031E", prod: "0004", model: "0001", deviceJoinName: "Inovelli Switch"
         fingerprint deviceId: "0x1001", inClusters: "0x5E,0x70,0x85,0x59,0x55,0x86,0x72,0x5A,0x73,0x98,0x9F,0x25,0x6C,0x75,0x22,0x7A" 
         fingerprint deviceId: "0x1001", inClusters: "0x5E,0x55,0x98,0x9F,0x6C,0x22,0x70,0x85,0x59,0x86,0x25,0x72,0x5A,0x5B,0x73,0x75,0x7A" 
-        
-        
-         
-        
     }
 
     simulator {
@@ -74,7 +70,8 @@ def generate_preferences()
     }
     
     input "disableLocal", "enum", title: "Disable Local Control\n\nDisable ability to control switch from the wall", description: "Tap to set", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
-    input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true
+    input name: "debugEnable", type: "bool", title: "Enable debug logging", defaultValue: true
+    input name: "infoEnable", type: "bool", title: "Enable informational logging", defaultValue: true
 }
 
 private channelNumber(String dni) {
@@ -121,7 +118,7 @@ private toggleTiles(number, value) {
 }
 
 def childOn(String dni) {
-    if (logEnable) log.debug "childOn($dni)"
+    if (infoEnable) log.info "childOn($dni)"
     def cmds = []
     if(channelNumber(dni).toInteger() <= 5) {
         toggleTiles("${channelNumber(dni)}", "on")
@@ -133,7 +130,7 @@ def childOn(String dni) {
 }
 
 def childOff(String dni) {
-    if (logEnable) log.debug "childOff($dni)"
+    if (infoEnable) log.info "childOff($dni)"
     def cmds = []
     if(channelNumber(dni).toInteger() <= 5) {
         toggleTiles("${channelNumber(dni)}", "off")
@@ -145,7 +142,7 @@ def childOff(String dni) {
 }
 
 def childRefresh(String dni) {
-    if (logEnable) log.debug "childRefresh($dni)"
+    if (infoEnable) log.info "childRefresh($dni)"
 }
 
 def childExists(ep) {
@@ -158,19 +155,19 @@ def childExists(ep) {
 }
 
 def installed() {
-    if (logEnable) log.debug "installed()"
+    if (infoEnable) log.info "installed()"
     refresh()
 }
 
 def configure() {
-    if (logEnable) log.debug "configure()"
+    if (infoEnable) log.info "configure()"
     def cmds = initialize()
     commands(cmds)
 }
 
 def updated() {
     if (!state.lastRan || now() >= state.lastRan + 2000) {
-        if (logEnable) log.debug "updated()"
+        if (infoEnable) log.info "updated()"
         state.lastRan = now()
         def cmds = initialize()
         if (cmds != [])
@@ -178,7 +175,7 @@ def updated() {
         else 
             return null
     } else {
-        if (logEnable) log.debug "updated() ran within the last 2 seconds. Skipping execution."
+        if (infoEnable) log.info "updated() ran within the last 2 seconds. Skipping execution."
     }
 }
 
@@ -194,11 +191,11 @@ def initialize() {
         runIn(3, "sendAlert", [data: [message: "Child device creation failed. Make sure the device handler for \"Switch Level Child Device\" is installed"]])
     }
     } else if (!enableDisableLocalChild && childExists("ep101")) {
-        if (logEnable) log.debug "Trying to delete child device ep101. If this fails it is likely that there is a SmartApp using the child device in question."
+        if (infoEnable) log.info "Trying to delete child device ep101. If this fails it is likely that there is a SmartApp using the child device in question."
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep101")}
         try {
-            if (logEnable) log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            if (infoEnable) log.info "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
             //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
@@ -221,7 +218,7 @@ def initialize() {
           cmds << getParameter(i)
       }
       else {
-          //if (logEnable) log.debug "Parameter already set"
+          //if (infoEnable) log.info "Parameter already set"
       }
     }
     
@@ -258,12 +255,12 @@ def calculateParameter(number) {
 }
 
 def setParameter(number, value, size) {
-    if (logEnable) log.debug "Setting parameter $number with a size of $size bytes to $value"
+    if (infoEnable) log.info "Setting parameter $number with a size of $size bytes to $value"
     return zwave.configurationV1.configurationSet(configurationValue: integer2Cmd(value.toInteger(),size), parameterNumber: number, size: size)
 }
 
 def getParameter(number) {
-    if (logEnable) log.debug "Retreiving value of parameter $number"
+    if (infoEnable) log.info "Retreiving value of parameter $number"
     return zwave.configurationV1.configurationGet(parameterNumber: number)
 }
 
@@ -339,7 +336,6 @@ def getParameterInfo(number, type){
     parameter.parameter11name="Periodic Power & Energy Reports"
     parameter.parameter12name="Energy Reports"
     
-    
     parameter.parameter1description="The state the switch should return to once power is restored after power failure."
 	parameter.parameter2description="Inverts the orientation of the switch. Useful when the switch is installed upside down. Essentially up becomes down and down becomes up."
     parameter.parameter3description="Automatically turns the switch off after this many seconds. When the switch is turned on a timer is started that is the duration of this setting. When the timer expires, the switch is turned off."
@@ -356,29 +352,31 @@ def getParameterInfo(number, type){
     return parameter."parameter${number}${type}"
 }
 
-
-
 def zwaveEvent(hubitat.zwave.commands.meterv3.MeterReport cmd) {
-    if (logEnable) log.debug cmd
+    if (debugEnable) log.debug cmd
     def event
 	if (cmd.scale == 0) {
     	if (cmd.meterType == 161) {
 		    event = createEvent(name: "voltage", value: cmd.scaledMeterValue, unit: "V")
+            if (infoEnable) log.info "Voltage report received with value of ${cmd.scaledMeterValue} V"
         } else if (cmd.meterType == 1) {
         	event = createEvent(name: "energy", value: cmd.scaledMeterValue, unit: "kWh")
+            if (infoEnable) log.info "Energy report received with value of ${cmd.scaledMeterValue} kWh"
         }
 	} else if (cmd.scale == 1) {
 		event = createEvent(name: "amperage", value: cmd.scaledMeterValue, unit: "A")
+        if (infoEnable) log.info "Amperage report received with value of ${cmd.scaledMeterValue} A"
 	} else if (cmd.scale == 2) {
 		event = createEvent(name: "power", value: Math.round(cmd.scaledMeterValue), unit: "W")
+        if (infoEnable) log.info "Power report received with value of ${cmd.scaledMeterValue} W"
 	}
 
     return event
 }
 
 def zwaveEvent(hubitat.zwave.commands.configurationv1.ConfigurationReport cmd) {
-    if (logEnable) log.debug cmd
-    if (logEnable) log.debug "${device.displayName} parameter '${cmd.parameterNumber}' with a byte size of '${cmd.size}' is set to '${cmd2Integer(cmd.configurationValue)}'"
+    if (debugEnable) log.debug cmd
+    if (infoEnable) log.info "${device.displayName} parameter '${cmd.parameterNumber}' with a byte size of '${cmd.size}' is set to '${cmd2Integer(cmd.configurationValue)}'"
     state."parameter${cmd.parameterNumber}value" = cmd2Integer(cmd.configurationValue)
 }
 
@@ -425,7 +423,7 @@ def integer2Cmd(value, size) {
 	break
 	}
     } catch (e) {
-        if (logEnable) log.debug "Error: integer2Cmd $e Value: $value"
+        if (infoEnable) log.info "Error: integer2Cmd $e Value: $value"
     }
 }
 
@@ -450,9 +448,9 @@ def parse(description) {
         def cmd = zwave.parse(description, commandClassVersions)
         if (cmd) {
             result = zwaveEvent(cmd)
-            //if (logEnable) log.debug("'$cmd' parsed to $result")
+            //if (debugEnable) log.debug("'$cmd' parsed to $result")
         } else {
-            if (logEnable) log.debug("Couldn't zwave.parse '$description'")
+            if (debugEnable) log.debug("Couldn't zwave.parse '$description'")
         }
     }
     def now
@@ -465,51 +463,54 @@ def parse(description) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd) {
-    if (logEnable) log.debug cmd
+    if (debugEnable) log.debug cmd
+    if (infoEnable) log.info "Basic report received with value of ${cmd.value ? "on" : "off"}"
 	createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "physical")
 }
 
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicSet cmd) {
-    if (logEnable) log.debug cmd
+    if (debugEnable) log.debug cmd
+    if (infoEnable) log.info "Basic set received with value of ${cmd.value ? "on" : "off"}"
 	createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "physical")
 }
 
 def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd) {
-    if (logEnable) log.debug cmd
+    if (debugEnable) log.debug cmd
+    if (infoEnable) log.info "Switch Binary report received with value of ${cmd.value ? "on" : "off"}"
 	createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "digital")
 }
 
 def zwaveEvent(hubitat.zwave.Command cmd) {
-    if (logEnable) log.debug "Unhandled: $cmd"
+    if (debugEnable) log.debug "Unhandled: $cmd"
     null
 }
 
 def on() {
     commands([
-        zwave.basicV1.basicSet(value: 0xFF),
-        zwave.basicV1.basicGet()
+        zwave.basicV1.basicSet(value: 0xFF)//,
+        //zwave.basicV1.basicGet()
     ])
 }
 
 def off() {
     commands([
-        zwave.basicV1.basicSet(value: 0x00),
-        zwave.basicV1.basicGet()
+        zwave.basicV1.basicSet(value: 0x00)//,
+        //zwave.basicV1.basicGet()
     ])
 }
 
 def ping() {
-    if (logEnable) log.debug "ping()"
+    if (infoEnable) log.info "ping()"
     refresh()
 }
 
 def poll() {
-    if (logEnable) log.debug "poll()"
+    if (infoEnable) log.info "poll()"
     refresh()
 }
 
 def refresh() {
-    if (logEnable) log.debug "refresh()"
+    if (infoEnable) log.info "refresh()"
     def cmds = []
     cmds << zwave.basicV1.basicGet()
     cmds << zwave.meterV3.meterGet(scale: 0)
@@ -559,7 +560,7 @@ def processAssociations(){
    if (state.associationGroups) {
        associationGroups = state.associationGroups
    } else {
-       if (logEnable) log.debug "Getting supported association groups from device"
+       if (infoEnable) log.info "Getting supported association groups from device"
        cmds <<  zwave.associationV2.associationGroupingsGet()
    }
    for (int i = 1; i <= associationGroups; i++){
@@ -567,20 +568,20 @@ def processAssociations(){
          if(state."desiredAssociation${i}" != null || state."defaultG${i}") {
             def refreshGroup = false
             ((state."desiredAssociation${i}"? state."desiredAssociation${i}" : [] + state."defaultG${i}") - state."actualAssociation${i}").each {
-                if (logEnable) log.debug "Adding node $it to group $i"
+                if (infoEnable) log.info "Adding node $it to group $i"
                 cmds << zwave.associationV2.associationSet(groupingIdentifier:i, nodeId:Integer.parseInt(it,16))
                 refreshGroup = true
             }
             ((state."actualAssociation${i}" - state."defaultG${i}") - state."desiredAssociation${i}").each {
-                if (logEnable) log.debug "Removing node $it from group $i"
+                if (infoEnable) log.info "Removing node $it from group $i"
                 cmds << zwave.associationV2.associationRemove(groupingIdentifier:i, nodeId:Integer.parseInt(it,16))
                 refreshGroup = true
             }
             if (refreshGroup == true) cmds << zwave.associationV2.associationGet(groupingIdentifier:i)
-            else if (logEnable) log.debug "There are no association actions to complete for group $i"
+            else if (infoEnable) log.info "There are no association actions to complete for group $i"
          }
       } else {
-         if (logEnable) log.debug "Association info not known for group $i. Requesting info from device."
+         if (infoEnable) log.info "Association info not known for group $i. Requesting info from device."
          cmds << zwave.associationV2.associationGet(groupingIdentifier:i)
       }
    }
@@ -588,7 +589,7 @@ def processAssociations(){
 }
 
 def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationReport cmd) {
-    if (logEnable) log.debug cmd
+    if (debugEnable) log.debug cmd
     def temp = []
     if (cmd.nodeId != []) {
        cmd.nodeId.each {
@@ -596,29 +597,31 @@ def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationReport cmd) {
        }
     } 
     state."actualAssociation${cmd.groupingIdentifier}" = temp
-    if (logEnable) log.debug "Associations for Group ${cmd.groupingIdentifier}: ${temp}"
+    if (infoEnable) log.info "Associations for Group ${cmd.groupingIdentifier}: ${temp}"
     updateDataValue("associationGroup${cmd.groupingIdentifier}", "$temp")
 }
 
 def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationGroupingsReport cmd) {
-    if (logEnable) log.debug cmd
+    if (debugEnable) log.debug cmd
     sendEvent(name: "groups", value: cmd.supportedGroupings)
-    if (logEnable) log.debug "Supported association groups: ${cmd.supportedGroupings}"
+    if (infoEnable) log.info "Supported association groups: ${cmd.supportedGroupings}"
     state.associationGroups = cmd.supportedGroupings
 }
 
 def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
-    if (logEnable) log.debug cmd
+    if (debugEnable) log.debug cmd
     if(cmd.applicationVersion != null && cmd.applicationSubVersion != null) {
 	    def firmware = "${cmd.applicationVersion}.${cmd.applicationSubVersion.toString().padLeft(2,'0')}"
+        if (infoEnable) log.info "Firmware report received: ${firmware}"
         state.needfwUpdate = "false"
         createEvent(name: "firmware", value: "${firmware}")
     }
 }
 
 def zwaveEvent(hubitat.zwave.commands.protectionv2.ProtectionReport cmd) {
-    if (logEnable) log.debug cmd
+    if (debugEnable) log.debug cmd
     def integerValue = cmd.localProtectionState
+    if (infoEnable) log.info "Protection report received: Local protection is ${integerValue > 0 ? "on" : "off"}"
     def children = childDevices
     def childDevice = children.find{it.deviceNetworkId.endsWith("ep101")}
     if (childDevice) {
