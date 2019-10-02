@@ -1,7 +1,7 @@
 /**
  *  Inovelli Switch Red Series
  *  Author: Eric Maycock (erocm123)
- *  Date: 2019-08-28
+ *  Date: 2019-10-01
  *
  *  Copyright 2019 Eric Maycock / Inovelli
  *
@@ -13,6 +13,9 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2019-10-01: Adding the ability to set a custom color for the RGB indicator. Use a hue 360 color wheel.
+ *              Adding the ability to enable z-wave "rf protection" to disable control from z-wave commands.
  *
  */
  
@@ -85,7 +88,14 @@ def generate_preferences()
                     //defaultValue: getParameterInfo(i, "default"),
                     options: getParameterInfo(i, "options")
             break
-        }  
+        }
+        if (i == 5){
+           input "parameter5custom", "number", 
+               title: "Custom LED RGB Value", 
+               description: "\nInput a custom value in this field to override the above setting. The value should be between 0 - 360 and can be determined by using the typical hue color wheel.", 
+               required: false,
+               range: "0..360"
+        }
     }
     
     input description: "When each notification set (Color, Level, Duration, Type) is configured, a switch child device is created that can be used in SmartApps to activate that notification.", title: "LED Notifications", displayDuringSetup: false, type: "paragraph", element: "paragraph"
@@ -142,7 +152,8 @@ def generate_preferences()
                     4:"Pulse"]
     
     }
-    input "disableLocal", "enum", title: "Disable Local Control\n\nDisable ability to control switch from the wall", description: "Tap to set", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
+    input "disableLocal", "enum", title: "Disable Local Control", description: "\nDisable ability to control switch from the wall", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
+    input "disableRemote", "enum", title: "Disable Remote Control", description: "\nDisable ability to control switch from inside SmartThings", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
     input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true
     input name: "infoEnable", type: "bool", title: "Enable informational logging", defaultValue: true
 }
@@ -319,8 +330,8 @@ def initialize() {
     def cmds = processAssociations()
     
     getParameterNumbers().each{ i ->
-      if ((state."parameter${i}value" != (settings."parameter${i}"!=null? calculateParameter(i).toInteger() : getParameterInfo(i, "default").toInteger()))){
-          cmds << setParameter(i, settings."parameter${i}"!=null? calculateParameter(i).toInteger() : getParameterInfo(i, "default").toInteger(), getParameterInfo(i, "size").toInteger())
+      if ((state."parameter${i}value" != ((settings."parameter${i}"!=null||calculateParameter(i)!=null)? calculateParameter(i).toInteger() : getParameterInfo(i, "default").toInteger()))){
+          cmds << setParameter(i, (settings."parameter${i}"!=null||calculateParameter(i)!=null)? calculateParameter(i).toInteger() : getParameterInfo(i, "default").toInteger(), getParameterInfo(i, "size").toInteger())
           cmds << getParameter(i)
       }
       else {
@@ -330,19 +341,21 @@ def initialize() {
     
     cmds << zwave.versionV1.versionGet()
     
-    if (state.disableLocal != settings.disableLocal) {
+    if (state.localProtectionState != settings.disableLocal || state.rfProtectionState != settings.disableRemote) {
         cmds << zwave.protectionV2.protectionSet(localProtectionState : disableLocal!=null? disableLocal.toInteger() : 0, rfProtectionState: disableRemote!=null? disableRemote.toInteger() : 0)
         cmds << zwave.protectionV2.protectionGet()
     }
-    
-    state.disableRemote = settings.disableRemote
-    state.disableLocal = settings.disableLocal
+
     if (cmds != []) return cmds else return []
 }
 
 def calculateParameter(number) {
     def value = 0
     switch (number){
+      case "5":
+          if (settings.parameter5custom =~ /^([0-9]{1}|[0-9]{2}|[0-9]{3})$/) value = settings.parameter5custom.toInteger() / 360 * 255
+          else value = settings."parameter${number}"
+      break
       case "8-1":
       case "8-2":
       case "8-3": 
@@ -814,12 +827,13 @@ def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.protectionv2.ProtectionReport cmd) {
-    if (logEnable) log.debug cmd
-    def integerValue = cmd.localProtectionState
-    if (infoEnable) log.info "Protection report received: Local protection is ${integerValue > 0 ? "on" : "off"}"
+    if (debugEnable) log.debug cmd
+    if (infoEnable) log.info "Protection report received: Local protection is ${cmd.localProtectionState > 0 ? "on" : "off"} & Remote protection is ${cmd.rfProtectionState > 0 ? "on" : "off"}"
+    state.localProtectionState = cmd.localProtectionState
+    state.rfProtectionState = cmd.rfProtectionState
     def children = childDevices
     def childDevice = children.find{it.deviceNetworkId.endsWith("ep101")}
     if (childDevice) {
-        childDevice.sendEvent(name: "switch", value: integerValue > 0 ? "on" : "off")        
+        childDevice.sendEvent(name: "switch", value: cmd.localProtectionState > 0 ? "on" : "off")        
     }
 }
