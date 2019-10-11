@@ -1,3 +1,23 @@
+/**
+ *  Z-Wave Association
+ *  Author: Eric Maycock (erocm123)
+ *  Date: 2019-10-10
+ *
+ *  Copyright 2019 Eric Maycock / Inovelli
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ *  in compliance with the License. You may obtain a copy of the License at:
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+ *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2019-10-10: Changing name of switch capability to switch / dimmer / bulb
+ *
+ */
+
 definition(
     name: "Z-Wave Association",
     namespace: "erocm123",
@@ -90,13 +110,13 @@ def associationInputs() {
     section("Source Device") {
         input "sCapability", "enum", title: "Which capability?", multiple: false, required: true, submitOnChange: true, options: capabilities()
         if (settings.sCapability) {
-            input "s${settings.sCapability}", "capability.${settings.sCapability.toLowerCase()}", title: "${settings.sCapability}", multiple: false, required: false
+            input "s${settings.sCapability}", "capability.${settings.sCapability.toLowerCase()}", title: "${capabilities()[settings.sCapability]}", multiple: false, required: false
         }
     }
     section("Destination Device") {
         input "dCapability", "enum", title: "Which capability?", multiple: false, required: true, submitOnChange: true, options: capabilities()
         if (settings.dCapability) {
-            input "d${settings.dCapability}", "capability.${toCamelCase(settings.dCapability)}", title: "${settings.dCapability}", multiple: true, required: false
+            input "d${settings.dCapability}", "capability.${toCamelCase(settings.dCapability)}", title: "${capabilities()[settings.dCapability]}", multiple: true, required: false
         }
     }
     section("Options") {
@@ -109,8 +129,8 @@ def associationInputs() {
 }
 
 def capabilities() {
-    return ["Actuator", "Sensor", "Switch", "Motion Sensor", "Relative Humidity Measurement", "Water Sensor", 
-    "Thermostat", "Temperature Measurement", "Contact Sensor", "Lock", "Alarm", "Presence Sensor", "Smoke Detector", "Valve", "Button" ]
+    return ["Actuator":"Actuator", "Sensor":"Sensor", "Switch":"Switch / Dimmer / Bulb", "Motion Sensor":"Motion Sensor", "Relative Humidity Measurement":"Relative Humidity Measurement", "Water Sensor":"Water Sensor", 
+    "Thermostat":"Thermostat", "Temperature Measurement":"Temperature Measurement", "Contact Sensor":"Contact Sensor", "Lock":"Lock", "Alarm":"Alarm", "Presence Sensor":"Presence Sensor", "Smoke Detector":"Smoke Detector", "Valve":"Valve", "Button":"Button" ]
 }
 
 def returnGroups() {
