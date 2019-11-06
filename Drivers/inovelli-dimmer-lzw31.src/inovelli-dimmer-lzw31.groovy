@@ -17,7 +17,7 @@
  */
  
 metadata {
-    definition (name: "Inovelli Dimmer LZW31", namespace: "InovelliUSA", author: "Eric Maycock", vid: "generic-dimmer") {
+    definition (name: "Inovelli Dimmer LZW31", namespace: "InovelliUSA", author: "Eric Maycock", vid: "generic-dimmer", importUrl:"https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-lzw31.src/inovelli-dimmer-lzw31.groovy") {
         capability "Switch"
         capability "Refresh"
         capability "Polling"
