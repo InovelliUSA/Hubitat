@@ -49,6 +49,11 @@ metadata {
         command "holdUp"
         command "holdDown"
         
+        command "childOn"
+        command "childOff"
+        command "childRefresh"
+        command "reset"
+        
         command "reset"
         command "setAssociationGroup", ["number", "enum", "number", "number"] // group number, nodes, action (0 - remove, 1 - add), multi-channel endpoint (optional)
 
@@ -161,30 +166,25 @@ private sendAlert(data) {
     )
 }
 
-void childSetLevel(String dni, value) {
+def childSetLevel(String dni, value) {
     def valueaux = value as Integer
     def level = Math.max(Math.min(valueaux, 99), 0)    
     def cmds = []
     switch (channelNumber(dni)) {
-        case 8:
-            cmds << new hubitat.device.HubAction(command(zwave.configurationV1.configurationSet(scaledConfigurationValue: value, parameterNumber: channelNumber(dni), size: 1) ))
-            cmds << new hubitat.device.HubAction(command(zwave.configurationV1.configurationGet(parameterNumber: channelNumber(dni) )))
-        break
-        case 9:
-            cmds << new hubitat.device.HubAction(command(zwave.configurationV1.configurationSet(scaledConfigurationValue: value, parameterNumber: channelNumber(dni), size: 1) ))
-            cmds << new hubitat.device.HubAction(command(zwave.configurationV1.configurationGet(parameterNumber: channelNumber(dni) )))
-        break
         case 101:
-            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionSet(localProtectionState : level > 0 ? 2 : 0, rfProtectionState: 0) ))
-            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionGet() ))
+            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionSet(localProtectionState : level > 0 ? 1 : 0, rfProtectionState: state.rfProtectionState? state.rfProtectionState:0) ), hubitat.device.Protocol.ZWAVE)
+            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionGet() ), hubitat.device.Protocol.ZWAVE)
+        break
+        case 102:
+            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionSet(localProtectionState : state.localProtectionState? state.localProtectionState:0, rfProtectionState : level > 0 ? 1 : 0) ), hubitat.device.Protocol.ZWAVE)
+            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionGet() ), hubitat.device.Protocol.ZWAVE)
         break
     }
-	sendHubCommand(cmds, 1000)
+	return cmds
 }
 
 private toggleTiles(number, value) {
-   log.debug "$number:$value"
-   for (int i = 1; i <= 4; i++){
+   for (int i = 1; i <= 5; i++){
        if ("${i}" != number){
            def childDevice = childDevices.find{it.deviceNetworkId == "$device.deviceNetworkId-ep$i"}
            if (childDevice) {         
@@ -199,32 +199,32 @@ private toggleTiles(number, value) {
    }
 }
 
-void childOn(String dni) {
-    log.debug "childOn($dni)"
+def childOn(String dni) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: childOn($dni)"
     def cmds = []
-    if(channelNumber(dni).toInteger() <= 4) {
+    if(channelNumber(dni).toInteger() <= 5) {
         toggleTiles("${channelNumber(dni)}", "on")
-        cmds << new hubitat.device.HubAction(command(setParameter(16, calculateParameter("16-${channelNumber(dni)}"), 4)) )
-        sendHubCommand(cmds, 1000)
+        cmds << new hubitat.device.HubAction(command(setParameter(16, calculateParameter("16-${channelNumber(dni)}"), 4)), hubitat.device.Protocol.ZWAVE )
+        return cmds
     } else {
         childSetLevel(dni, 99)
     }
 }
 
-void childOff(String dni) {
-    log.debug "childOff($dni)"
+def childOff(String dni) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: childOff($dni)"
     def cmds = []
-    if(channelNumber(dni).toInteger() <= 4) {
+    if(channelNumber(dni).toInteger() <= 5) {
         toggleTiles("${channelNumber(dni)}", "off")
-        cmds << new hubitat.device.HubAction(command(setParameter(16, 0, 4)) )
-        sendHubCommand(cmds, 1000)
+        cmds << new hubitat.device.HubAction(command(setParameter(16, 0, 4)), hubitat.device.Protocol.ZWAVE )
+        return cmds
     } else {
-        childSetLevel(dni, 99)
+        childSetLevel(dni, 0)
     }
 }
 
 void childRefresh(String dni) {
-    log.debug "childRefresh($dni)"
+    if (infoEnable) log.info "${device.label?device.label:device.name}: childRefresh($dni)"
 }
 
 def childExists(ep) {
