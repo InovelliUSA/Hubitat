@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer LZW31
  *  Author: Eric Maycock (erocm123)
- *  Date: 2019-11-05
+ *  Date: 2019-11-13
  *
  *  Copyright 2019 Eric Maycock / Inovelli
  *
@@ -14,6 +14,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ *  2019-11-13: Bug fix for not being able to set default level back to 0
  */
  
 metadata {
@@ -442,8 +443,8 @@ def getParameterInfo(number, value){
     parameter.parameter6options="55..99"
     parameter.parameter7options=["1":"Yes", "0":"No"]
     parameter.parameter8options="0..32767"
-    parameter.parameter9options="1..100"
-    parameter.parameter10options="1..100"
+    parameter.parameter9options="0..100"
+    parameter.parameter10options="0..100"
     parameter.parameter11options="0..100"
     parameter.parameter12options="0..15"
     parameter.parameter13options=["0":"Red","21":"Orange","42":"Yellow","85":"Green","127":"Cyan","170":"Blue","212":"Violet","234":"Pink"]
