@@ -98,18 +98,18 @@ def generate_preferences()
                     options: getParameterInfo(i, "options")
             break
         }  
-    }
-    if (i == 13){
-        input "parameter13custom", "number", 
-            title: "Custom LED RGB Value", 
-            description: "\nInput a custom value in this field to override the above setting. The value should be between 0 - 360 and can be determined by using the typical hue color wheel.", 
-            required: false,
-            range: "0..360"
+        if (i == 13){
+            input "parameter13custom", "number", 
+                title: "Custom LED RGB Value", 
+                description: "\nInput a custom value in this field to override the above setting. The value should be between 0 - 360 and can be determined by using the typical hue color wheel.", 
+                required: false,
+                range: "0..360"
+        }
     }
     
     input description: "When each notification set (Color, Level, Duration, Type) is configured, a switch child device is created that can be used in SmartApps to activate that notification.", title: "LED Notifications", displayDuringSetup: false, type: "paragraph", element: "paragraph"
     
-    [1,2,3,4].each { i ->
+    [1,2,3,4,5].each { i ->
                 input "parameter16-${i}a", "enum", title: "LED Effect Color - Notification $i", description: "Tap to set", displayDuringSetup: false, required: false, options: [
                     0:"Red",
                     21:"Orange",
@@ -744,7 +744,7 @@ def parse(description) {
             result = zwaveEvent(cmd)
             //log.debug("'$cmd' parsed to $result")
         } else {
-            log.debug("Couldn't zwave.parse '$description'")
+            if (debugEnable) log.debug "Couldn't zwave.parse '$description'" 
         }
     }
     def now
@@ -836,8 +836,6 @@ def reset() {
 def on() {
     if (infoEnable) log.info "${device.label?device.label:device.name}: on()"
     commands([
-        //zwave.basicV1.basicSet(value: 0xFF),
-        //zwave.basicV1.basicGet()
         zwave.switchMultilevelV1.switchMultilevelSet(value: 0xFF)//,
         //zwave.switchMultilevelV1.switchMultilevelGet()
     ])
@@ -846,8 +844,6 @@ def on() {
 def off() {
     if (infoEnable) log.info "${device.label?device.label:device.name}: off()"
     commands([
-        //zwave.basicV1.basicSet(value: 0x00),
-        //zwave.basicV1.basicGet()
         zwave.switchMultilevelV1.switchMultilevelSet(value: 0x00)//,
         //zwave.switchMultilevelV1.switchMultilevelGet()
     ])
@@ -856,8 +852,8 @@ def off() {
 def setLevel(value) {
     if (infoEnable) log.info "${device.label?device.label:device.name}: setLevel($value)"
     commands([
-        zwave.basicV1.basicSet(value: value < 100 ? value : 99),
-        zwave.basicV1.basicGet()
+        zwave.basicV1.basicSet(value: value < 100 ? value : 99)//,
+        //zwave.basicV1.basicGet()
     ])
 }
 
@@ -865,8 +861,8 @@ def setLevel(value, duration) {
     if (infoEnable) log.info "${device.label?device.label:device.name}: setLevel($value, $duration)"
     def dimmingDuration = duration < 128 ? duration : 128 + Math.round(duration / 60)
     commands([
-        zwave.switchMultilevelV2.switchMultilevelSet(value: value < 100 ? value : 99, dimmingDuration: dimmingDuration),
-        zwave.switchMultilevelV1.switchMultilevelGet()
+        zwave.switchMultilevelV2.switchMultilevelSet(value: value < 100 ? value : 99, dimmingDuration: dimmingDuration)//,
+        //zwave.switchMultilevelV1.switchMultilevelGet()
     ])
 }
 
