@@ -1,7 +1,4 @@
 /**
- *
- *  Hubitat Import URL: https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-1-channel-outdoor-smart-plug-nzw96.src/inovelli-1-channel-outdoor-smart-plug-nzw96.groovy
- *
  *  Inovelli 1-Channel Outdoor Smart Plug NZW96
  *  Author: Eric Maycock (erocm123)
  *  Date: 2018-02-15
@@ -20,7 +17,12 @@
  */
  
 metadata {
-    definition (name: "Inovelli 1-Channel Outdoor Smart Plug NZW96", namespace: "InovelliUSA", author: "Eric Maycock") {
+    definition (
+        name: "Inovelli 1-Channel Outdoor Smart Plug NZW96",
+        namespace: "InovelliUSA",
+        author: "Eric Maycock",
+        importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-1-channel-outdoor-smart-plug-nzw96.src/inovelli-1-channel-outdoor-smart-plug-nzw96.groovy"
+    ) {
         capability "Switch"
         capability "Refresh"
         capability "Polling"

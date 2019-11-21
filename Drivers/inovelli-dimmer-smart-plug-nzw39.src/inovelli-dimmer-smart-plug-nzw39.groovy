@@ -1,7 +1,4 @@
 /**
- *
- *  Hubitat Import URL: https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-smart-plug-nzw39.src/inovelli-dimmer-smart-plug-nzw39.groovy
- *
  *  Copyright 2015 SmartThings
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -15,7 +12,13 @@
  *
  */
 metadata {
-	definition (name: "Inovelli Dimmer Smart Plug NZW39", namespace: "InovelliUSA", author: "SmartThings", ocfDeviceType: "oic.d.light") {
+	definition (
+        name: "Inovelli Dimmer Smart Plug NZW39", 
+        namespace: "InovelliUSA", 
+        author: "SmartThings", 
+        ocfDeviceType: "oic.d.light",
+        importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-smart-plug-nzw39.src/inovelli-dimmer-smart-plug-nzw39.groovy"
+    ) {
 		capability "Switch Level"
 		capability "Actuator"
 		capability "Switch"

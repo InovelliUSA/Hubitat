@@ -1,7 +1,4 @@
 /**
- *
- *  Hubitat Import URL: https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-nzw31.src/inovelli-dimmer-nzw31.groovy
- *
  *  Inovelli Dimmer NZW31
  *  Author: Eric Maycock (erocm123)
  *  Date: 2018-12-04
@@ -16,6 +13,11 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2019-11-20: Fixed Association Group management.
+ *              Added upgraded NZW31 fingerpint.
+ *
+ *  2019-09-02: Added Hubitat's method of disabling debug messages
  *
  *  2018-12-04: Added option to "Disable Remote Control" and to send button events 1,pushed / 1,held for on / off.
  *
@@ -41,7 +43,13 @@
  */
  
 metadata {
-    definition (name: "Inovelli Dimmer NZW31", namespace: "InovelliUSA", author: "Eric Maycock", vid: "generic-dimmer") {
+    definition (
+        name: "Inovelli Dimmer NZW31", 
+        namespace: "InovelliUSA", 
+        author: "Eric Maycock", 
+        vid: "generic-dimmer",
+        importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-nzw31.src/inovelli-dimmer-nzw31.groovy"
+    ) {
         capability "Switch"
         capability "Refresh"
         capability "Polling"
@@ -55,7 +63,11 @@ metadata {
         attribute "lastEvent", "String"
         attribute "firmware", "String"
         
-        command "setAssociationGroup", ["number", "enum", "number", "number"] // group number, nodes, action (0 - remove, 1 - add), multi-channel endpoint (optional)
+        command "setAssociationGroup", [[name: "Group Number*",type:"NUMBER", description: "Provide the association group number to edit"], 
+                                        [name: "Z-Wave Node*", type:"STRING", description: "Enter the node number (in hex) associated with the node"], 
+                                        [name: "Action*", type:"ENUM", constraints: ["Add", "Remove"]],
+                                        [name:"Multi-channel Endpoint", type:"NUMBER", description: "Currently not implemented"]] 
+
         command "childOn"
         command "childOff"
         command "childRefresh"
@@ -66,6 +78,7 @@ metadata {
         fingerprint mfr: "015D", prod: "1F01", model: "1F01", deviceJoinName: "Inovelli Dimmer"
         fingerprint mfr: "0312", prod: "1F01", model: "1F01", deviceJoinName: "Inovelli Dimmer"
         fingerprint deviceId: "0x1101", inClusters: "0x5E,0x26,0x27,0x70,0x75,0x22,0x85,0x8E,0x59,0x55,0x86,0x72,0x5A,0x73,0x6C,0x7A"
+        fingerprint deviceId: "0x1F01", inClusters: "0x5E,0x26,0x70,0x75,0x22,0x85,0x8E,0x59,0x55,0x86,0x72,0x5A,0x73,0x9F,0x6C,0x7A" // Add for NZW31 upgrades to NZW31S
     }
 
     simulator {
@@ -94,6 +107,7 @@ metadata {
         input "group3remote", "bool", title: "Send command on z-wave action", description: "", required: false, defaultValue: true
         input "group3way", "bool", title: "Send command on 3-way action", description: "", required: false, defaultValue: true
         input "group3timer", "bool", title: "Send command on auto off timer", description: "", required: false, defaultValue: true
+	input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true
     }
     
     tiles {
@@ -129,24 +143,24 @@ metadata {
 }
 
 def installed() {
-    log.debug "installed()"
+    if (logEnable) log.debug "installed()"
     refresh()
 }
 
 def configure() {
-    log.debug "configure()"
+    if (logEnable) log.debug "configure()"
     def cmds = initialize()
     commands(cmds)
 }
 
 def updated() {
     if (!state.lastRan || now() >= state.lastRan + 2000) {
-        log.debug "updated()"
+        if (logEnable) log.debug "updated()"
         state.lastRan = now()
         def cmds = initialize()
         commands(cmds)
     } else {
-        log.debug "updated() ran within the last 2 seconds. Skipping execution."
+        if (logEnable) log.debug "updated() ran within the last 2 seconds. Skipping execution."
     }
 }
 
@@ -176,7 +190,7 @@ def integer2Cmd(value, size) {
 	break
 	}
     } catch (e) {
-        log.debug "Error: integer2Cmd $e Value: $value"
+        if (logEnable) log.debug "Error: integer2Cmd $e Value: $value"
     }
 }
 
@@ -191,11 +205,11 @@ def initialize() {
         runIn(3, "sendAlert", [data: [message: "Child device creation failed. Make sure the device handler for \"Switch Level Child Device\" is installed"]])
     }
     } else if (!enableDefaultLocalChild && childExists("ep8")) {
-        log.debug "Trying to delete child device ep8. If this fails it is likely that there is a SmartApp using the child device in question."
+        if (logEnable) log.debug "Trying to delete child device ep8. If this fails it is likely that there is a SmartApp using the child device in question."
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep8")}
         try {
-            log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            if (logEnable) log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
             //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
@@ -210,11 +224,11 @@ def initialize() {
         runIn(3, "sendAlert", [data: [message: "Child device creation failed. Make sure the device handler for \"Switch Level Child Device\" is installed"]])
     }
     } else if (!enableDefaultLocalChild && childExists("ep9")) {
-        log.debug "Trying to delete child device ep9. If this fails it is likely that there is a SmartApp using the child device in question."
+        if (logEnable) log.debug "Trying to delete child device ep9. If this fails it is likely that there is a SmartApp using the child device in question."
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep9")}
         try {
-            log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            if (logEnable) log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
             //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
@@ -229,11 +243,11 @@ def initialize() {
         runIn(3, "sendAlert", [data: [message: "Child device creation failed. Make sure the device handler for \"Switch Level Child Device\" is installed"]])
     }
     } else if (!enableDisableLocalChild && childExists("ep101")) {
-        log.debug "Trying to delete child device ep101. If this fails it is likely that there is a SmartApp using the child device in question."
+        if (logEnable) log.debug "Trying to delete child device ep101. If this fails it is likely that there is a SmartApp using the child device in question."
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep101")}
         try {
-            log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            if (logEnable) log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
             //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
@@ -305,9 +319,9 @@ def parse(description) {
         def cmd = zwave.parse(description, [0x20: 1, 0x25: 1, 0x70: 1, 0x98: 1])
         if (cmd) {
             result = zwaveEvent(cmd)
-            log.debug("'$description' parsed to $result")
+            if (logEnable) log.debug("'$description' parsed to $result")
         } else {
-            log.debug("Couldn't zwave.parse '$description'")
+            if (logEnable) log.debug("Couldn't zwave.parse '$description'")
         }
     }
     def now
@@ -347,7 +361,7 @@ private dimmerEvents(hubitat.zwave.Command cmd) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.configurationv1.ConfigurationReport cmd) {
-    log.debug "${device.displayName} parameter '${cmd.parameterNumber}' with a byte size of '${cmd.size}' is set to '${cmd2Integer(cmd.configurationValue)}'"
+    if (logEnable) log.debug "${device.displayName} parameter '${cmd.parameterNumber}' with a byte size of '${cmd.size}' is set to '${cmd2Integer(cmd.configurationValue)}'"
     def integerValue = cmd2Integer(cmd.configurationValue)
     switch (cmd.parameterNumber) {
         case 8:
@@ -378,7 +392,7 @@ def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cm
 }
 
 def zwaveEvent(hubitat.zwave.Command cmd) {
-    log.debug "Unhandled: $cmd"
+    if (logEnable) log.debug "Unhandled: $cmd"
     null
 }
 
@@ -443,17 +457,17 @@ def setLevel(value, duration) {
 
 
 def childOn(String dni) {
-    log.debug "childOn($dni)"
+    if (logEnable) log.debug "childOn($dni)"
     childSetLevel(dni, 99)
 }
 
 def childOff(String dni) {
-    log.debug "childOff($dni)"
+    if (logEnable) log.debug "childOff($dni)"
     childSetLevel(dni, 0)
 }
 
 def childRefresh(String dni) {
-    log.debug "childRefresh($dni)"
+    if (logEnable) log.debug "childRefresh($dni)"
 }
 
 def childSetLevel(String dni, value) {
@@ -508,17 +522,17 @@ def childExists(ep) {
 }
 
 def ping() {
-    log.debug "ping()"
+    if (logEnable) log.debug "ping()"
     refresh()
 }
 
 def poll() {
-    log.debug "poll()"
+    if (logEnable) log.debug "poll()"
     refresh()
 }
 
 def refresh() {
-    log.debug "refresh()"
+    if (logEnable) log.debug "refresh()"
     commands([zwave.switchBinaryV1.switchBinaryGet(),
               zwave.switchMultilevelV1.switchMultilevelGet()
     ])
@@ -537,56 +551,63 @@ private commands(commands, delay=500) {
 }
 
 def setDefaultAssociations() {
-    def smartThingsHubID = (zwaveHubNodeId.toString().format( '%02x', zwaveHubNodeId )).toUpperCase()
+    def smartThingsHubID = String.format('%02x', zwaveHubNodeId).toUpperCase()
     state.defaultG1 = [smartThingsHubID]
     state.defaultG2 = []
     state.defaultG3 = []
 }
 
-def setAssociationGroup(group, nodes, action, endpoint = null){
-    if (!state."desiredAssociation${group}") {
-        state."desiredAssociation${group}" = nodes
-    } else {
-        switch (action) {
-            case 0:
-                state."desiredAssociation${group}" = state."desiredAssociation${group}" - nodes
-            break
-            case 1:
-                state."desiredAssociation${group}" = state."desiredAssociation${group}" + nodes
-            break
-        }
+def setAssociationGroup(group, node, action, endpoint = null){
+    if (! node =~ /[0-9A-F]+/)
+        return
+
+    if (group < 1 || group > maxAssociationGroup())
+        return
+    
+    def associations = state."desiredAssociation${group}"?:[]
+    switch (action) {
+        case "Remove":
+        associations = associations - node
+        break
+        case "Add":
+        associations << node
+        break
     }
+    state."desiredAssociation${group}" = associations.unique()
+    return
+}
+
+def maxAssociationGroup(){
+   if (!state.associationGroups) {
+       if (logEnable) log.debug "Getting supported association groups from device"
+       zwave.associationV2.associationGroupingsGet() // execute the update immediately
+   }
+   (state.associationGroups?: 5) as int
 }
 
 def processAssociations(){
    def cmds = []
    setDefaultAssociations()
-   def associationGroups = 5
-   if (state.associationGroups) {
-       associationGroups = state.associationGroups
-   } else {
-       log.debug "Getting supported association groups from device"
-       cmds <<  zwave.associationV2.associationGroupingsGet()
-   }
+   def associationGroups = maxAssociationGroup()
    for (int i = 1; i <= associationGroups; i++){
       if(state."actualAssociation${i}" != null){
          if(state."desiredAssociation${i}" != null || state."defaultG${i}") {
             def refreshGroup = false
             ((state."desiredAssociation${i}"? state."desiredAssociation${i}" : [] + state."defaultG${i}") - state."actualAssociation${i}").each {
-                log.debug "Adding node $it to group $i"
-                cmds << zwave.associationV2.associationSet(groupingIdentifier:i, nodeId:Integer.parseInt(it,16))
+                if (logEnable) log.debug "Adding node $it to group $i"
+                cmds << zwave.associationV2.associationSet(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
                 refreshGroup = true
             }
             ((state."actualAssociation${i}" - state."defaultG${i}") - state."desiredAssociation${i}").each {
-                log.debug "Removing node $it from group $i"
-                cmds << zwave.associationV2.associationRemove(groupingIdentifier:i, nodeId:Integer.parseInt(it,16))
+                if (logEnable) log.debug "Removing node $it from group $i"
+                cmds << zwave.associationV2.associationRemove(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
                 refreshGroup = true
             }
             if (refreshGroup == true) cmds << zwave.associationV2.associationGet(groupingIdentifier:i)
-            else log.debug "There are no association actions to complete for group $i"
+            else if (logEnable) log.debug "There are no association actions to complete for group $i"
          }
       } else {
-         log.debug "Association info not known for group $i. Requesting info from device."
+         if (logEnable) log.debug "Association info not known for group $i. Requesting info from device."
          cmds << zwave.associationV2.associationGet(groupingIdentifier:i)
       }
    }
@@ -601,18 +622,18 @@ def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationReport cmd) {
        }
     } 
     state."actualAssociation${cmd.groupingIdentifier}" = temp
-    log.debug "Associations for Group ${cmd.groupingIdentifier}: ${temp}"
+    if (logEnable) log.debug "Associations for Group ${cmd.groupingIdentifier}: ${temp}"
     updateDataValue("associationGroup${cmd.groupingIdentifier}", "$temp")
 }
 
 def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationGroupingsReport cmd) {
     sendEvent(name: "groups", value: cmd.supportedGroupings)
-    log.debug "Supported association groups: ${cmd.supportedGroupings}"
+    if (logEnable) log.debug "Supported association groups: ${cmd.supportedGroupings}"
     state.associationGroups = cmd.supportedGroupings
 }
 
 def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
-    log.debug cmd
+    if (logEnable) log.debug cmd
     if(cmd.applicationVersion && cmd.applicationSubVersion) {
 	    def firmware = "${cmd.applicationVersion}.${cmd.applicationSubVersion.toString().padLeft(2,'0')}"
         state.needfwUpdate = "false"
@@ -621,7 +642,7 @@ def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.protectionv2.ProtectionReport cmd) {
-    log.debug cmd
+    if (logEnable) log.debug cmd
     def integerValue = cmd.localProtectionState
     def children = childDevices
     def childDevice = children.find{it.deviceNetworkId.endsWith("ep101")}
