@@ -1,7 +1,7 @@
 /**
  *  Inovelli Switch Red Series
  *  Author: Eric Maycock (erocm123)
- *  Date: 2019-10-15
+ *  Date: 2019-12-03
  *
  *  Copyright 2019 Eric Maycock / Inovelli
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2019-12-03: Specify central scene command class version for upcoming Hubitat update.
  *
  *  2019-10-15: Ability to create child devices for local & rf protection to use in various automations.
  *              Device label is now displayed in logging. 
@@ -169,6 +171,7 @@ private channelNumber(String dni) {
 }
 
 private sendAlert(data) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: Error while creating child device"
     sendEvent(
         descriptionText: data.message,
         eventType: "ALERT",
@@ -176,23 +179,6 @@ private sendAlert(data) {
         value: "failed",
         displayed: true,
     )
-}
-
-def childSetLevel(String dni, value) {
-    def valueaux = value as Integer
-    def level = Math.max(Math.min(valueaux, 99), 0)    
-    def cmds = []
-    switch (channelNumber(dni)) {
-        case 101:
-            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionSet(localProtectionState : level > 0 ? 1 : 0, rfProtectionState: state.rfProtectionState? state.rfProtectionState:0) ), hubitat.device.Protocol.ZWAVE)
-            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionGet() ), hubitat.device.Protocol.ZWAVE)
-        break
-        case 102:
-            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionSet(localProtectionState : state.localProtectionState? state.localProtectionState:0, rfProtectionState : level > 0 ? 1 : 0) ), hubitat.device.Protocol.ZWAVE)
-            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionGet() ), hubitat.device.Protocol.ZWAVE)
-        break
-    }
-	return cmds
 }
 
 private toggleTiles(number, value) {
@@ -209,6 +195,24 @@ private toggleTiles(number, value) {
            }
        }
    }
+}
+
+def childSetLevel(String dni, value) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: childSetLevel($dni, $value)"
+    def valueaux = value as Integer
+    def level = Math.max(Math.min(valueaux, 99), 0)    
+    def cmds = []
+    switch (channelNumber(dni)) {
+        case 101:
+            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionSet(localProtectionState : level > 0 ? 1 : 0, rfProtectionState: state.rfProtectionState? state.rfProtectionState:0) ), hubitat.device.Protocol.ZWAVE)
+            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionGet() ), hubitat.device.Protocol.ZWAVE)
+        break
+        case 102:
+            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionSet(localProtectionState : state.localProtectionState? state.localProtectionState:0, rfProtectionState : level > 0 ? 1 : 0) ), hubitat.device.Protocol.ZWAVE)
+            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionGet() ), hubitat.device.Protocol.ZWAVE)
+        break
+    }
+	return cmds
 }
 
 def childOn(String dni) {
@@ -275,7 +279,7 @@ def updated() {
 
 def initialize() {
     sendEvent(name: "checkInterval", value: 3 * 60 * 60 + 2 * 60, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID, offlinePingable: "1"])
-    sendEvent(name: "numberOfButtons", value: 7, displayed: true)
+    sendEvent(name: "numberOfButtons", value: 8, displayed: true)
     
     if (enableDisableLocalChild && !childExists("ep101")) {
     try {
@@ -339,23 +343,19 @@ def initialize() {
     if (device.label != state.oldLabel) {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep1")}
-        if (childDevice)
-        childDevice.setLabel("${device.displayName} (Notification 1)")
+        if (childDevice) childDevice.setLabel("${device.displayName} (Notification 1)")
         childDevice = children.find{it.deviceNetworkId.endsWith("ep2")}
-        if (childDevice)
-        childDevice.setLabel("${device.displayName} (Notification 2)")
+        if (childDevice) childDevice.setLabel("${device.displayName} (Notification 2)")
         childDevice = children.find{it.deviceNetworkId.endsWith("ep3")}
-        if (childDevice)
-        childDevice.setLabel("${device.displayName} (Notification 3)")
+        if (childDevice) childDevice.setLabel("${device.displayName} (Notification 3)")
         childDevice = children.find{it.deviceNetworkId.endsWith("ep4")}
-        if (childDevice)
-        childDevice.setLabel("${device.displayName} (Notification 4)")
+        if (childDevice) childDevice.setLabel("${device.displayName} (Notification 4)")
+        childDevice = children.find{it.deviceNetworkId.endsWith("ep5")}
+        if (childDevice) childDevice.setLabel("${device.displayName} (Notification 5)")
         childDevice = children.find{it.deviceNetworkId.endsWith("ep101")}
-        if (childDevice)
-        childDevice.setLabel("${device.displayName} (Disable Local Control)")
+        if (childDevice) childDevice.setLabel("${device.displayName} (Disable Local Control)")
         childDevice = children.find{it.deviceNetworkId.endsWith("ep102")}
-        if (childDevice)
-        childDevice.setLabel("${device.displayName} (Disable Remote Control)")
+        if (childDevice) childDevice.setLabel("${device.displayName} (Disable Remote Control)")
         state.oldLabel = device.label
     }
     
@@ -363,17 +363,19 @@ def initialize() {
     
     getParameterNumbers().each{ i ->
       if ((state."parameter${i}value" != ((settings."parameter${i}"!=null||calculateParameter(i)!=null)? calculateParameter(i).toInteger() : getParameterInfo(i, "default").toInteger()))){
+          if (infoEnable) log.info "Parameter $i is not set correctly. Setting it to ${settings."parameter${i}"!=null? calculateParameter(i).toInteger() : getParameterInfo(i, "default").toInteger()}."
           cmds << setParameter(i, (settings."parameter${i}"!=null||calculateParameter(i)!=null)? calculateParameter(i).toInteger() : getParameterInfo(i, "default").toInteger(), getParameterInfo(i, "size").toInteger())
           cmds << getParameter(i)
       }
       else {
-          //if (infoEnable) log.info "${device.label?device.label:device.name}: Parameter already set"
+          if (infoEnable) log.info "${device.label?device.label:device.name}: Parameter $i already set"
       }
     }
     
     cmds << zwave.versionV1.versionGet()
-    
-    if (state.localProtectionState != settings.disableLocal || state.rfProtectionState != settings.disableRemote) {
+
+    if ("${state.localProtectionState}" != "${settings.disableLocal}" || "${state.rfProtectionState}" != "${settings.disableRemote}") {
+        if (infoEnable) log.info "${device.label?device.label:device.name}: Setting local protection to ${disableLocal!=null? disableLocal.toInteger() : 0} & remote protection to ${disableRemote!=null? disableRemote.toInteger() : 0}"
         cmds << zwave.protectionV2.protectionSet(localProtectionState : disableLocal!=null? disableLocal.toInteger() : 0, rfProtectionState: disableRemote!=null? disableRemote.toInteger() : 0)
         cmds << zwave.protectionV2.protectionGet()
     }
@@ -528,8 +530,12 @@ def zwaveEvent(hubitat.zwave.commands.meterv3.MeterReport cmd) {
 
 def zwaveEvent(hubitat.zwave.commands.configurationv1.ConfigurationReport cmd) {
     if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
-    if (infoEnable) log.info "${device.label?device.label:device.name}: ${device.displayName} parameter '${cmd.parameterNumber}' with a byte size of '${cmd.size}' is set to '${cmd2Integer(cmd.configurationValue)}'"
-    state."parameter${cmd.parameterNumber}value" = cmd2Integer(cmd.configurationValue)
+    if (infoEnable) log.info "${device.label?device.label:device.name}: parameter '${cmd.parameterNumber}' with a byte size of '${cmd.size}' is set to '${cmd2Integer(cmd.configurationValue)}'"
+    if (!state.lastRan || now() <= state.lastRan + 60000) {
+        state."parameter${cmd.parameterNumber}value" = cmd2Integer(cmd.configurationValue)
+    } else {
+        if (infoEnable) log.debug "${device.label?device.label:device.name}: Configuration report received more than 60 seconds after running updated(). Possible configuration made at switch"
+    }
 }
 
 def cmd2Integer(array) {
@@ -580,7 +586,7 @@ def integer2Cmd(value, size) {
 }
 
 private getCommandClassVersions() {
-	[0x20: 1, 0x25: 1, 0x70: 1, 0x98: 1, 0x32: 3]
+	[0x20: 1, 0x25: 1, 0x70: 1, 0x98: 1, 0x32: 3, 0x5B: 1]
 }
 
 def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cmd) {
@@ -643,7 +649,7 @@ def zwaveEvent(hubitat.zwave.commands.centralscenev1.CentralSceneNotification cm
        createEvent(buttonEvent(6, (cmd.sceneNumber == 2? "pushed" : "held"), "physical"))
        break
        case 2:
-       null
+       createEvent(buttonEvent(8, (cmd.sceneNumber == 2? "pushed" : "held"), "physical"))
        break
        default:
        createEvent(buttonEvent(cmd.keyAttributes - 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical"))
@@ -666,6 +672,7 @@ def zwaveEvent(hubitat.zwave.Command cmd) {
 }
 
 def reset() {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: Resetting energy statistics"
 	def cmds = []
     cmds << zwave.meterV2.meterReset()
     cmds << zwave.meterV2.meterGet(scale: 0)
@@ -674,6 +681,7 @@ def reset() {
 }
 
 def on() {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: on()"
     commands([
         zwave.basicV1.basicSet(value: 0xFF)//,
         //zwave.basicV1.basicGet()
@@ -681,6 +689,7 @@ def on() {
 }
 
 def off() {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: off()"
     commands([
         zwave.basicV1.basicSet(value: 0x00)//,
         //zwave.basicV1.basicGet()
@@ -865,8 +874,12 @@ def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
 def zwaveEvent(hubitat.zwave.commands.protectionv2.ProtectionReport cmd) {
     if (debugEnable) log.debug "${device.label?device.label:device.name}: ${device.label?device.label:device.name}: ${cmd}"
     if (infoEnable) log.info "${device.label?device.label:device.name}: Protection report received: Local protection is ${cmd.localProtectionState > 0 ? "on" : "off"} & Remote protection is ${cmd.rfProtectionState > 0 ? "on" : "off"}"
-    state.localProtectionState = cmd.localProtectionState
-    state.rfProtectionState = cmd.rfProtectionState
+    if (!state.lastRan || now() <= state.lastRan + 60000) {
+        state.localProtectionState = cmd.localProtectionState
+        state.rfProtectionState = cmd.rfProtectionState
+    } else {
+        if (infoEnable) log.debug "${device.label?device.label:device.name}: Protection report received more than 60 seconds after running updated(). Possible configuration made at switch"
+    }
     //device.updateSetting("disableLocal",[value:cmd.localProtectionState?cmd.localProtectionState:0,type:"enum"])
     //device.updateSetting("disableRemote",[value:cmd.rfProtectionState?cmd.rfProtectionState:0,type:"enum"])
     def children = childDevices
