@@ -398,21 +398,35 @@ def setDefaultAssociations() {
     state.defaultG3 = []
 }
 
-def setAssociationGroup(group, node, action, endpoint = null){
-    if (! node =~ /[0-9A-F]+/)
-        return
+def setAssociationGroup(group, nodes, action, endpoint = null){
+    // Normalize the arguments to be backwards compatible with the old method
+    action = "${action}" == "1" ? "Add" : "${action}" == "0" ? "Remove" : "${action}" // convert 1/0 to Add/Remove
+    group  = "${group}" =~ /\d+/ ? (group as int) : group                             // convert group to int (if possible)
+    nodes  = [] + nodes ?: [nodes]                                                    // convert to collection if not already a collection
 
-    if (group < 1 || group > maxAssociationGroup())
+    if (! nodes.every { it =~ /[0-9A-F]+/ }) {
+        log.error "invalid Nodes ${nodes}"
         return
+    }
+
+    if (group < 1 || group > maxAssociationGroup()) {
+        log.error "Association group is invalid 1 <= ${group} <= ${maxAssociationGroup()}"
+        return
+    }
     
     def associations = state."desiredAssociation${group}"?:[]
-    switch (action) {
-        case "Remove":
-        associations = associations - node
-        break
-        case "Add":
-        associations << node
-        break
+    nodes.each { 
+        node = "${it}"
+        switch (action) {
+            case "Remove":
+            if (logEnable) log.debug "Removing node ${node} from association group ${group}"
+            associations = associations - node
+            break
+            case "Add":
+            if (logEnable) log.debug "Adding node ${node} to association group ${group}"
+            associations << node
+            break
+        }
     }
     state."desiredAssociation${group}" = associations.unique()
     return
