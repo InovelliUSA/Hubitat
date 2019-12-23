@@ -164,7 +164,7 @@ def generate_preferences()
     
     }
     input "disableLocal", "enum", title: "Disable Local Control", description: "\nDisable ability to control switch from the wall", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
-    input "disableRemote", "enum", title: "Disable Remote Control", description: "\nDisable ability to control switch from inside SmartThings", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
+    input "disableRemote", "enum", title: "Disable Remote Control", description: "\nDisable ability to control switch from inside Hubitat", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
     input description: "Use the below options to enable child devices for the specified settings. This will allow you to adjust these settings using SmartApps such as Smart Lighting. If any of the options are enabled, make sure you have the appropriate child device handlers installed.\n(Firmware 1.02+)", title: "Child Devices", displayDuringSetup: false, type: "paragraph", element: "paragraph"
     input "enableDisableLocalChild", "bool", title: "Disable Local Control", description: "", required: false, defaultValue: false
     input "enableDisableRemoteChild", "bool", title: "Disable Remote Control", description: "", required: false, defaultValue: false
@@ -320,7 +320,7 @@ def initialize() {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep9")}
         try {
-            if (infoEnable) log.info "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            if (infoEnable) log.info "Hubitat has issues trying to delete the child device when it is in use. Need to manually delete them."
             //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
@@ -339,7 +339,7 @@ def initialize() {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep10")}
         try {
-            if (infoEnable) log.info "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            if (infoEnable) log.info "Hubitat has issues trying to delete the child device when it is in use. Need to manually delete them."
             //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
@@ -358,7 +358,7 @@ def initialize() {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep101")}
         try {
-            if (infoEnable) log.info "${device.label?device.label:device.name}: SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            if (infoEnable) log.info "${device.label?device.label:device.name}: Hubitat has issues trying to delete the child device when it is in use. Need to manually delete them."
             //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
@@ -377,7 +377,7 @@ def initialize() {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep102")}
         try {
-            if (infoEnable) log.info "${device.label?device.label:device.name}: SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            if (infoEnable) log.info "${device.label?device.label:device.name}: Hubitat has issues trying to delete the child device when it is in use. Need to manually delete them."
             //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
@@ -398,7 +398,7 @@ def initialize() {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep${i}")}
         try {
-            if (infoEnable) log.info "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            if (infoEnable) log.info "Hubitat has issues trying to delete the child device when it is in use. Need to manually delete them."
             //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
@@ -768,7 +768,7 @@ def parse(description) {
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd) {
     if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
     if (infoEnable) log.info "${device.label?device.label:device.name}: Basic report received with value of ${cmd.value ? "on" : "off"} ($cmd.value)"
-    // Since SmartThings isn't filtering duplicate events, we are skipping these
+    // Since Hubitat isn't filtering duplicate events, we are skipping these
     // Switch is sending SwitchMultilevelReport as well (which we will use)
     dimmerEvents(cmd)
 }
