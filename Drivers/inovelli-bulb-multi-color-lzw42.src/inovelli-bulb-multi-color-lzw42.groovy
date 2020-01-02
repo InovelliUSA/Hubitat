@@ -280,10 +280,11 @@ def setColor(value) {
 		def rgb = huesatToRGB(value.hue, value.saturation)
 		result << zwave.switchColorV3.switchColorSet(red: rgb[0], green: rgb[1], blue: rgb[2], warmWhite:0, coldWhite:0)
 	}
-    if (device.currentValue("switch") != "on") {
-        log.debug "Bulb is off. Turning on"
-        result << zwave.basicV1.basicSet(value: 0xFF)
-    }
+// Why turn on just for color change
+//    if (device.currentValue("switch") != "on") {
+//        log.debug "Bulb is off. Turning on"
+//        result << zwave.basicV1.basicSet(value: 0xFF)
+//    }
 	commands(result)// + "delay 4000" + commands(queryAllColors(), 500)
 }
 
@@ -293,11 +294,11 @@ def setColorTemperature(temp) {
 	def coldValue = temp >= 5000 ? 255 : 0
 	def parameterNumber = temp < 5000 ? WARM_WHITE_CONFIG : COLD_WHITE_CONFIG
 	def cmds = [zwave.switchColorV3.switchColorSet(red: 0, green: 0, blue: 0, warmWhite: warmValue, coldWhite: coldValue)]
-                
-    if (device.currentValue("switch") != "on") {
-        log.debug "Bulb is off. Turning on"
-        cmds << zwave.basicV1.basicSet(value: 0xFF)
-    }
+// Why Turn on on color temp change?                
+//    if (device.currentValue("switch") != "on") {
+//        log.debug "Bulb is off. Turning on"
+//        cmds << zwave.basicV1.basicSet(value: 0xFF)
+//    }
 	commands(cmds) + "delay 4000" + commands(queryAllColors(), 500)
 }
 
