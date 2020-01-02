@@ -17,6 +17,7 @@
  *  Forked and updated by bcopeland 1/2/2020 
  *    - removed turn on when set color temp
  *    - removed turn on when set color
+ *  Modified with colorStaging preference to match official standards
  */
 
 metadata {
@@ -35,7 +36,10 @@ metadata {
         fingerprint deviceId: "0x1101", inClusters: "0x5E,0x85,0x59,0x86,0x72,0x5A,0x33,0x26,0x70,0x27,0x98,0x73,0x7A"
         fingerprint deviceId: "0x1101", inClusters: "0x5E,0x98,0x86,0x85,0x59,0x72,0x73,0x33,0x26,0x70,0x27,0x5A,0x7A" //Secure
 	}
-
+	preferences {
+        	// added for official hubitat standards
+        	input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: true
+    	}
 	simulator {
 	}
 
@@ -283,11 +287,10 @@ def setColor(value) {
 		def rgb = huesatToRGB(value.hue, value.saturation)
 		result << zwave.switchColorV3.switchColorSet(red: rgb[0], green: rgb[1], blue: rgb[2], warmWhite:0, coldWhite:0)
 	}
-// Why turn on just for color change
-//    if (device.currentValue("switch") != "on") {
-//        log.debug "Bulb is off. Turning on"
-//        result << zwave.basicV1.basicSet(value: 0xFF)
-//    }
+        if ((device.currentValue("switch") != "on") && (!colorStaging)) {
+       		log.debug "Bulb is off. Turning on"
+ 		result << zwave.basicV1.basicSet(value: 0xFF)
+	}
 	commands(result)// + "delay 4000" + commands(queryAllColors(), 500)
 }
 
@@ -297,11 +300,11 @@ def setColorTemperature(temp) {
 	def coldValue = temp >= 5000 ? 255 : 0
 	def parameterNumber = temp < 5000 ? WARM_WHITE_CONFIG : COLD_WHITE_CONFIG
 	def cmds = [zwave.switchColorV3.switchColorSet(red: 0, green: 0, blue: 0, warmWhite: warmValue, coldWhite: coldValue)]
-// Why Turn on on color temp change?                
-//    if (device.currentValue("switch") != "on") {
-//        log.debug "Bulb is off. Turning on"
-//        cmds << zwave.basicV1.basicSet(value: 0xFF)
-//    }
+             
+    	if ((device.currentValue("switch") != "on") && (!colorStaging)) {
+        	log.debug "Bulb is off. Turning on"
+       		cmds << zwave.basicV1.basicSet(value: 0xFF)
+	}
 	commands(cmds) + "delay 4000" + commands(queryAllColors(), 500)
 }
 
