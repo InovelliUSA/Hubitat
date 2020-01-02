@@ -14,10 +14,12 @@
  *
  *  Author: Eric Maycock
  *  Date: 2019-9-9
+ *  Forked and updated by bcopeland 1/2/2020 
+ *    - removed turn on when set color temp
  */
 
 metadata {
-	definition (name: "Inovelli Bulb Multi-White LZW41", namespace: "InovelliUSA", author: "InovelliUSA",
+	definition (name: "Inovelli Bulb Multi-White LZW41 DDD", namespace: "djdizzyd", author: "InovelliUSA",
 				ocfDeviceType: "oic.d.light", mnmn: "SmartThings", vid: "generic-rgbw-color-bulb",
 				runLocally: false, minHubCoreVersion: '000.017.0012', executeCommandsLocally: false) {
 		capability "Switch Level"
