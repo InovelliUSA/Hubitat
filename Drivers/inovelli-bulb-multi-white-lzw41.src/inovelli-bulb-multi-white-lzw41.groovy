@@ -16,6 +16,7 @@
  *  Date: 2019-9-9
  *  Forked and updated by bcopeland 1/2/2020 
  *    - removed turn on when set color temp
+ *  Modified to allow for colorStaging preference per official standards
  */
 
 metadata {
