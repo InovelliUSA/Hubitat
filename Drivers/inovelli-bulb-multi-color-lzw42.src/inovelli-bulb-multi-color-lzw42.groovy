@@ -38,7 +38,7 @@ metadata {
 	}
 	preferences {
         	// added for official hubitat standards
-        	input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: true
+        	input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: false
     	}
 	simulator {
 	}
