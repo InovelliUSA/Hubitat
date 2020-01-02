@@ -20,7 +20,7 @@
  */
 
 metadata {
-	definition (name: "Inovelli Bulb Multi-Color LZW42", namespace: "InovelliUSA", author: "InovelliUSA", ocfDeviceType: "oic.d.light", vid: "generic-rgbw-color-bulb") {
+	definition (name: "Inovelli Bulb Multi-Color LZW42 DDD", namespace: "djdizzyd", author: "InovelliUSA", ocfDeviceType: "oic.d.light", vid: "generic-rgbw-color-bulb") {
 		capability "Switch Level"
 		capability "Color Control"
 		capability "Color Temperature"
