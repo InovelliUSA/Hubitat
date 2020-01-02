@@ -14,6 +14,9 @@
  *
  *  Author: Eric Maycock
  *  Date: 2019-9-9
+ *  Forked and updated by bcopeland 1/2/2020 
+ *    - removed turn on when set color temp
+ *    - removed turn on when set color
  */
 
 metadata {
