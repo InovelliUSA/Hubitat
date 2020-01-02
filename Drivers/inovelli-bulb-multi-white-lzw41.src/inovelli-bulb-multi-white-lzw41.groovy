@@ -230,10 +230,11 @@ def setColorTemperature(temp) {
 	def coldValue = temp >= 5000 ? 255 : 0
 	def parameterNumber = temp < 5000 ? WARM_WHITE_CONFIG : COLD_WHITE_CONFIG
 	def cmds = [zwave.switchColorV3.switchColorSet(warmWhite: warmValue, coldWhite: coldValue)]
-    if (device.currentValue("switch") != "on") {
-        log.debug "Bulb is off. Turning on"
-        cmds << zwave.basicV1.basicSet(value: 0xFF)
-    }
+// Why turn on?
+//    if (device.currentValue("switch") != "on") {
+//        log.debug "Bulb is off. Turning on"
+//        cmds << zwave.basicV1.basicSet(value: 0xFF)
+//    }
 	commands(cmds) + "delay 4000" + commands(queryAllColors(), 500)
 }
 
