@@ -37,6 +37,7 @@ metadata {
 	preferences {
 		// added for official hubitat standards
 		input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: false
+        input name: "debugLogging", type: "bool", description: "", title: "Enable Debug Logging", defaultVaule: false
     	}
 }
 
@@ -47,12 +48,12 @@ private getCOLD_WHITE() { "coldWhite" }
 private getWHITE_NAMES() { [WARM_WHITE, COLD_WHITE] }
 
 def updated() {
-	log.debug "updated().."
+	if (debugLogging) log.debug "updated().."
 	response(refresh())
 }
 
 def installed() {
-	log.debug "installed()..."
+	if (debugLogging) log.debug "installed()..."
 	sendEvent(name: "checkInterval", value: 1860, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID, offlinePingable: "0"])
 	sendEvent(name: "level", value: 100, unit: "%")
 	sendEvent(name: "colorTemperature", value: 2700)
@@ -61,11 +62,11 @@ def installed() {
 def parse(description) {
 	def result = null
 	if (description != "updated") {
-        log.debug("description: $description")
+        if (debugLogging) log.debug("description: $description")
 		def cmd = zwave.parse(description,[0x33:1,0x08:2,0x26:3])
 		if (cmd) {
 			result = zwaveEvent(cmd)
-			log.debug("'$description' parsed to $result")
+			if(debugLogging) log.debug("'$description' parsed to $result")
 		} else {
 			log.debug("Couldn't zwave.parse '$description'")
 		}
@@ -74,7 +75,7 @@ def parse(description) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd) {
-    log.debug cmd
+    if (debugLogging) log.debug cmd
 	dimmerEvents(cmd)
 }
 
@@ -83,13 +84,13 @@ def zwaveEvent(hubitat.zwave.commands.basicv1.BasicSet cmd) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.switchmultilevelv3.SwitchMultilevelReport cmd) {
-    log.debug cmd
+    if (debugLogging) log.debug cmd
 	unschedule(offlinePing)
 	dimmerEvents(cmd)
 }
 
 def zwaveEvent(hubitat.zwave.commands.switchcolorv1.SwitchColorReport cmd) {
-	log.debug "got SwitchColorReport: $cmd"
+	if (debugLogging) log.debug "got SwitchColorReport: $cmd"
 	def result = []
 	if (cmd.value == 255) {
 		def parameterNumber = (cmd.colorComponent == WARM_WHITE) ? WARM_WHITE_CONFIG : COLD_WHITE_CONFIG
@@ -129,7 +130,7 @@ def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cm
 
 def zwaveEvent(hubitat.zwave.commands.configurationv2.ConfigurationReport cmd) {
     //log.debug cmd
-    log.debug "${device.displayName} parameter '${cmd.parameterNumber}' with a byte size of '${cmd.size}' is set to '${cmd2Integer(cmd.configurationValue)}'"
+    if (debugLogging) log.debug "${device.displayName} parameter '${cmd.parameterNumber}' with a byte size of '${cmd.size}' is set to '${cmd2Integer(cmd.configurationValue)}'"
     if (cmd.parameterNumber == 81 || cmd.parameterNumber == 82) {
        // log.debug "Got parameter: " + cmd.parameterNumber
         sendEvent(name: "colorTemperature", value: cmd.scaledConfigurationValue)
@@ -185,14 +186,14 @@ def refresh() {
 }
 
 def ping() {
-	log.debug "ping().."
+	if (debugLogging) log.debug "ping().."
 	unschedule(offlinePing)
 	runEvery30Minutes(offlinePing)
 	command(zwave.switchMultilevelV3.switchMultilevelGet())
 }
 
 def offlinePing() {
-	log.debug "offlinePing()..."
+	if (debugLogging) log.debug "offlinePing()..."
 	sendHubCommand(new hubitat.device.HubAction(command(zwave.switchMultilevelV3.switchMultilevelGet())))
 }
 
@@ -201,7 +202,7 @@ def setLevel(level) {
 }
 
 def setLevel(level, duration) {
-	log.debug "setLevel($level, $duration)"
+	if (debugLogging) log.debug "setLevel($level, $duration)"
 	if(level > 99) level = 99
 	commands([
 		zwave.switchMultilevelV3.switchMultilevelSet(value: level, dimmingDuration: duration),
@@ -210,7 +211,7 @@ def setLevel(level, duration) {
 }
 
 def setColorTemperature(temp) {
-	log.debug "setColorTemperature($temp)"
+	if (debugLogging) log.debug "setColorTemperature($temp)"
 	def warmValue = temp < 5000 ? 255 : 0
 	def coldValue = temp >= 5000 ? 255 : 0
 	def parameterNumber = temp < 5000 ? WARM_WHITE_CONFIG : COLD_WHITE_CONFIG
@@ -232,7 +233,7 @@ def setColorTemperature(temp) {
     }
 
     if ((device.currentValue("switch") != "on") && (!colorStaging)) {
-		log.debug "Bulb is off. Turning on"
+		if (debugLogging) log.debug "Bulb is off. Turning on"
 		cmds << zwave.basicV1.basicSet(value: 0xFF)
 	}
 	commands(cmds) + "delay 4000" + commands(queryAllColors(), 500) + commands(zwave.configurationV2.configurationGet([parameterNumber: parameterNumber]))
@@ -288,11 +289,11 @@ def processAssociations(){
    def cmds = []
    setDefaultAssociations()
    def associationGroups = 5
-   log.debug state.associationGroups
+   if (debugLogging) log.debug state.associationGroups
    if (state.associationGroups) {
        associationGroups = state.associationGroups
    } else {
-       log.debug "Getting supported association groups from device"
+       if (debugLogging) log.debug "Getting supported association groups from device"
        cmds <<  zwave.associationV2.associationGroupingsGet().format()
    }
    for (int i = 1; i <= associationGroups; i++){
@@ -300,12 +301,12 @@ def processAssociations(){
          if(state."desiredAssociation${i}" != null || state."defaultG${i}") {
             def refreshGroup = false
             ((state."desiredAssociation${i}"? state."desiredAssociation${i}" : [] + state."defaultG${i}") - state."actualAssociation${i}").each {
-                log.debug "Adding node $it to group $i"
+                if (debugLogging) log.debug "Adding node $it to group $i"
                 cmds << zwave.associationV2.associationSet(groupingIdentifier:i, nodeId:Integer.parseInt(it,16)).format()
                 refreshGroup = true
             }
             ((state."actualAssociation${i}" - state."defaultG${i}") - state."desiredAssociation${i}").each {
-                log.debug "Removing node $it from group $i"
+                if (debugLogging) log.debug "Removing node $it from group $i"
                 cmds << zwave.associationV2.associationRemove(groupingIdentifier:i, nodeId:Integer.parseInt(it,16)).format()
                 refreshGroup = true
             }
@@ -313,7 +314,7 @@ def processAssociations(){
             else log.debug "There are no association actions to complete for group $i"
          }
       } else {
-         log.debug "Association info not known for group $i. Requesting info from device."
+         if (debugLogging) log.debug "Association info not known for group $i. Requesting info from device."
          cmds << zwave.associationV2.associationGet(groupingIdentifier:i).format()
       }
    }
