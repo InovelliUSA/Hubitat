@@ -38,8 +38,6 @@ metadata {
 		// added for official hubitat standards
 		input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: false
     	}
-	main(["switch"])
-	details(["switch", "levelSliderControl", "colorTempSliderControl", "refresh"])
 }
 
 private getWARM_WHITE_CONFIG() { 0x51 }
@@ -63,7 +61,8 @@ def installed() {
 def parse(description) {
 	def result = null
 	if (description != "updated") {
-		def cmd = zwave.parse(description)
+        log.debug("description: $description")
+		def cmd = zwave.parse(description,[0x33:1,0x08:2,0x26:3])
 		if (cmd) {
 			result = zwaveEvent(cmd)
 			log.debug("'$description' parsed to $result")
@@ -89,7 +88,7 @@ def zwaveEvent(hubitat.zwave.commands.switchmultilevelv3.SwitchMultilevelReport 
 	dimmerEvents(cmd)
 }
 
-def zwaveEvent(hubitat.zwave.commands.switchcolorv3.SwitchColorReport cmd) {
+def zwaveEvent(hubitat.zwave.commands.switchcolorv1.SwitchColorReport cmd) {
 	log.debug "got SwitchColorReport: $cmd"
 	def result = []
 	if (cmd.value == 255) {
@@ -98,6 +97,8 @@ def zwaveEvent(hubitat.zwave.commands.switchcolorv3.SwitchColorReport cmd) {
 	}
 	result
 }
+
+
 
 private dimmerEvents(hubitat.zwave.Command cmd) {
 	def value = (cmd.value ? "on" : "off")
@@ -129,7 +130,12 @@ def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cm
 def zwaveEvent(hubitat.zwave.commands.configurationv2.ConfigurationReport cmd) {
     //log.debug cmd
     log.debug "${device.displayName} parameter '${cmd.parameterNumber}' with a byte size of '${cmd.size}' is set to '${cmd2Integer(cmd.configurationValue)}'"
-    state."parameter${cmd.parameterNumber}value" = cmd2Integer(cmd.configurationValue)
+    if (cmd.parameterNumber == 81 || cmd.parameterNumber == 82) {
+       // log.debug "Got parameter: " + cmd.parameterNumber
+        sendEvent(name: "colorTemperature", value: cmd.scaledConfigurationValue)
+    }
+        state."parameter${cmd.parameterNumber}value" = cmd2Integer(cmd.configurationValue)
+    
 }
 
 def cmd2Integer(array) {
@@ -208,12 +214,28 @@ def setColorTemperature(temp) {
 	def warmValue = temp < 5000 ? 255 : 0
 	def coldValue = temp >= 5000 ? 255 : 0
 	def parameterNumber = temp < 5000 ? WARM_WHITE_CONFIG : COLD_WHITE_CONFIG
-	def cmds = [zwave.switchColorV3.switchColorSet(warmWhite: warmValue, coldWhite: coldValue)]
-	if ((device.currentValue("switch") != "on") && (!colorStaging)) {
+	def cmds = []
+    cmds << zwave.switchColorV3.switchColorSet(warmWhite: warmValue, coldWhite: coldValue)
+    if (temp < 2700) {
+        // min is 2700
+        temp = 2700
+    }
+    if (temp > 6500) {
+         // max is 6500
+         temp = 6500
+    }
+    if ((temp < 5000) && (temp >= 2700)) {   
+        cmds << zwave.configurationV1.configurationSet(scaledConfigurationValue: temp, parameterNumber: 81, size:2)
+    }
+    if ((temp >=5000) && (temp <= 6500)) {
+         cmds << zwave.configurationV1.configurationSet(scaledConfigurationValue: temp, parameterNumber: 82, size:2)   
+    }
+
+    if ((device.currentValue("switch") != "on") && (!colorStaging)) {
 		log.debug "Bulb is off. Turning on"
 		cmds << zwave.basicV1.basicSet(value: 0xFF)
 	}
-	commands(cmds) + "delay 4000" + commands(queryAllColors(), 500)
+	commands(cmds) + "delay 4000" + commands(queryAllColors(), 500) + commands(zwave.configurationV2.configurationGet([parameterNumber: parameterNumber]))
 }
 
 private queryAllColors() {
