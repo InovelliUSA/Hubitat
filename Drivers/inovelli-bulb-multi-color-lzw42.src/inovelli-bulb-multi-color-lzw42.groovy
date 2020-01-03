@@ -39,36 +39,8 @@ metadata {
 	preferences {
         	// added for official hubitat standards
         	input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: false
-    	}
-	simulator {
 	}
-
-	tiles(scale: 2) {
-		multiAttributeTile(name:"switch", type: "lighting", width: 1, height: 1, canChangeIcon: true) {
-			tileAttribute("device.switch", key: "PRIMARY_CONTROL") {
-				attributeState("on", label:'${name}', action:"switch.off", icon:"st.lights.philips.hue-single", backgroundColor:"#00a0dc", nextState:"turningOff")
-				attributeState("off", label:'${name}', action:"switch.on", icon:"st.lights.philips.hue-single", backgroundColor:"#ffffff", nextState:"turningOn")
-				attributeState("turningOn", label:'${name}', action:"switch.off", icon:"st.lights.philips.hue-single", backgroundColor:"#00a0dc", nextState:"turningOff")
-				attributeState("turningOff", label:'${name}', action:"switch.on", icon:"st.lights.philips.hue-single", backgroundColor:"#ffffff", nextState:"turningOn")
-			}
-
-			tileAttribute ("device.level", key: "SLIDER_CONTROL") {
-				attributeState "level", action:"switch level.setLevel"
-			}
-
-			tileAttribute ("device.color", key: "COLOR_CONTROL") {
-				attributeState "color", action:"color control.setColor"
-			}
-		}
-	}
-
-	controlTile("colorTempSliderControl", "device.colorTemperature", "slider", width: 4, height: 2, inactiveLabel: false, range:"(2700..6500)") {
-		state "colorTemperature", action:"color temperature.setColorTemperature"
-	}
-    standardTile("refresh", "device.switch", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
-			state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
-		}
-
+	
 	main(["switch"])
 	details(["switch", "levelSliderControl", "rgbSelector", "colorTempSliderControl", "refresh"])
 }
@@ -433,8 +405,8 @@ def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationGroupingsReport c
 }
 
 def setDefaultAssociations() {
-    def smartThingsHubID = zwaveHubNodeId.toString().format( '%02x', zwaveHubNodeId )
-    state.defaultG1 = [smartThingsHubID]
+    def hubitatHubID = zwaveHubNodeId.toString().format( '%02x', zwaveHubNodeId )
+    state.defaultG1 = [hubitatHubID]
     state.defaultG2 = []
     state.defaultG3 = []
 }
