@@ -28,6 +28,8 @@ metadata {
 		capability "Actuator"
 		capability "Sensor"
 		capability "Health Check"
+
+		attribute "colorName", "string"
         
         fingerprint mfr: "0300", prod: "0006", model: "0001", deviceJoinName: "Inovelli Bulb Multi-White" //US
         fingerprint deviceId: "0x1101", inClusters: "0x5E,0x85,0x59,0x86,0x72,0x5A,0x26,0x33,0x27,0x70,0x7A,0x73,0x98,0x7A"

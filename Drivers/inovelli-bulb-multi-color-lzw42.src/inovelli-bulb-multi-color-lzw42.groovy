@@ -32,6 +32,8 @@ metadata {
 		capability "Health Check"
 		capability "Configuration"
 
+		attribute "colorName", "string"
+
         fingerprint mfr: "031E", prod: "0005", model: "0001", deviceJoinName: "Inovelli Bulb Multi-Color"
         fingerprint deviceId: "0x1101", inClusters: "0x5E,0x85,0x59,0x86,0x72,0x5A,0x33,0x26,0x70,0x27,0x98,0x73,0x7A"
         fingerprint deviceId: "0x1101", inClusters: "0x5E,0x98,0x86,0x85,0x59,0x72,0x73,0x33,0x26,0x70,0x27,0x5A,0x7A" //Secure
@@ -135,6 +137,7 @@ def zwaveEvent(hubitat.zwave.commands.switchcolorv3.SwitchColorReport cmd) {
 		// Send the color as hue and saturation
 		def hsv = rgbToHSV(*colors)
 		result << createEvent(name: "hue", value: hsv.hue)
+		setGenericName(hsv.hue)
 		result << createEvent(name: "saturation", value: hsv.saturation)
 		// Reset the values
 		RGB_NAMES.collect { state.colorReceived[it] = null}
@@ -180,6 +183,7 @@ def zwaveEvent(hubitat.zwave.commands.configurationv2.ConfigurationReport cmd) {
 	def result = null
 	if (cmd.parameterNumber == WARM_WHITE_CONFIG || cmd.parameterNumber == COLD_WHITE_CONFIG) {
 		result = createEvent(name: "colorTemperature", value: cmd.scaledConfigurationValue)
+		setGenericTempName(cmd.scaledConfigurationValue)
 	}
 	result
 }
@@ -232,29 +236,29 @@ def setLevel(level, duration) {
 
 def setSaturation(percent) {
 	if (logEnable) log.debug "setSaturation($percent)"
-	setColor(saturation: percent)
+	setColor([saturation: percent, hue: state.hue])
 }
 
 def setHue(value) {
 	if (logEnable) log.debug "setHue($value)"
-	setColor(hue: value)
+	setColor([hue: value, saturation: state.saturation])
 }
 
 def setColor(value) {
+	if (value.hue == null || value.saturation == null) return
 	if (logEnable) log.debug "setColor($value)"
 	def result = []
-	if (value.hex) {
-		def c = value.hex.findAll(/[0-9a-fA-F]{2}/).collect { Integer.parseInt(it, 16) }
-		result << zwave.switchColorV3.switchColorSet(red: c[0], green: c[1], blue: c[2], warmWhite: 0, coldWhite: 0)
-	} else {
-		def rgb = huesatToRGB(value.hue, value.saturation)
-		result << zwave.switchColorV3.switchColorSet(red: rgb[0], green: rgb[1], blue: rgb[2], warmWhite:0, coldWhite:0)
-	}
-    if ((device.currentValue("switch") != "on") && (!colorStaging)) {
+	def rgb = huesatToRGB(value.hue, value.saturation)
+	result << zwave.switchColorV3.switchColorSet(red: rgb[0], green: rgb[1], blue: rgb[2], warmWhite:0, coldWhite:0)
+
+	if ((device.currentValue("switch") != "on") && (!colorStaging)) {
 		if (logEnable) log.debug "Bulb is off. Turning on"
  		result << zwave.basicV1.basicSet(value: 0xFF)
 	}
 	commands(result) + "Delay 7000" + commands(queryAllColors(), 1000)
+	if (value.level) { 
+		setLevel(value.level) 
+	}
 }
 
 def setColorTemperature(temp) {
@@ -312,76 +316,6 @@ def huesatToRGB(hue, sat) {
 	return colorUtil.hexToRgb(color)
 }
 
-def hexToRgb(colorHex) {
-	def rrInt = Integer.parseInt(colorHex.substring(1,3),16)
-    def ggInt = Integer.parseInt(colorHex.substring(3,5),16)
-    def bbInt = Integer.parseInt(colorHex.substring(5,7),16)
-    
-    def colorData = [:]
-    colorData = [r: rrInt, g: ggInt, b: bbInt]
-    colorData
-}
-
-// huesatToRGB Changed method provided by daved314
-def huesatToRGB(float hue, float sat) {
-	if (hue <= 100) {
-		hue = hue * 3.6
-    }
-    sat = sat / 100
-    float v = 1.0
-    float c = v * sat
-    float x = c * (1 - Math.abs(((hue/60)%2) - 1))
-    float m = v - c
-    int mod_h = (int)(hue / 60)
-    int cm = Math.round((c+m) * 255)
-    int xm = Math.round((x+m) * 255)
-    int zm = Math.round((0+m) * 255)
-    switch(mod_h) {
-    	case 0: return [cm, xm, zm]
-       	case 1: return [xm, cm, zm]
-        case 2: return [zm, cm, xm]
-        case 3: return [zm, xm, cm]
-        case 4: return [xm, zm, cm]
-        case 5: return [cm, zm, xm]
-	}   	
-}
-
-private rgbwToHSV(Map colorMap) {
-    //log.debug "rgbwToHSV(): colorMap: ${colorMap}"
-
-    if (colorMap.containsKey("r") & colorMap.containsKey("g") & colorMap.containsKey("b")) { 
-
-        float r = colorMap.r / 255f
-        float g = colorMap.g / 255f
-        float b = colorMap.b / 255f
-        float w = (colorMap.white) ? colorMap.white / 255f : 0.0
-        float max = [r, g, b].max()
-        float min = [r, g, b].min()
-        float delta = max - min
-
-        float h,s,v = 0
-
-        if (delta) {
-            s = delta / max
-            if (r == max) {
-                h = ((g - b) / delta) / 6
-            } else if (g == max) {
-                h = (2 + (b - r) / delta) / 6
-            } else {
-                h = (4 + (r - g) / delta) / 6
-            }
-            while (h < 0) h += 1
-            while (h >= 1) h -= 1
-        }
-
-        v = [max,w].max() 
-
-        return colorMap << [ hue: h * 100, saturation: s * 100, level: Math.round(v * 100) ]
-    }
-    else {
-        log.error "rgbwToHSV(): Cannot obtain color information from colorMap: ${colorMap}"
-    }
-}
 
 def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationReport cmd) {
     def temp = []
@@ -457,3 +391,66 @@ def processAssociations(){
    }
    return cmds
 }
+
+
+def setGenericTempName(temp){
+    if (!temp) return
+    def genericName
+    def value = temp.toInteger()
+    if (value <= 2000) genericName = "Sodium"
+    else if (value <= 2100) genericName = "Starlight"
+    else if (value < 2400) genericName = "Sunrise"
+    else if (value < 2800) genericName = "Incandescent"
+    else if (value < 3300) genericName = "Soft White"
+    else if (value < 3500) genericName = "Warm White"
+    else if (value < 4150) genericName = "Moonlight"
+    else if (value <= 5000) genericName = "Horizon"
+    else if (value < 5500) genericName = "Daylight"
+    else if (value < 6000) genericName = "Electronic"
+    else if (value <= 6500) genericName = "Skylight"
+    else if (value < 20000) genericName = "Polar"
+    def descriptionText = "${device.getDisplayName()} color is ${genericName}"
+    if (txtEnable) log.info "${descriptionText}"
+    sendEvent(name: "colorName", value: genericName ,descriptionText: descriptionText)
+}
+
+
+
+def setGenericName(hue){
+    def colorName
+    hue = hue.toInteger()
+    hue = (hue * 3.6)
+    switch (hue.toInteger()){
+        case 0..15: colorName = "Red"
+            break
+        case 16..45: colorName = "Orange"
+            break
+        case 46..75: colorName = "Yellow"
+            break
+        case 76..105: colorName = "Chartreuse"
+            break
+        case 106..135: colorName = "Green"
+            break
+        case 136..165: colorName = "Spring"
+            break
+        case 166..195: colorName = "Cyan"
+            break
+        case 196..225: colorName = "Azure"
+            break
+        case 226..255: colorName = "Blue"
+            break
+        case 256..285: colorName = "Violet"
+            break
+        case 286..315: colorName = "Magenta"
+            break
+        case 316..345: colorName = "Rose"
+            break
+        case 346..360: colorName = "Red"
+            break
+    }
+    def descriptionText = "${device.getDisplayName()} color is ${colorName}"
+    if (txtEnable) log.info "${descriptionText}"
+    sendEvent(name: "colorName", value: colorName ,descriptionText: descriptionText)
+}
+
+
