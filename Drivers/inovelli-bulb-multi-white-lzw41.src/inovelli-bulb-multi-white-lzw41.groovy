@@ -41,6 +41,8 @@ metadata {
     	}
 }
 
+private getCOLOR_TEMP_MIN() { 2700 }
+private getCOLOR_TEMP_MAX() { 6500 }
 private getWARM_WHITE_CONFIG() { 0x51 }
 private getCOLD_WHITE_CONFIG() { 0x52 }
 private getWARM_WHITE() { "warmWhite" }
@@ -135,6 +137,7 @@ def zwaveEvent(hubitat.zwave.commands.configurationv2.ConfigurationReport cmd) {
     def result = null
 	if (cmd.parameterNumber == WARM_WHITE_CONFIG || cmd.parameterNumber == COLD_WHITE_CONFIG) {
         result = createEvent(name: "colorTemperature", value: cmd.scaledConfigurationValue)
+		setGenericTempName(cmd.scaledConfigurationValue)
     }
 	result    
 }
@@ -192,14 +195,8 @@ def setColorTemperature(temp) {
 	def parameterNumber = temp < 5000 ? WARM_WHITE_CONFIG : COLD_WHITE_CONFIG
 	def cmds = []
     cmds << zwave.switchColorV3.switchColorSet(warmWhite: warmValue, coldWhite: coldValue)
-    if (temp < 2700) {
-        // min is 2700
-        temp = 2700
-    }
-    if (temp > 6500) {
-         // max is 6500
-         temp = 6500
-    }
+    if (temp < COLOR_TEMP_MIN) temp = 2700
+    if (temp > COLOR_TEMP_MAX) temp = 6500
     cmds << zwave.configurationV1.configurationSet([scaledConfigurationValue: temp, parameterNumber: parameterNumber, size:2])
     if ((device.currentValue("switch") != "on") && (!colorStaging)) {
 		if (logEnable) log.debug "Bulb is off. Turning on"
@@ -232,6 +229,28 @@ private command(hubitat.zwave.Command cmd) {
 
 private commands(commands, delay=200) {
 	delayBetween(commands.collect{ command(it) }, delay)
+}
+
+
+def setGenericTempName(temp){
+    if (!temp) return
+    def genericName
+    def value = temp.toInteger()
+    if (value <= 2000) genericName = "Sodium"
+    else if (value <= 2100) genericName = "Starlight"
+    else if (value < 2400) genericName = "Sunrise"
+    else if (value < 2800) genericName = "Incandescent"
+    else if (value < 3300) genericName = "Soft White"
+    else if (value < 3500) genericName = "Warm White"
+    else if (value < 4150) genericName = "Moonlight"
+    else if (value <= 5000) genericName = "Horizon"
+    else if (value < 5500) genericName = "Daylight"
+    else if (value < 6000) genericName = "Electronic"
+    else if (value <= 6500) genericName = "Skylight"
+    else if (value < 20000) genericName = "Polar"
+    def descriptionText = "${device.getDisplayName()} color is ${genericName}"
+    if (txtEnable) log.info "${descriptionText}"
+    sendEvent(name: "colorName", value: genericName ,descriptionText: descriptionText)
 }
 
 def setDefaultAssociations() {
