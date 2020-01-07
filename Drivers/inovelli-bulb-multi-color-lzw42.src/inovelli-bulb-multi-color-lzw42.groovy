@@ -242,7 +242,7 @@ def setSaturation(percent) {
 
 def setHue(value) {
 	if (logEnable) log.debug "setHue($value)"
-	setColor([hue: value, saturation: device.currentValue("saturation"), level: device.currentValue("level")])
+	setColor([hue: value, saturation: 100, level: device.currentValue("level")])
 }
 
 def setColor(value) {
@@ -257,7 +257,7 @@ def setColor(value) {
 		if (logEnable) log.debug "Bulb is off. Turning on"
  		result << zwave.basicV1.basicSet(value: 0xFF)
 	}
-	commands(result) + "Delay 7000" + commands(queryAllColors(), 1000)
+	commands(result + queryAllColors())
 }
 
 def setColorTemperature(temp) {
@@ -276,7 +276,8 @@ def setColorTemperature(temp) {
 		cmds << zwave.basicV1.basicSet(value: 0xFF)
 		cmds << zwave.switchMultiLevelV3.switchMultilevelGet()
 	}
-	commands(cmds) + "delay 7000" + commands(queryAllColors(), 1000)
+	commands(cmds + queryAllColors())
+	
 }
 
 private queryAllColors() {
