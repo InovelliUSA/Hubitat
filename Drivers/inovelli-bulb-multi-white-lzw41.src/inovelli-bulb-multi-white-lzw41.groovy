@@ -221,7 +221,7 @@ def setColorTemperature(temp) {
 		cmds << zwave.basicV1.basicSet(value: 0xFF)
 		cmds << zwave.switchMultiLevelV3.switchMultilevelGet()
 	}
-	commands(cmds) + "delay 4000" + commands(queryAllColors(), 500)
+	commands(cmds + queryAllColors())
 }
 
 private queryAllColors() {
