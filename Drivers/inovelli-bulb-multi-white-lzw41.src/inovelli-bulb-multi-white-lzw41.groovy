@@ -28,6 +28,7 @@ metadata {
 		capability "Actuator"
 		capability "Sensor"
 		capability "Health Check"
+		capability "Configuration"
 
 		attribute "colorName", "string"
         
@@ -40,6 +41,7 @@ metadata {
 		// added for official hubitat standards
 		input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: false
         input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true
+		input name: "bulbMemory", type: "bool", title: "Enable Power State Memory", defaultValue: false
     	}
 }
 
@@ -60,8 +62,19 @@ def updated() {
 	log.info "updated().."
 	log.warn "debug logging is: ${logEnable == true}"
 	log.warn "color staging is: ${colorStaging == false}"
+	log.warn "bulb memory is: ${bulbMemory == false}"
+
 	if (logEnable) runIn(1800,logsOff)
 	response(refresh())
+}
+
+def configure() {
+	def value = 0
+	def cmds = []
+	if (bulbMemory) value=1
+	cmds << zwave.configurationV1.configurationSet([scaledConfigurationValue: value, parameterNumber: 2, size:1])
+	cmds << zwave.configurationV2.configurationGet([parameterNumber: 2])
+	commands(cmds)
 }
 
 def installed() {
@@ -141,6 +154,9 @@ def zwaveEvent(hubitat.zwave.commands.configurationv2.ConfigurationReport cmd) {
         result = createEvent(name: "colorTemperature", value: cmd.scaledConfigurationValue)
 		setGenericTempName(cmd.scaledConfigurationValue)
     }
+	if (cmd.parameterNumber == 0x02) {
+		state.powerStateMem = cmd.scaledConfigurationValue
+	}
 	result    
 }
 
