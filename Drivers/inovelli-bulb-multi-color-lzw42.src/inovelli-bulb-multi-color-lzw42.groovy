@@ -43,6 +43,7 @@ metadata {
         	// added for official hubitat standards
         	input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: false
 			input name: "logEnable", type: "bool", description: "", title: "Enable Debug Logging", defaultVaule: true
+			input name: "bulbMemory", type: "bool", title: "Enable Power State Memory", defaultValue: false
 	}
 	
 }
@@ -84,10 +85,12 @@ def installed() {
 }
 
 def configure() {
-	commands([
-		// Set the dimming ramp rate
-		zwave.configurationV2.configurationSet(parameterNumber: 0x10, size: 1, scaledConfigurationValue: 5)
-	])
+	def value = 0
+	def cmds = []
+	if (bulbMemory) value=1
+	cmds << zwave.configurationV1.configurationSet([scaledConfigurationValue: value, parameterNumber: 2, size:1])
+	cmds << zwave.configurationV2.configurationGet([parameterNumber: 2])
+	commands(cmds)
 }
 
 def parse(description) {
@@ -185,6 +188,9 @@ def zwaveEvent(hubitat.zwave.commands.configurationv2.ConfigurationReport cmd) {
 	if (cmd.parameterNumber == WARM_WHITE_CONFIG || cmd.parameterNumber == COLD_WHITE_CONFIG) {
 		result = createEvent(name: "colorTemperature", value: cmd.scaledConfigurationValue)
 		setGenericTempName(cmd.scaledConfigurationValue)
+	}
+		if (cmd.parameterNumber == 0x02) {
+		state.powerStateMem = cmd.scaledConfigurationValue
 	}
 	result
 }
