@@ -82,7 +82,7 @@ def updated() {
 
 def installed() {
 	if (logEnable) log.debug "installed()..."
-	state.colorReceived = [RED: null, GREEN: null, BLUE: null, WARM_WHITE: null, COLD_WHITE: null]
+	state.colorReceived = [RED: null, GREEN: null, BLUE: null, warmWhite: null, coldWhite: null]
 	sendEvent(name: "checkInterval", value: 1860, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID, offlinePingable: "0"])
 	sendEvent(name: "level", value: 100, unit: "%")
 	sendEvent(name: "colorTemperature", value: COLOR_TEMP_MIN)
@@ -136,6 +136,7 @@ def zwaveEvent(hubitat.zwave.commands.switchmultilevelv3.SwitchMultilevelReport 
 
 def zwaveEvent(hubitat.zwave.commands.switchcolorv1.SwitchColorReport cmd) {
 	if (logEnable) log.debug "got SwitchColorReport: $cmd"
+	
 	state.colorReceived[cmd.colorComponent] = cmd.value
 	def result = []
 	// Check if we got all the RGB color components
@@ -259,6 +260,7 @@ def setHue(value) {
 }
 
 def setColor(value) {
+	state.colorReceived = [RED: null, GREEN: null, BLUE: null, warmWhite: null, coldWhite: null]
 	if (value.hue == null || value.saturation == null) return
 	if (logEnable) log.debug "setColor($value)"
 	def result = []
