@@ -41,7 +41,7 @@ metadata {
 	}
 	preferences {
         	// added for official hubitat standards
-        	input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: false
+			input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: false
 			input name: "logEnable", type: "bool", description: "", title: "Enable Debug Logging", defaultVaule: true
 			input name: "bulbMemory", type: "bool", title: "Enable Power State Memory", defaultValue: false
 	}
