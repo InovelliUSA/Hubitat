@@ -81,7 +81,7 @@ def updated() {
 
 def installed() {
 	if (logEnable) log.debug "installed()..."
-	state.colorReceived = [RED: null, GREEN: null, BLUE: null, WARM_WHITE: null, COLD_WHITE: null]
+	state.colorReceived = [red: null, green: null, blue: null, warmWhite: null, coldWhite: null]
 	sendEvent(name: "checkInterval", value: 1860, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID, offlinePingable: "0"])
 	sendEvent(name: "level", value: 100, unit: "%")
 	sendEvent(name: "colorTemperature", value: COLOR_TEMP_MIN)
@@ -258,6 +258,7 @@ def setHue(value) {
 }
 
 def setColor(value) {
+	state.colorReceived = [red: null, green: null, blue: null, warmWhite: null, coldWhite: null]
 	if (value.hue == null || value.saturation == null) return
 	if (logEnable) log.debug "setColor($value)"
 	def result = []
