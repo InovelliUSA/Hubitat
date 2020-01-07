@@ -23,6 +23,7 @@
  *		Fixed reporting 
  *		Removed SmartThings related code
  *		Added importURL
+ *		Added color name
  */
 
 metadata {
