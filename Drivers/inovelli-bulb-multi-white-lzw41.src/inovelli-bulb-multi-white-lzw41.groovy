@@ -14,9 +14,15 @@
  *
  *  Author: Eric Maycock
  *  Date: 2019-9-9
- *  Forked and updated by bcopeland 1/2/2020 
- *    - removed turn on when set color temp
- *  Modified to allow for colorStaging preference per official standards
+ *  updated by bcopeland 1/7/2020 
+ *		Added color pre-staging option
+ *		Added power restored memory configuration
+ *		Added debug logging configuration
+ *		Fixed color setting (broken in official drivers)
+ *		Fixed color temperature setting (broken in official drivers)
+ *		Fixed reporting (broken in official drivers)
+ *		Removed SmartThings related code
+ *		Added importURL
  */
 
 metadata {
