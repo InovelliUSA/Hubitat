@@ -18,9 +18,9 @@
  *		Added color pre-staging option
  *		Added power restored memory configuration
  *		Added debug logging configuration
- *		Fixed color setting (broken in official drivers)
- *		Fixed color temperature setting (broken in official drivers)
- *		Fixed reporting (broken in official drivers)
+ *		Fixed color setting 
+ *		Fixed color temperature setting 
+ *		Fixed reporting 
  *		Removed SmartThings related code
  *		Added importURL
  */
