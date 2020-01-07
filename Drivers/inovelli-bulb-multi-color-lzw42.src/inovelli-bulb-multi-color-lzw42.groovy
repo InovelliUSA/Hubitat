@@ -20,6 +20,7 @@
  *  Modified with colorStaging preference to match official standards
  */
 
+
 metadata {
 	definition (name: "Inovelli Bulb Multi-Color LZW42 DDD", namespace: "djdizzyd", author: "InovelliUSA", importUrl: "https://raw.githubusercontent.com/djdizzyd/Hubitat-Inovelli/master/Drivers/inovelli-bulb-multi-color-lzw42.src/inovelli-bulb-multi-color-lzw42.groovy") {
 		capability "Switch Level"
@@ -94,7 +95,7 @@ def parse(description) {
 	if (description != "updated") {
         def cmd
         try {
-		    cmd = zwave.parse(description)
+		    cmd = zwave.parse(description,[0x33:1,0x08:2,0x26:3])
         } catch (e) {
             //log.debug "An exception was caught $e"
         }
@@ -123,7 +124,7 @@ def zwaveEvent(hubitat.zwave.commands.switchmultilevelv3.SwitchMultilevelReport 
 	dimmerEvents(cmd)
 }
 
-def zwaveEvent(hubitat.zwave.commands.switchcolorv3.SwitchColorReport cmd) {
+def zwaveEvent(hubitat.zwave.commands.switchcolorv1.SwitchColorReport cmd) {
 	if (logEnable) log.debug "got SwitchColorReport: $cmd"
 	state.colorReceived[cmd.colorComponent] = cmd.value
 	def result = []
@@ -135,10 +136,10 @@ def zwaveEvent(hubitat.zwave.commands.switchcolorv3.SwitchColorReport cmd) {
 		def hexColor = "#" + colors.collect { Integer.toHexString(it).padLeft(2, "0") }.join("")
 		result << createEvent(name: "color", value: hexColor)
 		// Send the color as hue and saturation
-		def hsv = rgbToHSV(*colors)
-		result << createEvent(name: "hue", value: hsv.hue)
-		setGenericName(hsv.hue)
-		result << createEvent(name: "saturation", value: hsv.saturation)
+		def hsv = hubitat.helper.ColorUtils.rgbToHSV(colors)
+		result << createEvent(name: "hue", value: hsv[0])
+		setGenericName(hsv[0])
+		result << createEvent(name: "saturation", value: hsv[1])
 		// Reset the values
 		RGB_NAMES.collect { state.colorReceived[it] = null}
 	}
@@ -236,19 +237,20 @@ def setLevel(level, duration) {
 
 def setSaturation(percent) {
 	if (logEnable) log.debug "setSaturation($percent)"
-	setColor([saturation: percent, hue: state.hue])
+	setColor([saturation: percent, hue: device.currentValue("hue"), level: device.currentValue("level")])
 }
 
 def setHue(value) {
 	if (logEnable) log.debug "setHue($value)"
-	setColor([hue: value, saturation: state.saturation])
+	setColor([hue: value, saturation: device.currentValue("saturation"), level: device.currentValue("level")])
 }
 
 def setColor(value) {
 	if (value.hue == null || value.saturation == null) return
 	if (logEnable) log.debug "setColor($value)"
 	def result = []
-	def rgb = huesatToRGB(value.hue, value.saturation)
+	def rgb = hubitat.helper.ColorUtils.hsvToRGB([value.hue, value.saturation, value.level])
+    log.debug "r:" + rgb[0] + ", g: " + rgb[1] +", b: " + rgb[2]
 	result << zwave.switchColorV3.switchColorSet(red: rgb[0], green: rgb[1], blue: rgb[2], warmWhite:0, coldWhite:0)
 
 	if ((device.currentValue("switch") != "on") && (!colorStaging)) {
@@ -256,9 +258,6 @@ def setColor(value) {
  		result << zwave.basicV1.basicSet(value: 0xFF)
 	}
 	commands(result) + "Delay 7000" + commands(queryAllColors(), 1000)
-	if (value.level) { 
-		setLevel(value.level) 
-	}
 }
 
 def setColorTemperature(temp) {
@@ -306,13 +305,13 @@ private commands(commands, delay=200) {
 }
 
 def rgbToHSV(red, green, blue) {
-	def hex = colorUtil.rgbToHex(red as int, green as int, blue as int)
-	def hsv = colorUtil.hexToHsv(hex)
+	def hex = hubitat.helper.ColorUtils.rgbToHex([red as int, green as int, blue as int])
+	def hsv = hubitat.helper.ColorUtils.hexToHsv(hex)
 	return [hue: hsv[0], saturation: hsv[1], value: hsv[2]]
 }
 
-def huesatToRGB(hue, sat) {
-	def color = colorUtil.hsvToHex(Math.round(hue) as int, Math.round(sat) as int)
+def huesatToRGB(hue, sat, level) {
+	def color = colorUtil.hsvToHex(hue as int, sat as int, level as int)
 	return colorUtil.hexToRgb(color)
 }
 
