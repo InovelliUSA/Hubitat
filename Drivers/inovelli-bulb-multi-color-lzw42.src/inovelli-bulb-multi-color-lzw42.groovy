@@ -49,7 +49,7 @@ metadata {
         	// added for official hubitat standards
 			input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: false
 			input name: "logEnable", type: "bool", description: "", title: "Enable Debug Logging", defaultVaule: true
-			input name: "bulbMemory", type: "bool", title: "Enable Power State Memory", defaultValue: false
+			input name: "bulbMemory", type: "enum", title: "Power outage state", options: [0:"Remembers Last State",1:"Bulb turns ON",2:"Bulb turns OFF"], defaultValue: 0
 	}
 	
 }
@@ -75,6 +75,7 @@ def updated() {
 	log.info "updated().."
 	log.warn "debug logging is: ${logEnable == true}"
 	log.warn "color staging is: ${colorStaging == false}"
+	if (state.powerStateMem.toInteger() != bulbMemory.toInteger()) device.configure() 
 	if (logEnable) runIn(1800,logsOff)
 	response(refresh())
 }
@@ -91,10 +92,8 @@ def installed() {
 }
 
 def configure() {
-	def value = 0
 	def cmds = []
-	if (bulbMemory) value=1
-	cmds << zwave.configurationV1.configurationSet([scaledConfigurationValue: value, parameterNumber: 2, size:1])
+	cmds << zwave.configurationV1.configurationSet([scaledConfigurationValue: bulbMemory.toInteger(), parameterNumber: 2, size:1])
 	cmds << zwave.configurationV2.configurationGet([parameterNumber: 2])
 	commands(cmds)
 }
