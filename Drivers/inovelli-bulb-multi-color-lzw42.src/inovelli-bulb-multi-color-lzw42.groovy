@@ -75,6 +75,7 @@ def updated() {
 	log.info "updated().."
 	log.warn "debug logging is: ${logEnable == true}"
 	log.warn "color staging is: ${colorStaging == false}"
+	if (!state.powerStateMem) state.powerStateMem=0
 	if (state.powerStateMem.toInteger() != bulbMemory.toInteger()) device.configure() 
 	if (logEnable) runIn(1800,logsOff)
 	response(refresh())
