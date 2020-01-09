@@ -25,9 +25,9 @@
  *		Removed SmartThings related code
  *		Added importURL
  *		Added color name
-  *	updated by bcopeland 1/9/2020
+ *	updated by bcopeland 1/9/2020
  *		Added firmware version reporting
-  *     Fix for scene capture and level in setcolor
+ *		Fix for scene capture and level in setcolor
  */
 
 
