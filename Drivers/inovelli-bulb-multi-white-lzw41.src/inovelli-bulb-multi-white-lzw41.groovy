@@ -24,6 +24,8 @@
  *		Removed SmartThings related code
  *		Added importURL
  *		Added color name
+  *	updated by bcopeland 1/9/2020
+ *		added firmware version reporting
  */
 
 metadata {
@@ -37,6 +39,7 @@ metadata {
 		capability "Health Check"
 		capability "Configuration"
 
+		attribute "firmware", "decimal"
 		attribute "colorName", "string"
         
         fingerprint mfr: "0300", prod: "0006", model: "0001", deviceJoinName: "Inovelli Bulb Multi-White" //US
@@ -70,7 +73,7 @@ def updated() {
 	log.warn "debug logging is: ${logEnable == true}"
 	log.warn "color staging is: ${colorStaging == false}"
 	log.warn "bulb memory is: ${bulbMemory == false}"
-	if (!state.powerStateMem) state.powerStateMem=0
+	if (!state.powerStateMem) initializeVars()
 	if (state.powerStateMem.toInteger() != bulbMemory.toInteger()) device.configure() 
 	if (logEnable) runIn(1800,logsOff)
 	response(refresh())
@@ -88,6 +91,11 @@ def installed() {
 	sendEvent(name: "checkInterval", value: 1860, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID, offlinePingable: "0"])
 	sendEvent(name: "level", value: 100, unit: "%")
 	sendEvent(name: "colorTemperature", value: 2700)
+	initializeVars()
+}
+
+def initializeVars() {
+	state.powerStateMem=0
 }
 
 def parse(description) {
@@ -112,6 +120,12 @@ def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd) {
 
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicSet cmd) {
 	dimmerEvents(cmd)
+}
+
+def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
+	if (logEnable) log.debug "got version report"
+	BigDecimal fw = cmd.applicationVersion + (cmd.applicationSubVersion / 100)
+	state.firmware = fw
 }
 
 def zwaveEvent(hubitat.zwave.commands.switchmultilevelv3.SwitchMultilevelReport cmd) {
@@ -184,7 +198,7 @@ def off() {
 }
 
 def refresh() {
-    commands([zwave.switchMultilevelV3.switchMultilevelGet()] + queryAllColors(), 500)
+    commands([zwave.switchMultilevelV3.switchMultilevelGet()] + queryAllColors() + zwave.versionV1.versionGet())
 }
 
 def ping() {

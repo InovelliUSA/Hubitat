@@ -24,6 +24,8 @@
  *		Removed SmartThings related code
  *		Added importURL
  *		Added color name
+ *	updated by bcopeland 1/9/2020
+ *		added firmware version reporting
  */
 
 
@@ -40,6 +42,7 @@ metadata {
 		capability "Configuration"
 
 		attribute "colorName", "string"
+		attribute "firmware", "decimal"
 
         fingerprint mfr: "031E", prod: "0005", model: "0001", deviceJoinName: "Inovelli Bulb Multi-Color"
         fingerprint deviceId: "0x1101", inClusters: "0x5E,0x85,0x59,0x86,0x72,0x5A,0x33,0x26,0x70,0x27,0x98,0x73,0x7A"
@@ -75,7 +78,7 @@ def updated() {
 	log.info "updated().."
 	log.warn "debug logging is: ${logEnable == true}"
 	log.warn "color staging is: ${colorStaging == false}"
-	if (!state.powerStateMem) state.powerStateMem=0
+	if (!state.powerStateMem) initializeVars()
 	if (state.powerStateMem.toInteger() != bulbMemory.toInteger()) device.configure() 
 	if (logEnable) runIn(1800,logsOff)
 	response(refresh())
@@ -83,13 +86,18 @@ def updated() {
 
 def installed() {
 	if (logEnable) log.debug "installed()..."
-	state.colorReceived = [red: null, green: null, blue: null, warmWhite: null, coldWhite: null]
+	initializeVars()
 	sendEvent(name: "checkInterval", value: 1860, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID, offlinePingable: "0"])
 	sendEvent(name: "level", value: 100, unit: "%")
 	sendEvent(name: "colorTemperature", value: COLOR_TEMP_MIN)
 	sendEvent(name: "color", value: "#000000")
 	sendEvent(name: "hue", value: 0)
 	sendEvent(name: "saturation", value: 0)
+}
+
+def initializeVars() {
+	if (!state.colorReceived) state.colorReceived = [red: null, green: null, blue: null, warmWhite: null, coldWhite: null]
+	if (!state.powerStateMem) state.powerStateMem=0
 }
 
 def configure() {
@@ -123,6 +131,12 @@ def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd) {
 	dimmerEvents(cmd)
 }
 
+def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
+	if (logEnable) log.debug "got version report"
+	BigDecimal fw = cmd.applicationVersion + (cmd.applicationSubVersion / 100)
+	state.firmware = fw
+}
+
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicSet cmd) {
 	dimmerEvents(cmd)
 }
@@ -134,6 +148,7 @@ def zwaveEvent(hubitat.zwave.commands.switchmultilevelv3.SwitchMultilevelReport 
 }
 
 def zwaveEvent(hubitat.zwave.commands.switchcolorv1.SwitchColorReport cmd) {
+	if (!state.colorReceived) initializeVars()
 	if (logEnable) log.debug "got SwitchColorReport: $cmd"
 	state.colorReceived[cmd.colorComponent] = cmd.value
 	def result = []
@@ -219,7 +234,7 @@ def off() {
 }
 
 def refresh() {
-	commands([zwave.switchMultilevelV3.switchMultilevelGet()] + queryAllColors())
+	commands([zwave.switchMultilevelV3.switchMultilevelGet()] + queryAllColors() + zwave.versionV1.versionGet())
 }
 
 def ping() {
@@ -258,7 +273,6 @@ def setHue(value) {
 }
 
 def setColor(value) {
-	state.colorReceived = [red: null, green: null, blue: null, warmWhite: null, coldWhite: null]
 	if (value.hue == null || value.saturation == null) return
 	if (logEnable) log.debug "setColor($value)"
 	def result = []
@@ -453,5 +467,3 @@ def setGenericName(hue){
     if (txtEnable) log.info "${descriptionText}"
     sendEvent(name: "colorName", value: colorName ,descriptionText: descriptionText)
 }
-
-
