@@ -239,7 +239,7 @@ def setColorTemperature(temp) {
     if ((device.currentValue("switch") != "on") && (!colorStaging)) {
 		if (logEnable) log.debug "Bulb is off. Turning on"
 		cmds << zwave.basicV1.basicSet(value: 0xFF)
-		cmds << zwave.switchMultiLevelV3.switchMultilevelGet()
+		cmds << zwave.switchMultilevelV3.switchMultilevelGet()
 	}
 	commands(cmds + queryAllColors())
 }

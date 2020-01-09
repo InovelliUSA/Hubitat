@@ -41,6 +41,7 @@ metadata {
 		capability "Sensor"
 		capability "Health Check"
 		capability "Configuration"
+		capability "ColorMode"
 
 		attribute "colorName", "string"
 		attribute "firmware", "decimal"
@@ -281,12 +282,12 @@ def setColor(value) {
 	def rgb = hubitat.helper.ColorUtils.hsvToRGB([value.hue, value.saturation, value.level])
     log.debug "r:" + rgb[0] + ", g: " + rgb[1] +", b: " + rgb[2]
 	result << zwave.switchColorV3.switchColorSet(red: rgb[0], green: rgb[1], blue: rgb[2], warmWhite:0, coldWhite:0)
-
-	if ((device.currentValue("switch") != "on") && (!colorStaging)) {
+	result << zwave.switchMultilevelV3.switchMultilevelSet(value: value.level, dimmingDuration:1)
+	if ((device.currentValue("switch") != "on") && ((!colorStaging) || (device.currentValue("level") != value.level))) {
 		if (logEnable) log.debug "Bulb is off. Turning on"
  		result << zwave.basicV1.basicSet(value: 0xFF)
 	}
-	commands(result + queryAllColors())
+	commands(result + queryAllColors()+zwave.switchMultilevelV3.switchMultilevelGet())
 }
 
 def setColorTemperature(temp) {
@@ -303,7 +304,7 @@ def setColorTemperature(temp) {
     if ((device.currentValue("switch") != "on") && (!colorStaging)) {
 		if (logEnable) log.debug "Bulb is off. Turning on"
 		cmds << zwave.basicV1.basicSet(value: 0xFF)
-		cmds << zwave.switchMultiLevelV3.switchMultilevelGet()
+		cmds << zwave.switchMultilevelV3.switchMultilevelGet()
 	}
 	commands(cmds + queryAllColors())
 	
@@ -428,6 +429,7 @@ def setGenericTempName(temp){
     else if (value < 20000) genericName = "Polar"
     def descriptionText = "${device.getDisplayName()} color is ${genericName}"
     if (txtEnable) log.info "${descriptionText}"
+	sendEvent(name: "colorMode", value: "CT", descriptionText: "${device.getDisplayName()} color mode is CT")
     sendEvent(name: "colorName", value: genericName ,descriptionText: descriptionText)
 }
 
@@ -467,6 +469,7 @@ def setGenericName(hue){
     }
     def descriptionText = "${device.getDisplayName()} color is ${colorName}"
     if (txtEnable) log.info "${descriptionText}"
+	sendEvent(name: "colorMode", value: "RGB", descriptionText: "${device.getDisplayName()} color mode is RGB")
     sendEvent(name: "colorName", value: colorName ,descriptionText: descriptionText)
 }
 
