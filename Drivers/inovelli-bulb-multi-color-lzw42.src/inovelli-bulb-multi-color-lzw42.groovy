@@ -165,12 +165,12 @@ def zwaveEvent(hubitat.zwave.commands.switchcolorv1.SwitchColorReport cmd) {
 		result << createEvent(name: "color", value: hexColor)
 		// Send the color as hue and saturation
 		def hsv = hubitat.helper.ColorUtils.rgbToHSV(colors)
-		result << createEvent(name: "hue", value: hsv[0])
-		result << createEvent(name: "saturation", value: hsv[1])
+		result << createEvent(name: "hue", value: hsv[0].round())
+		result << createEvent(name: "saturation", value: hsv[1].round())
 		
 		if ((hsv[0] > 0) && (hsv[1] > 0)) {
 			setGenericName(hsv[0])
-			result << createEvent(name: "level", value: hsv[2])
+			result << createEvent(name: "level", value: hsv[2].round())
 		}
 		// Reset the values
 		RGB_NAMES.collect { state.colorReceived[it] = null}
