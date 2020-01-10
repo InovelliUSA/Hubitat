@@ -281,32 +281,33 @@ def setColor(value) {
 	def rgb = hubitat.helper.ColorUtils.hsvToRGB([value.hue, value.saturation, value.level])
     log.debug "r:" + rgb[0] + ", g: " + rgb[1] +", b: " + rgb[2]
 	result << zwave.switchColorV3.switchColorSet(red: rgb[0], green: rgb[1], blue: rgb[2], warmWhite:0, coldWhite:0)
-	result << zwave.switchMultilevelV3.switchMultilevelSet(value: value.level, dimmingDuration:1)
-	if ((device.currentValue("switch") != "on") && ((!colorStaging) || (device.currentValue("level") != value.level))) {
+	if ((device.currentValue("switch") != "on") && (!colorStaging)){
 		if (logEnable) log.debug "Bulb is off. Turning on"
  		result << zwave.basicV1.basicSet(value: 0xFF)
+        result << zwave.switchMultilevelV3.switchMultilevelGet()
 	}
-	commands(result + queryAllColors()+zwave.switchMultilevelV3.switchMultilevelGet())
+    commands(result+queryAllColors())
 }
 
 def setColorTemperature(temp) {
 	if (logEnable) log.debug "setColorTemperature($temp)"
-	def warmValue = temp < 5000 ? 255 : 0
-	def coldValue = temp >= 5000 ? 255 : 0
-	def parameterNumber = temp < 5000 ? WARM_WHITE_CONFIG : COLD_WHITE_CONFIG
-	def cmds = []
-    cmds << zwave.switchColorV3.switchColorSet(red: 0, green: 0, blue:0, warmWhite: warmValue, coldWhite: coldValue)
-    if (temp < COLOR_TEMP_MIN) temp = 2700
-    if (temp > COLOR_TEMP_MAX) temp = 6500
-	cmds << zwave.configurationV1.configurationSet([scaledConfigurationValue: temp, parameterNumber: parameterNumber, size:2])
-
-    if ((device.currentValue("switch") != "on") && (!colorStaging)) {
-		if (logEnable) log.debug "Bulb is off. Turning on"
-		cmds << zwave.basicV1.basicSet(value: 0xFF)
-		cmds << zwave.switchMultilevelV3.switchMultilevelGet()
+	if ((device.currentValue("colorMode") != "CT") || (device.currentValue("colorTemperature") != temp)) {
+		def warmValue = temp < 5000 ? 255 : 0
+		def coldValue = temp >= 5000 ? 255 : 0
+		def parameterNumber = temp < 5000 ? WARM_WHITE_CONFIG : COLD_WHITE_CONFIG
+		def cmds = []
+		cmds << zwave.switchColorV3.switchColorSet(red: 0, green: 0, blue:0, warmWhite: warmValue, coldWhite: coldValue)
+		if (temp < COLOR_TEMP_MIN) temp = 2700
+		if (temp > COLOR_TEMP_MAX) temp = 6500
+		cmds << zwave.configurationV1.configurationSet([scaledConfigurationValue: temp, parameterNumber: parameterNumber, size:2])
+		if ((device.currentValue("switch") != "on") && (!colorStaging)) {
+			if (logEnable) log.debug "Bulb is off. Turning on"
+			cmds << zwave.basicV1.basicSet(value: 0xFF)
+			cmds << zwave.switchMultilevelV3.switchMultilevelGet()
+		}
+		commands(cmds + queryAllColors())
+        
 	}
-	commands(cmds + queryAllColors())
-	
 }
 
 private queryAllColors() {
