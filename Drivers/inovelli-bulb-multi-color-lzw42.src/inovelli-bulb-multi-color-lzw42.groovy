@@ -167,8 +167,11 @@ def zwaveEvent(hubitat.zwave.commands.switchcolorv1.SwitchColorReport cmd) {
 		def hsv = hubitat.helper.ColorUtils.rgbToHSV(colors)
 		result << createEvent(name: "hue", value: hsv[0])
 		result << createEvent(name: "saturation", value: hsv[1])
-		result << createEvent(name: "level", value: hsv[2])
-		if ((hsv[0] > 0) && (hsv[1] > 0)) setGenericName(hsv[0])
+		
+		if ((hsv[0] > 0) && (hsv[1] > 0)) {
+			setGenericName(hsv[0])
+			result << createEvent(name: "level", value: hsv[2])
+		}
 		// Reset the values
 		RGB_NAMES.collect { state.colorReceived[it] = null}
 	}
@@ -182,6 +185,7 @@ def zwaveEvent(hubitat.zwave.commands.switchcolorv1.SwitchColorReport cmd) {
 		} else {
 			def parameterNumber = warmWhite ? WARM_WHITE_CONFIG : COLD_WHITE_CONFIG
 			result << response(command(zwave.configurationV2.configurationGet([parameterNumber: parameterNumber])))
+			result << response(command(zwave.switchMultilevelV3.switchMultilevelGet()))
 		}
 		// Reset the values
 		WHITE_NAMES.collect { state.colorReceived[it] = null }
