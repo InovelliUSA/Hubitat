@@ -70,9 +70,8 @@ def logsOff(){
 
 def updated() {
 	log.info "updated().."
-	log.warn "debug logging is: ${logEnable == true}"
-	log.warn "color staging is: ${colorStaging == false}"
-	log.warn "bulb memory is: ${bulbMemory == false}"
+	log.warn "debug logging is: ${logEnable}"
+	log.warn "color staging is: ${colorStaging}"
 	if (!state.powerStateMem) initializeVars()
 	if (state.powerStateMem.toInteger() != bulbMemory.toInteger()) device.configure() 
 	if (logEnable) runIn(1800,logsOff)
