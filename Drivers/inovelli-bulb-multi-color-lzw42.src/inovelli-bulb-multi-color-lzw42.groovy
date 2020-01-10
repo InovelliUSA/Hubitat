@@ -27,6 +27,8 @@
  *	updated by bcopeland 1/9/2020
  *		added firmware version reporting
  *		fix for scene capture and level in setcolor
+ *	updated by bcopeland 1/10/2020
+ *		fix for hsl level from received color report
  */
 
 
@@ -165,6 +167,7 @@ def zwaveEvent(hubitat.zwave.commands.switchcolorv1.SwitchColorReport cmd) {
 		def hsv = hubitat.helper.ColorUtils.rgbToHSV(colors)
 		result << createEvent(name: "hue", value: hsv[0])
 		result << createEvent(name: "saturation", value: hsv[1])
+		result << createEvent(name: "level", value: hsv[2])
 		if ((hsv[0] > 0) && (hsv[1] > 0)) setGenericName(hsv[0])
 		// Reset the values
 		RGB_NAMES.collect { state.colorReceived[it] = null}
