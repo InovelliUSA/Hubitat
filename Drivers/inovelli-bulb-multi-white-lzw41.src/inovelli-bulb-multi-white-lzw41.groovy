@@ -156,7 +156,7 @@ private dimmerEvents(hubitat.zwave.Command cmd) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cmd) {
-	def encapsulatedCommand = cmd.encapsulatedCommand()
+	def encapsulatedCommand = cmd.encapsulatedCommand([0x33:1,0x08:2,0x26:3])
 	if (encapsulatedCommand) {
 		zwaveEvent(encapsulatedCommand)
 	} else {
