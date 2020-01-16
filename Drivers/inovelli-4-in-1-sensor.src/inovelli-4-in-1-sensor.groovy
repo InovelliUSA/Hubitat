@@ -3,7 +3,7 @@
  *  Inovelli 4-in-1 Sensor 
  *   
  *	github: InovelliUSA
- *	Date: 2019-09-04
+ *	Date: 2020-01-16
  *	Copyright Inovelli / Eric Maycock
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -15,32 +15,41 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ *  2020-01-16: Support for all device configuration parameters.
+ *              Offset options for temperature, humidity, and illuminance.
+ *              Fix illuminance scale.
+ *              Options to enable & disable logging.
+ *              Association support added for use with the Inovelli Z-Wave association tool.
+ *
  */
 
  metadata {
 	definition (name: "Inovelli 4-in-1 Sensor", namespace: "InovelliUSA", author: "Eric Maycock", vid:"generic-motion-7") {
-		capability "Motion Sensor"
-		capability "Acceleration Sensor"
-		capability "Temperature Measurement"
-		capability "Relative Humidity Measurement"
-		capability "Illuminance Measurement"
-		capability "Configuration"
-		capability "Sensor"
-		capability "Battery"
+        capability "Motion Sensor"
+        capability "Temperature Measurement"
+        capability "Relative Humidity Measurement"
+        capability "Illuminance Measurement"
+        capability "Configuration"
+        capability "Sensor"
+        capability "Battery"
         capability "Refresh"
-        capability "Tamper Alert"
-        capability "Health Check"
+        //capability "Health Check"
         
         command "resetBatteryRuntime"
-		
-        attribute   "needUpdate", "string"
-        
+        command "setAssociationGroup", ["number", "enum", "number", "number"] // group number, nodes, action (0 - remove, 1 - add), multi-channel endpoint (optional)
+
+        attribute "lastActivity", "String"
+        attribute "lastEvent", "String"
+        attribute "firmware", "String"
+
         fingerprint mfr: "0072", prod: "0503", model: "0002", deviceJoinName: "Inovelli 4-in-1 Sensor"
+        fingerprint mfr: "0072", prod: "0503", model: "1E00", deviceJoinName: "Inovelli 4-in-1 Sensor"
+        fingerprint mfr: "031E", prod: "000D", model: "0001", deviceJoinName: "Inovelli 4-in-1 Sensor"
         fingerprint deviceId: "0x0701", inClusters: "0x5E,0x55,0x9F,0x98,0x6C,0x85,0x59,0x72,0x80,0x84,0x73,0x70,0x7A,0x5A,0x71,0x31,0x86"
 	}
     preferences {
-        //input description: "Once you change values on this page, the corner of the \"configuration\" icon will change orange until all configuration parameters are updated.", title: "Settings", displayDuringSetup: false, type: "paragraph", element: "paragraph"
-		//generate_preferences(configuration_model()) 
+        input description: "If battery powered, the configuration options (aside from temp, humidity, & lux offsets) will not be updated until the sensor wakes up (once every 24-Hours). To manually wake up the sensor, press the button on the back 3 times quickly.", title: "Settings", displayDuringSetup: false, type: "paragraph", element: "paragraph"
+        generate_preferences() 
     }
 	simulator {
 	}
@@ -61,55 +70,47 @@
 				attributeState "statusText", label:'${currentValue}'
 			}
 		}
-       standardTile("motion","device.motion", width: 2, height: 2) {
-            	state "active", label:'motion', icon:"st.motion.motion.active", backgroundColor:"#00a0dc"
-                state "inactive", label:'no motion', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff"
+        standardTile("motion","device.motion", inactiveLabel: false, width: 2, height: 2) {
+                state "inactive",label:'no motion',icon:"st.motion.motion.inactive",backgroundColor:"#ffffff"
+                state "active",label:'motion',icon:"st.motion.motion.active",backgroundColor:"#00a0dc"
 		}
 		valueTile("humidity","device.humidity", width: 2, height: 2) {
            	state "humidity",label:'RH ${currentValue}%',unit:"%"
 		}
-		valueTile(
-        	"illuminance","device.illuminance", width: 2, height: 2) {
-            	state "luminosity", label:'LUX ${currentValue}%', unit:"%", backgroundColors:[
+		valueTile("illuminance", "device.illuminance", inactiveLabel: false, width: 2, height: 2) {
+           state "luminosity", label:'LUX ${currentValue}', unit:"lux", 
+                backgroundColors:[
                 	[value: 0, color: "#000000"],
                     [value: 1, color: "#060053"],
-                    [value: 12, color: "#3E3900"],
-                    [value: 24, color: "#8E8400"],
-					[value: 48, color: "#C5C08B"],
-					[value: 60, color: "#DAD7B6"],
-					[value: 84, color: "#F3F2E9"],
-                    [value: 100, color: "#F3F2E9"]
+                    [value: 3, color: "#3E3900"],
+                    [value: 12, color: "#8E8400"],
+					[value: 24, color: "#C5C08B"],
+					[value: 36, color: "#DAD7B6"],
+					[value: 128, color: "#F3F2E9"],
+                    [value: 1000, color: "#FFFFFF"]
 				]
-		}
-		standardTile("acceleration", "device.acceleration", width: 2, height: 2) {
-			state("active", label:'tamper', icon:"st.motion.acceleration.active", backgroundColor:"#f39c12")
-			state("inactive", label:'clear', icon:"st.motion.acceleration.inactive", backgroundColor:"#ffffff")
-		}
-        standardTile("tamper", "device.tamper", width: 2, height: 2) {
-			state("detected", label:'tamper\nactive', icon:"st.contact.contact.open", backgroundColor:"#e86d13")
-			state("clear", label:'tamper\nclear', icon:"st.contact.contact.closed", backgroundColor:"#cccccc")
 		}
 		valueTile("battery", "device.battery", decoration: "flat", width: 2, height: 2) {
 			state "battery", label:'${currentValue}% battery', unit:""
 		}
-        valueTile("currentFirmware", "device.currentFirmware", width: 2, height: 2) {
-			state "currentFirmware", label:'Firmware: v${currentValue}', unit:""
-		}
-        standardTile("refresh", "device.switch", decoration: "flat", width: 2, height: 2) {
-			state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh-icon"
+        valueTile("firmware", "device.firmware", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
+            state "default", label: 'Firmware: ${currentValue}', icon: ""
+        }
+        standardTile("refresh", "device.switch", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
+			state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
 		}
         standardTile("configure", "device.needUpdate", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
             state "NO" , label:'', action:"configuration.configure", icon:"st.secondary.configure"
             state "YES", label:'', action:"configuration.configure", icon:"https://github.com/erocm123/SmartThingsPublic/raw/master/devicetypes/erocm123/qubino-flush-1d-relay.src/configure@2x.png"
         }
-        valueTile(
+        /*valueTile(
 			"batteryRuntime", "device.batteryRuntime", decoration: "flat", width: 2, height: 2) {
 			state "batteryRuntime", label:'Battery: ${currentValue} Double tap to reset counter', unit:"", action:"resetBatteryRuntime"
 		}
         standardTile(
 			"statusText2", "device.statusText2", decoration: "flat", width: 2, height: 2) {
 			state "statusText2", label:'${currentValue}', unit:"", action:"resetBatteryRuntime"
-		}
+		}*/
         
 		main([
         	"main", "motion"
@@ -117,8 +118,7 @@
 		details([
         	"main",
             "humidity","illuminance", "battery",
-            "motion","tamper", "refresh",
-             "statusText2", "configure", 
+            "motion", "refresh", "firmware"
             ])
 	}
 }
@@ -133,9 +133,9 @@ def parse(description) {
         def cmd = zwave.parse(description, commandClassVersions)
         if (cmd) {
             result += zwaveEvent(cmd)
-            log.debug("'$cmd' parsed to $result")
+            if (debugEnable != false) "'$cmd' parsed to $result"
         } else {
-            log.debug("Couldn't zwave.parse '$description'")
+            if (debugEnable != false) "Couldn't zwave.parse '$description'"
         }
     }
     def now
@@ -144,6 +144,7 @@ def parse(description) {
     else
     now = new Date().format("yyyy MMM dd EEE h:mm:ss a")
     sendEvent(name: "lastActivity", value: now, displayed:false)
+    updateStatus()
     result
 }
 
@@ -164,18 +165,21 @@ def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityCommandsSupportedReport
 }
 
 def zwaveEvent(hubitat.zwave.commands.configurationv2.ConfigurationReport cmd) {
-    update_current_properties(cmd)
-    log.debug "${device.displayName} parameter '${cmd.parameterNumber}' with a byte size of '${cmd.size}' is set to '${cmd2Integer(cmd.configurationValue)}'"
+    if (debugEnable != false) log.debug "${device.label?device.label:device.name}: ${cmd}"
+    if (infoEnable != false) log.info "${device.label?device.label:device.name}: parameter '${cmd.parameterNumber}' with a byte size of '${cmd.size}' is set to '${cmd2Integer(cmd.configurationValue)}'"
+    state."parameter${cmd.parameterNumber}value" = cmd2Integer(cmd.configurationValue)
 }
 
 def zwaveEvent(hubitat.zwave.commands.wakeupv1.WakeUpIntervalReport cmd)
 {
-	log.debug "WakeUpIntervalReport ${cmd.toString()}"
+    if (debugEnable != false) log.debug "${device.label?device.label:device.name}: ${cmd}"
+	if (infoEnable != false) log.info "${device.label?device.label:device.name}: WakeUpIntervalReport ${cmd.seconds} seconds"
     state.wakeInterval = cmd.seconds
 }
 
 def zwaveEvent(hubitat.zwave.commands.batteryv1.BatteryReport cmd) {
-    log.debug cmd
+    if (debugEnable != false) log.debug "${device.label?device.label:device.name}: ${cmd}"
+    if (infoEnable != false) log.info "${device.label?device.label:device.name}: Battery report received: ${cmd.batteryLevel}"
 	def map = [ name: "battery", unit: "%" ]
 	if (cmd.batteryLevel == 0xFF) {
 		map.value = 1
@@ -188,9 +192,15 @@ def zwaveEvent(hubitat.zwave.commands.batteryv1.BatteryReport cmd) {
 	createEvent(map)
 }
 
+def logsOff(){
+    log.info "${device.label?device.label:device.name}: Disabling logging after timeout"
+    device.updateSetting("debugEnable",[value:"false",type:"bool"])
+    //device.updateSetting("infoEnable",[value:"false",type:"bool"])
+}
+
 def zwaveEvent(hubitat.zwave.commands.sensormultilevelv5.SensorMultilevelReport cmd)
 {
-    log.debug cmd
+    if (debugEnable != false) log.debug "${device.label?device.label:device.name}: ${cmd}"
 	def map = [:]
 	switch (cmd.sensorType) {
 		case 1:
@@ -199,21 +209,25 @@ def zwaveEvent(hubitat.zwave.commands.sensormultilevelv5.SensorMultilevelReport 
             state.realTemperature = convertTemperatureIfNeeded(cmd.scaledSensorValue, cmdScale, cmd.precision)
 			map.value = getAdjustedTemp(state.realTemperature)
 			map.unit = getTemperatureScale()
+            if (infoEnable != false) log.info "${device.label?device.label:device.name}: Temperature report received: ${map.value}"
 			break;
 		case 3:
 			map.name = "illuminance"
             state.realLuminance = cmd.scaledSensorValue.toInteger()
 			map.value = getAdjustedLuminance(cmd.scaledSensorValue.toInteger())
 			map.unit = "lux"
+            if (infoEnable != false) log.info "${device.label?device.label:device.name}: Illuminance report received: ${map.value}"
 			break;
         case 5:
 			map.name = "humidity"
             state.realHumidity = cmd.scaledSensorValue.toInteger()
 			map.value = getAdjustedHumidity(cmd.scaledSensorValue.toInteger())
 			map.unit = "%"
+            if (infoEnable != false) log.info "${device.label?device.label:device.name}: Humidity report received: ${map.value}"
 			break;
 		default:
 			map.descriptionText = cmd.toString()
+            if (infoEnable != false) log.info "${device.label?device.label:device.name}: Unhandled sensor multilevel report received: ${map.descriptionText}"
 	}
 	createEvent(map)
 }
@@ -231,40 +245,50 @@ def motionEvent(value) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.sensorbinaryv2.SensorBinaryReport cmd) {
+    if (debugEnable != false) log.debug "${device.label?device.label:device.name}: ${cmd}"
+    if (infoEnable != false) log.info "${device.label?device.label:device.name}: Sensor Binary report received: ${cmd.value}"
 	motionEvent(cmd.sensorValue)
 }
 
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicSet cmd) {
+    if (debugEnable != false) log.debug "${device.label?device.label:device.name}: ${cmd}"
+    if (infoEnable != false) log.info "${device.label?device.label:device.name}: Basic Set received: ${cmd.value}"
 	motionEvent(cmd.value)
 }
 
 def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd) {
-	log.debug cmd
+	if (debugEnable != false) log.debug "${device.label?device.label:device.name}: ${cmd}"
+    //if (infoEnable != false) log.info "${device.label?device.label:device.name}: Notification report received: event - ${cmd.event},  notificationType - ${cmd.notificationType}"
     def result = []
 	if (cmd.notificationType == 7) {
+        if (infoEnable != false) log.info "${device.label?device.label:device.name}: notificationType 7 (Home Security)"
 		switch (cmd.event) {
 			case 0:
-                // Status Normal
+                if (infoEnable != false) log.info "${device.label?device.label:device.name}: event 0 (State Idle)"
                 result << motionEvent(0)
 				result << createEvent(name: "tamper", value: "clear", descriptionText: "$device.displayName tamper cleared")
                 result << createEvent(name: "acceleration", value: "inactive", descriptionText: "$device.displayName tamper cleared")
 				break
             case 1:
+                if (infoEnable != false) log.info "${device.label?device.label:device.name}: event 1 (Intrusion - location provided)"
 				result << motionEvent(1)
 				break
 			case 3:
+                if (infoEnable != false) log.info "${device.label?device.label:device.name}: event 3 (Tampering - product cover removed)"
 				result << createEvent(name: "tamper", value: "detected", descriptionText: "$device.displayName was moved")
                 result << createEvent(name: "acceleration", value: "active", descriptionText: "$device.displayName was moved")
 				break
 			case 7:
+                if (infoEnable != false) log.info "${device.label?device.label:device.name}: event 7 (Motion detection - location provided)"
 				result << motionEvent(1)
 				break
             case 8:
-                // Status Trigger
+                if (infoEnable != false) log.info "${device.label?device.label:device.name}: event 8 (Motion detection)"
 				result << motionEvent(1)
 				break
 		}
 	} else {
+        if (infoEnable != false) log.info "${device.label?device.label:device.name}: Unhandled Notification report received: ${cmd}"
 		result << createEvent(descriptionText: cmd.toString(), isStateChange: false)
 	}
 	result
@@ -272,13 +296,14 @@ def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd) {
 
 def zwaveEvent(hubitat.zwave.commands.wakeupv1.WakeUpNotification cmd)
 {
-    log.debug "Device ${device.displayName} woke up"
+    if (debugEnable != false) log.debug "${device.label?device.label:device.name}: ${cmd}"
+    if (infoEnable != false) log.info "${device.label?device.label:device.name}: WakeUp Notification received"
 
-    def cmds = update_needed_settings()
+    def cmds = initialize()
     
     if (!state.lastBatteryReport || (now() - state.lastBatteryReport) / 60000 >= 60 * 24)
     {
-        log.debug "Over 24hr since last battery report. Requesting report"
+        if (infoEnable != false) log.info "${device.label?device.label:device.name}: Over 24hr since last battery report. Requesting report"
         cmds << zwave.batteryV1.batteryGet()
     }
     
@@ -287,32 +312,13 @@ def zwaveEvent(hubitat.zwave.commands.wakeupv1.WakeUpNotification cmd)
     response(commands(cmds))
 }
 
-def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationReport cmd) {
-	log.debug "AssociationReport $cmd"
-    if (zwaveHubNodeId in cmd.nodeId) state."association${cmd.groupingIdentifier}" = true
-    else state."association${cmd.groupingIdentifier}" = false
-}
-
-def zwaveEvent(hubitat.zwave.commands.firmwareupdatemdv2.FirmwareMdReport cmd){
-    log.debug "Firmware Report ${cmd.toString()}"
-}
-
-def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
-    log.debug cmd
-    if(cmd.applicationVersion && cmd.applicationSubVersion) {
-	    def firmware = "${cmd.applicationVersion}.${cmd.applicationSubVersion.toString().padLeft(2,'0')}"
-        state.needfwUpdate = "false"
-        updateDataValue("firmware", firmware)
-        createEvent(name: "currentFirmware", value: firmware)
-    }
-}
-
 def zwaveEvent(hubitat.zwave.Command cmd) {
-    log.debug "Unknown Z-Wave Command: ${cmd.toString()}"
+    if (debugEnable != false) log.debug "${device.label?device.label:device.name}: ${cmd}"
+    if (infoEnable != false) log.info "${device.label?device.label:device.name}: Unknown Z-Wave Command: ${cmd.toString()}"
 }
 
 def refresh() {
-   	log.debug "$device.displayName - refresh()"
+   	if (infoEnable != false) log.info "${device.label?device.label:device.name}: refresh()"
 
     def request = []
     if (state.lastRefresh != null && now() - state.lastRefresh < 5000) {
@@ -335,159 +341,87 @@ def refresh() {
 }
 
 def ping() {
-   	log.debug "$device.displayName - ping()"
+   	if (infoEnable != false) log.info "${device.label?device.label:device.name}: ping()"
     return command(zwave.batteryV1.batteryGet())
 }
 
+def installed() {
+    if (infoEnable != false) log.info "${device.label?device.label:device.name}: installed()"
+    refresh()
+}
+
 def configure() {
-    log.debug "Configuring Device For SmartThings Use"
-    def cmds = []
-
-    cmds += update_needed_settings()
+    if (infoEnable != false) log.info "${device.label?device.label:device.name}: configure()"
+    def cmds = initialize()
     commands(cmds)
 }
 
-def updated()
-{
-    log.debug "updated() is being called"
-    sendEvent(name: "checkInterval", value: 2 * 12 * 60 * 60 + 5 * 60, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID])
-    if (state.realTemperature != null) sendEvent(name:"temperature", value: getAdjustedTemp(state.realTemperature))
-    if (state.realHumidity != null) sendEvent(name:"humidity", value: getAdjustedHumidity(state.realHumidity))
-    if (state.realLuminance != null) sendEvent(name:"illuminance", value: getAdjustedLuminance(state.realLuminance))
+def updated() {
+    if (!state.lastRan || now() >= state.lastRan + 2000) {
+        if (infoEnable != false) log.info "${device.label?device.label:device.name}: updated()"
+        if (infoEnable != false) log.info "${device.label?device.label:device.name}: If this sensor is battery powered, the configuration options (aside from temp, hum, & lum offsets) will not be updated until the sensor wakes up. To manually wake up the sensor, press the button on the back 3 times quickly."
+        if (debugEnable || infoEnable) runIn(1800,logsOff)
+        state.needfwUpdate = ""
+        state.lastRan = now()
+        if (state.realTemperature != null) sendEvent(name:"temperature", value: getAdjustedTemp(state.realTemperature))
+        if (state.realHumidity != null) sendEvent(name:"humidity", value: getAdjustedHumidity(state.realHumidity))
+        if (state.realLuminance != null) sendEvent(name:"illuminance", value: getAdjustedLuminance(state.realLuminance))
     
-    updateStatus()
-    
-    state.needfwUpdate = ""
-    
-    def cmds = update_needed_settings()
-    
-    sendEvent(name:"needUpdate", value: device.currentValue("needUpdate"), displayed:false, isStateChange: true)
-    
-    commands(cmds)
+        def cmds = initialize()
+        
+        updateStatus()
+        
+        if (cmds != [])
+            commands(cmds, 1000)
+        else 
+            return null
+    } else {
+        if (infoEnable != false) log.info "${device.label?device.label:device.name}: updated() ran within the last 2 seconds. Skipping execution."
+    }
 }
 
-def update_needed_settings()
-{   
-    def currentProperties = state.currentProperties ?: [:]
-    def configuration = new XmlSlurper().parseText(configuration_model())
+def initialize() {
+    if (infoEnable != false) log.info "${device.label?device.label:device.name}: initialize()"
+    sendEvent(name: "checkInterval", value: 3 * 60 * 60 + 2 * 60, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID, offlinePingable: "1"])
     
-    def isUpdateNeeded = "NO"
-
-    def cmds = []
+    def cmds = processAssociations()
     
     if(!state.needfwUpdate || state.needfwUpdate == "") {
-       log.debug "Requesting device firmware version"
+       if (infoEnable != false) log.info "${device.label?device.label:device.name}: Requesting device firmware version"
        cmds << zwave.versionV1.versionGet()
     }
     
-    if(!state.association1){
-       log.debug "Setting association group 1"
-       cmds << zwave.associationV2.associationSet(groupingIdentifier:1, nodeId:zwaveHubNodeId)
-       cmds << zwave.associationV2.associationGet(groupingIdentifier:1)
-    }
-    
-    if(state.wakeInterval == null || state.wakeInterval != 21600){
-        log.debug "Setting Wake Interval to 21600"
-        cmds << zwave.wakeUpV1.wakeUpIntervalSet(seconds: 21600, nodeid:zwaveHubNodeId)
-        cmds << zwave.wakeUpV1.wakeUpIntervalGet()
-    }
-    
     if (device.currentValue("temperature") == null) {
-        log.debug "Temperature report not yet received. Sending request"
+        if (infoEnable != false) log.info "${device.label?device.label:device.name}: Temperature report not yet received. Sending request"
         cmds << zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:1, scale:1)
     }
     if (device.currentValue("humidity") == null) {
-        log.debug "Humidity report not yet received. Sending request"
+        if (infoEnable != false) log.info "${device.label?device.label:device.name}: Humidity report not yet received. Sending request"
         cmds << zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:5, scale:1)
     }
     if (device.currentValue("illuminance") == null) {
-        log.debug "Illuminance report not yet received. Sending request"
+        if (infoEnable != false) log.info "${device.label?device.label:device.name}: Illuminance report not yet received. Sending request"
         cmds << zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:3, scale:1)
     }
     
-    configuration.Value.each
-    {     
-        if ("${it.@setting_type}" == "zwave"){
-            if (currentProperties."${it.@index}" == null)
-            {
-                log.debug "Current value of parameter ${it.@index} is unknown"
-                cmds << zwave.configurationV2.configurationGet(parameterNumber: it.@index.toInteger())
-                isUpdateNeeded = "YES"
-            }
-            else if (settings."${it.@index}" != null && convertParam(it.@index.toInteger(), cmd2Integer(currentProperties."${it.@index}")) != settings."${it.@index}".toInteger())
-            { 
-                isUpdateNeeded = "YES"
-
-                log.debug "Parameter ${it.@index} will be updated to " + settings."${it.@index}"
-                def convertedConfigurationValue = convertParam(it.@index.toInteger(), settings."${it.@index}".toInteger())
-                cmds << zwave.configurationV1.configurationSet(configurationValue: integer2Cmd(convertedConfigurationValue, it.@byteSize.toInteger()), parameterNumber: it.@index.toInteger(), size: it.@byteSize.toInteger())
-                cmds << zwave.configurationV1.configurationGet(parameterNumber: it.@index.toInteger())
-            }
-        }
+    if(state.wakeInterval == null || state.wakeInterval != 43200){
+        if (infoEnable != false) log.info "${device.label?device.label:device.name}: Setting Wake Interval to 43200"
+        cmds << zwave.wakeUpV1.wakeUpIntervalSet(seconds: 43200, nodeid:zwaveHubNodeId)
+        cmds << zwave.wakeUpV1.wakeUpIntervalGet()
     }
-    sendEvent(name:"needUpdate", value: isUpdateNeeded, displayed:false, isStateChange: true)
-    return cmds
-}
-
-def convertParam(number, value) {
-	switch (number){
-    	case 201:
-        	if (value < 0)
-            	256 + value
-        	else if (value > 100)
-            	value - 256
-            else
-            	value
-        break
-        case 202:
-        	if (value < 0)
-            	256 + value
-        	else if (value > 100)
-            	value - 256
-            else
-            	value
-        break
-        case 203:
-            if (value < 0)
-            	65536 + value
-        	else if (value > 1000)
-            	value - 65536
-            else
-            	value
-        break
-        case 204:
-        	if (value < 0)
-            	256 + value
-        	else if (value > 100)
-            	value - 256
-            else
-            	value
-        break
-        default:
-        	value
-        break
+    
+    getParameterNumbers().each{ i ->
+      if ((state."parameter${i}value" != ((settings."parameter${i}"!=null||calculateParameter(i)!=null)? calculateParameter(i).toInteger() : getParameterInfo(i, "default").toInteger()))){
+          //if (infoEnable != false) log.info "Parameter $i is not set correctly. Setting it to ${settings."parameter${i}"!=null? calculateParameter(i).toInteger() : getParameterInfo(i, "default").toInteger()}."
+          cmds << setParameter(i, (settings."parameter${i}"!=null||calculateParameter(i)!=null)? calculateParameter(i).toInteger() : getParameterInfo(i, "default").toInteger(), getParameterInfo(i, "size").toInteger())
+          cmds << getParameter(i)
+      }
+      else {
+          //if (infoEnable != false) log.info "${device.label?device.label:device.name}: Parameter $i already set"
+      }
     }
-}
 
-def update_current_properties(cmd)
-{
-
-    def currentProperties = state.currentProperties ?: [:]
-    def convertedConfigurationValue = convertParam("${cmd.parameterNumber}".toInteger(), cmd2Integer(cmd.configurationValue))
-    currentProperties."${cmd.parameterNumber}" = cmd.configurationValue
-
-    if (settings."${cmd.parameterNumber}" != null)
-    {
-        if (settings."${cmd.parameterNumber}".toInteger() == convertedConfigurationValue)
-        {
-            sendEvent(name:"needUpdate", value:"NO", displayed:false, isStateChange: true)
-        }
-        else
-        {
-            sendEvent(name:"needUpdate", value:"YES", displayed:false, isStateChange: true)
-        }
-    }
-    state.currentProperties = currentProperties
+    if (cmds != []) return cmds else return []
 }
 
 /**
@@ -527,16 +461,7 @@ def integer2Cmd(value, size) {
 	}
 }
 
-private setConfigured() {
-	updateDataValue("configured", "true")
-}
-
-private isConfigured() {
-	getDataValue("configured") == "true"
-}
-
 private command(hubitat.zwave.Command cmd) {
-    
 	if (state.sec && cmd.toString()) {
 		zwave.securityV1.securityMessageEncapsulation().encapsulate(cmd).format()
 	} else {
@@ -546,43 +471,6 @@ private command(hubitat.zwave.Command cmd) {
 
 private commands(commands, delay=1000) {
 	delayBetween(commands.collect{ command(it) }, delay)
-}
-
-def generate_preferences(configuration_model)
-{
-    def configuration = new XmlSlurper().parseText(configuration_model)
-    configuration.Value.each
-    {
-        switch(it.@type)
-        {
-            case ["byte","short","four"]:
-                input "${it.@index}", "number",
-                    title:"${it.@label}\n" + "${it.Help}",
-                    range: "${it.@min}..${it.@max}",
-                    defaultValue: "${it.@value}"
-            break
-            case "list":
-                def items = []
-                it.Item.each { items << ["${it.@value}":"${it.@label}"] }
-                input "${it.@index}", "enum",
-                    title:"${it.@label}\n" + "${it.Help}",
-                    defaultValue: "${it.@value}",
-                    options: items
-            break
-            case "decimal":
-               input "${it.@index}", "decimal",
-                    title:"${it.@label}\n" + "${it.Help}",
-                    //range: "${it.@min}..${it.@max}",
-                    defaultValue: "${it.@value}"
-            break
-            case "boolean":
-               input "${it.@index}", "boolean",
-                    title:"${it.@label}\n" + "${it.Help}",
-                    //range: "${it.@min}..${it.@max}",
-                    defaultValue: "${it.@value}"
-            break
-        }
-    }
 }
 
 private getBatteryRuntime() {
@@ -607,20 +495,12 @@ private getBatteryRuntime() {
   }
 }
 
-private getRoundedInterval(number) {
-    double tempDouble = (number / 60)
-    if (tempDouble == tempDouble.round())
-       return (tempDouble * 60).toInteger()
-    else 
-       return ((tempDouble.round() + 1) * 60).toInteger()
-}
-
 private getAdjustedTemp(value) {
-    
+
     value = Math.round((value as Double) * 100) / 100
 
-	if (settings."302") {
-	   return value =  value + Math.round(settings."302" * 100) /100
+	if (settings.temperatureOffset) {
+	   return value =  value + Math.round(settings.temperatureOffset * 100) /100
 	} else {
        return value
     }
@@ -631,8 +511,8 @@ private getAdjustedHumidity(value) {
     
     value = Math.round((value as Double) * 100) / 100
 
-	if (settings."303") {
-	   return value =  value + Math.round(settings."303" * 100) /100
+	if (settings.humidityOffset) {
+	   return value =  value + Math.round(settings.humidityOffset * 100) /100
 	} else {
        return value
     }
@@ -643,8 +523,8 @@ private getAdjustedLuminance(value) {
     
     value = Math.round((value as Double) * 100) / 100
 
-	if (settings."304") {
-	   return value =  value + Math.round(settings."304" * 100) /100
+	if (settings.luminanceOffset) {
+	   return value =  value + Math.round(settings.luminanceOffset * 100) /100
 	} else {
        return value
     }
@@ -653,7 +533,7 @@ private getAdjustedLuminance(value) {
 
 def resetBatteryRuntime() {
     if (state.lastReset != null && now() - state.lastReset < 5000) {
-        log.debug "Reset Double Press"
+        if (infoEnable != false) log.info "Reset Double Press"
         state.batteryRuntimeStart = now()
         updateStatus()
     }
@@ -685,101 +565,271 @@ private updateStatus(){
     }
 }
 
-def configuration_model()
+def calculateParameter(number) {
+    def value = 0
+    switch (number){
+      case "999":
+      break
+      default:
+          value = settings."parameter${number}"
+      break
+    }
+    return value
+}
+
+def setParameter(number, value, size) {
+    if (infoEnable != false) log.info "${device.label?device.label:device.name}: Setting parameter $number with a size of $size bytes to $value"
+    return zwave.configurationV1.configurationSet(configurationValue: integer2Cmd(value.toInteger(),size), parameterNumber: number, size: size)
+}
+
+def getParameter(number) {
+    if (infoEnable != false) log.info "${device.label?device.label:device.name}: Retreiving value of parameter $number"
+    return zwave.configurationV1.configurationGet(parameterNumber: number)
+}
+def getParameterNumbers(){
+    return [10,12,13,14,15,101,102,103,104,110,111,112,113,114]
+}
+
+def getParameterInfo(number, value){
+    def parameter = [:]
+    
+    parameter.parameter10description="At what battery level should the sensor send a low battery alert"
+    parameter.parameter12description="Sensitivity level of the motion sensor. 0=Disabled 1=Low 10=High"
+    parameter.parameter13description="How long after motion stops should the sensor wait before sending a no-motion report"
+    parameter.parameter14description="Send a Basic Set report to devices in association group 2"
+    parameter.parameter15description="Send OFF to devices in association group 2 when motion is triggered and ON when motion stops"
+    parameter.parameter100description="Resets parameters 101-104 to their default settings"
+    parameter.parameter101description="Interval, in seconds, in which temperature reports should be sent. 0=Disabled"
+    parameter.parameter102description="Interval, in seconds, in which humidity reports should be sent. 0=Disabled"
+    parameter.parameter103description="Interval, in seconds, in which luminance reports should be sent. 0=Disabled"
+    parameter.parameter104description="Interval, in seconds, in which battery reports should be sent. 0=Disabled"
+    parameter.parameter110description="Only send sensor reports if the below thresholds are met"
+    parameter.parameter111description="Threshold for temperature reports to be sent"
+    parameter.parameter112description="Threshold for humidity reports to be sent"
+    parameter.parameter113description="Threshold for luminance reports to be sent"
+    parameter.parameter114description="Threshold for battery reports to be sent"
+    
+    parameter.parameter10name="Low Battery Alert Level"
+    parameter.parameter12name="Motion Sensor Sensitivity"
+    parameter.parameter13name="Motion Sensor Reset Time"
+    parameter.parameter14name="Send Basic Set on Motion"
+    parameter.parameter15name="Reverse Basic Set ON / OFF"
+    parameter.parameter100name="Set 101-104 to Default"
+    parameter.parameter101name="Temperature Reporting Interval"
+    parameter.parameter102name="Humidity Reporting Interval"
+    parameter.parameter103name="Luminance Reporting Interval"
+    parameter.parameter104name="Battery Level Reporting Interval"
+    parameter.parameter110name="Send Reports According to Threshold"
+    parameter.parameter111name="Temperature Threshold"
+    parameter.parameter112name="Humidity Threshold"
+    parameter.parameter113name="Luminance Threshold"
+    parameter.parameter114name="Battery Threshold"
+    
+    parameter.parameter10options="10..50"
+    parameter.parameter12options="0..10"
+    parameter.parameter13options="5..15300"
+    parameter.parameter14options=["1":"Yes", "0":"No"]
+    parameter.parameter15options=["1":"Yes", "0":"No"]
+    parameter.parameter100options=["1":"Yes", "0":"No"]
+    parameter.parameter101options="0..2678400"
+    parameter.parameter102options="0..2678400"
+    parameter.parameter103options="0..2678400"
+    parameter.parameter104options="0..2678400"
+    parameter.parameter110options=["1":"Yes", "0":"No"]
+    parameter.parameter111options="1..500"
+    parameter.parameter112options="1..32"
+    parameter.parameter113options="1..65528"
+    parameter.parameter114options="1..100"
+    
+    parameter.parameter10size=1
+    parameter.parameter12size=1
+    parameter.parameter13size=2
+    parameter.parameter14size=1
+    parameter.parameter15size=1
+    parameter.parameter100size=1
+    parameter.parameter101size=4
+    parameter.parameter102size=4
+    parameter.parameter103size=4
+    parameter.parameter104size=4
+    parameter.parameter110size=1
+    parameter.parameter111size=2
+    parameter.parameter112size=1
+    parameter.parameter113size=2
+    parameter.parameter114size=1
+    
+    parameter.parameter10type="number"
+    parameter.parameter12type="number"
+    parameter.parameter13type="number"
+    parameter.parameter14type="enum"
+    parameter.parameter15type="enum"
+    parameter.parameter100type="enum"
+    parameter.parameter101type="number"
+    parameter.parameter102type="number"
+    parameter.parameter103type="number"
+    parameter.parameter104type="number"
+    parameter.parameter110type="enum"
+    parameter.parameter111type="number"
+    parameter.parameter112type="number"
+    parameter.parameter113type="number"
+    parameter.parameter114type="number"
+    
+    parameter.parameter10default=10
+    parameter.parameter12default=8
+    parameter.parameter13default=30
+    parameter.parameter14default=0
+    parameter.parameter15default=0
+    parameter.parameter100default=0
+    parameter.parameter101default=7200
+    parameter.parameter102default=7200
+    parameter.parameter103default=7200
+    parameter.parameter104default=7200
+    parameter.parameter110default=0
+    parameter.parameter111default=10
+    parameter.parameter112default=5
+    parameter.parameter113default=150
+    parameter.parameter114default=10
+    
+    return parameter."parameter${number}${value}"
+}
+
+def generate_preferences()
 {
-'''
-<configuration>
-<Value type="byte" byteSize="4" index="101" label="The interval time of sending the temperature reporting" min="0" max="2678400" value="7200" setting_type="zwave" fw="">
- <Help>
-the temperature reporting is disabled
-Range: 0
-Default: 7200
-</Help>
-</Value>
-<Value type="byte" byteSize="4" index="102" label="The interval time of sending the humidity reporting." min="0" max="2678400" value="7200" setting_type="zwave" fw="">
- <Help>
-the humidity reporting is disabled
-Range: 0
-Default: 7200
-</Help>
-</Value>
-<Value type="byte" byteSize="4" index="103" label="The interval time of sending the luminance reporting." min="0" max="2678400" value="7200" setting_type="zwave" fw="">
- <Help>
-the luminance reporting is disabled
-Range: 0
-Default: 7200
-</Help>
-</Value>
-<Value type="byte" byteSize="4" index="104" label="The interval time of sending the battery level reporting." min="0" max="2678400" value="86400" setting_type="zwave" fw="">
- <Help>
-the battery level reporting is disabled
-Range: 0
-Default: 86400
-</Help>
-</Value>
-<Value type="byte" byteSize="1" index="110" label="Enable 111 ~ 114 temperature, humidity, luminance, battery level change reporting." min="0" max="1" value="0" setting_type="zwave" fw="">
- <Help>
-Unable
-Range: 0
-Default: 0
-</Help>
-</Value>
-<Value type="byte" byteSize="2" index="111" label="Configuration temperature change threshold." min="1" max="500" value="10" setting_type="zwave" fw="">
- <Help>
-the temperature change threshold value(unit 0.1)
-Range: 1 to 500
-Default: 10
-</Help>
-</Value>
-<Value type="byte" byteSize="1" index="112" label="Configuration humidity change threshold." min="1" max="32" value="5" setting_type="zwave" fw="">
- <Help>
-humidity change threshold value(unit %)
-Range: 1 to 32
-Default: 5
-</Help>
-</Value>
-<Value type="byte" byteSize="2" index="113" label="Configuration luminance change threshold." min="0" max="32766" value="150" setting_type="zwave" fw="">
- <Help>
-luminance change threshold is 0 to 32766
-Range: 0 to 32766
-Default: 150
-</Help>
-</Value>
-<Value type="byte" byteSize="1" index="114" label="Configuration battery level change threshold." min="1" max="100" value="10" setting_type="zwave" fw="">
- <Help>
-battery level change threshold value(unit)%
-Range: 1 to 100
-Default: 10
-</Help>
-</Value>
-<Value type="byte" byteSize="1" index="12" label="PIR Sensitivity " min="0" max="10" value="10" setting_type="zwave" fw="">
- <Help>
-0x0A indicates the highest sensitivity
-Range: 0 to 10
-Default: 10
-</Help>
-</Value>
-<Value type="byte" byteSize="2" index="13" label="PIR triggers the waiting time value" min="5" max="15300" value="30" setting_type="zwave" fw="">
- <Help>
-the waiting time of the PIR triggering
-Range: 5 to 15300
-Default: 30
-</Help>
-</Value>
-<Value type="byte" byteSize="1" index="14" label="Whether the BASIC SET command is sent after the PIR is triggered" min="0" max="1" value="0" setting_type="zwave" fw="">
- <Help>
-Unable
-Range: 0
-Default: 0
-</Help>
-</Value>
-<Value type="byte" byteSize="1" index="15" label="PIR triggers the correspondence between the value of the Basic set and the PIR state" min="0" max="1" value="0" setting_type="zwave" fw="">
- <Help>
-PIR triggers Send the basic set command 0xff PIR alarm release send the basic set command 0x00
-Range: 0
-Default: 0
-</Help>
-</Value>
-</configuration>
-'''
+    getParameterNumbers().each { i ->
+        
+        switch(getParameterInfo(i, "type"))
+        {   
+            case "number":
+                input "parameter${i}", "number",
+                    title:getParameterInfo(i, "name") + "\n" + getParameterInfo(i, "description") + "\nRange: " + getParameterInfo(i, "options") + "\nDefault: " + getParameterInfo(i, "default"),
+                    range: getParameterInfo(i, "options")
+                    //defaultValue: getParameterInfo(i, "default")
+                    //displayDuringSetup: "${it.@displayDuringSetup}"
+            break
+            case "enum":
+                input "parameter${i}", "enum",
+                    title:getParameterInfo(i, "name") + "\n" + getParameterInfo(i, "description"),
+                    //defaultValue: getParameterInfo(i, "default"),
+                    //displayDuringSetup: "${it.@displayDuringSetup}",
+                    options: getParameterInfo(i, "options")
+            break
+        }
+    }
+    input name: "temperatureOffset", type: "decimal", title: "Temperature Offset\nAdjust the reported temperature by this positive or negative value\nRange: -10.0..10.0\nDefault: 0.0", range: "-10.0..10.0", defaultValue: 0
+    input name: "humidityOffset", type: "number", title: "Humidity Offset\nAdjust the reported humidity percentage by this positive or negative value\nRange: -10 ..10\nDefault: 0", range: "-10..10", defaultValue: 0
+    input name: "luminanceOffset", type: "number", title: "Luminance Offset\nAdjust the reported luminance by this positive or negative value\nRange: -100..100\nDefault: 0", range: "-100..100", defaultValue: 0
+    input name: "debugEnable", type: "bool", title: "Enable debug logging", defaultValue: true
+    input name: "infoEnable", type: "bool", title: "Enable informational logging", defaultValue: true
+}
+
+def setDefaultAssociations() {
+    def smartThingsHubID = (zwaveHubNodeId.toString().format( '%02x', zwaveHubNodeId )).toUpperCase()
+    state.defaultG1 = [smartThingsHubID]
+    state.defaultG2 = []
+    state.defaultG3 = []
+}
+
+def setAssociationGroup(group, nodes, action, endpoint = null){
+    if (!state."desiredAssociation${group}") {
+        state."desiredAssociation${group}" = nodes
+    } else {
+        switch (action) {
+            case 0:
+                state."desiredAssociation${group}" = state."desiredAssociation${group}" - nodes
+            break
+            case 1:
+                state."desiredAssociation${group}" = state."desiredAssociation${group}" + nodes
+            break
+        }
+    }
+}
+
+def processAssociations(){
+   def cmds = []
+   setDefaultAssociations()
+   def associationGroups = 5
+   if (state.associationGroups) {
+       associationGroups = state.associationGroups
+   } else {
+       if (infoEnable != false) log.info "${device.label?device.label:device.name}: Getting supported association groups from device"
+       cmds <<  zwave.associationV2.associationGroupingsGet()
+   }
+   for (int i = 1; i <= associationGroups; i++){
+      if(state."actualAssociation${i}" != null){
+         if(state."desiredAssociation${i}" != null || state."defaultG${i}") {
+            def refreshGroup = false
+            ((state."desiredAssociation${i}"? state."desiredAssociation${i}" : [] + state."defaultG${i}") - state."actualAssociation${i}").each {
+                if (it != null){
+                    if (infoEnable != false) log.info "${device.label?device.label:device.name}: Adding node $it to group $i"
+                    cmds << zwave.associationV2.associationSet(groupingIdentifier:i, nodeId:Integer.parseInt(it,16))
+                    refreshGroup = true
+                }
+            }
+            ((state."actualAssociation${i}" - state."defaultG${i}") - state."desiredAssociation${i}").each {
+                if (it != null){
+                    if (infoEnable != false) log.info "${device.label?device.label:device.name}: Removing node $it from group $i"
+                    cmds << zwave.associationV2.associationRemove(groupingIdentifier:i, nodeId:Integer.parseInt(it,16))
+                    refreshGroup = true
+                }
+            }
+            if (refreshGroup == true) cmds << zwave.associationV2.associationGet(groupingIdentifier:i)
+            else if (infoEnable != false) log.info "${device.label?device.label:device.name}: There are no association actions to complete for group $i"
+         }
+      } else {
+         if (infoEnable != false) log.info "${device.label?device.label:device.name}: Association info not known for group $i. Requesting info from device."
+         cmds << zwave.associationV2.associationGet(groupingIdentifier:i)
+      }
+   }
+   return cmds
+}
+
+def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationReport cmd) {
+    if (debugEnable != false) log.debug "${device.label?device.label:device.name}: ${cmd}"
+    def temp = []
+    if (cmd.nodeId != []) {
+       cmd.nodeId.each {
+          temp += it.toString().format( '%02x', it.toInteger() ).toUpperCase()
+       }
+    } 
+    state."actualAssociation${cmd.groupingIdentifier}" = temp
+    if (infoEnable != false) log.info "${device.label?device.label:device.name}: Associations for Group ${cmd.groupingIdentifier}: ${temp}"
+    updateDataValue("associationGroup${cmd.groupingIdentifier}", "$temp")
+}
+
+def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationGroupingsReport cmd) {
+    if (debugEnable != false) log.debug "${device.label?device.label:device.name}: ${cmd}"
+    sendEvent(name: "groups", value: cmd.supportedGroupings)
+    if (infoEnable != false) log.info "${device.label?device.label:device.name}: Supported association groups: ${cmd.supportedGroupings}"
+    state.associationGroups = cmd.supportedGroupings
+}
+
+def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
+    if (debugEnable != false) log.debug "${device.label?device.label:device.name}: ${cmd}"
+    if(cmd.firmware0Version != null && cmd.firmware0SubVersion != null) {
+	    def firmware = "${cmd.firmware0Version}.${cmd.firmware0SubVersion.toString().padLeft(2,'0')}"
+        if (infoEnable != false) log.info "${device.label?device.label:device.name}: Firmware report received: ${firmware}"
+        state.needfwUpdate = "false"
+        createEvent(name: "firmware", value: "${firmware}")
+    }
+}
+
+def zwaveEvent(hubitat.zwave.commands.protectionv2.ProtectionReport cmd) {
+    if (debugEnable != false) log.debug "${device.label?device.label:device.name}: ${device.label?device.label:device.name}: ${cmd}"
+    if (infoEnable != false) log.info "${device.label?device.label:device.name}: Protection report received: Local protection is ${cmd.localProtectionState > 0 ? "on" : "off"} & Remote protection is ${cmd.rfProtectionState > 0 ? "on" : "off"}"
+    if (!state.lastRan || now() <= state.lastRan + 60000) {
+        state.localProtectionState = cmd.localProtectionState
+        state.rfProtectionState = cmd.rfProtectionState
+    } else {
+        if (infoEnable != false) log.debug "${device.label?device.label:device.name}: Protection report received more than 60 seconds after running updated(). Possible configuration made at switch"
+    }
+    //device.updateSetting("disableLocal",[value:cmd.localProtectionState?cmd.localProtectionState:0,type:"enum"])
+    //device.updateSetting("disableRemote",[value:cmd.rfProtectionState?cmd.rfProtectionState:0,type:"enum"])
+    def children = childDevices
+    def childDevice = children.find{it.deviceNetworkId.endsWith("ep101")}
+    if (childDevice) {
+        childDevice.sendEvent(name: "switch", value: cmd.localProtectionState > 0 ? "on" : "off")        
+    }
+    childDevice = children.find{it.deviceNetworkId.endsWith("ep102")}
+    if (childDevice) {
+        childDevice.sendEvent(name: "switch", value: cmd.rfProtectionState > 0 ? "on" : "off")        
+    }
 }
