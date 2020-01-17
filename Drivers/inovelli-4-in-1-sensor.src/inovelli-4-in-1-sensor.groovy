@@ -3,7 +3,7 @@
  *  Inovelli 4-in-1 Sensor 
  *   
  *	github: InovelliUSA
- *	Date: 2020-01-16
+ *	Date: 2020-01-17
  *	Copyright Inovelli / Eric Maycock
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -46,6 +46,9 @@
         fingerprint mfr: "0072", prod: "0503", model: "1E00", deviceJoinName: "Inovelli 4-in-1 Sensor"
         fingerprint mfr: "031E", prod: "000D", model: "0001", deviceJoinName: "Inovelli 4-in-1 Sensor"
         fingerprint deviceId: "0x0701", inClusters: "0x5E,0x55,0x9F,0x98,0x6C,0x85,0x59,0x72,0x80,0x84,0x73,0x70,0x7A,0x5A,0x71,0x31,0x86"
+        fingerprint deviceId: "0x0701", inClusters: "0x5E,0x85,0x59,0x72,0x80,0x84,0x73,0x70,0x7A,0x5A,0x71,0x31,0x86,0x55,0x9F,0x98,0x6C"
+        
+        
 	}
     preferences {
         input description: "If battery powered, the configuration options (aside from temp, humidity, & lux offsets) will not be updated until the sensor wakes up (once every 24-Hours). To manually wake up the sensor, press the button on the back 3 times quickly.", title: "Settings", displayDuringSetup: false, type: "paragraph", element: "paragraph"
