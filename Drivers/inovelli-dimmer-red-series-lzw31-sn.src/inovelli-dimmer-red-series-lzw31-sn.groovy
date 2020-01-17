@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer Red Series LZW31-SN
  *  Author: Eric Maycock (erocm123)
- *  Date: 2019-11-16
+ *  Date: 2019-12-03
  *
  *  Copyright 2019 Eric Maycock / Inovelli
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2019-12-03: Specify central scene command class version for upcoming Hubitat update.
  *
  *  2019-11-20: Fixed Association Group management.
  *
@@ -181,6 +183,12 @@ private channelNumber(String dni) {
     dni.split("-ep")[-1] as Integer
 }
 
+def logsOff(){
+    log.warn "${device.label?device.label:device.name}: Disabling logging after timeout"
+    device.updateSetting("debugEnable",[value:"false",type:"bool"])
+    device.updateSetting("infoEnable",[value:"false",type:"bool"])
+}
+
 private sendAlert(data) {
     if (infoEnable) log.info "${device.label?device.label:device.name}: Error while creating child device"
     sendEvent(
@@ -288,6 +296,7 @@ def configure() {
 def updated() {
     if (!state.lastRan || now() >= state.lastRan + 2000) {
         if (infoEnable) log.info "${device.label?device.label:device.name}: updated()"
+        if (debugEnable || infoEnable) runIn(1800,logsOff)
         state.lastRan = now()
         def cmds = initialize()
         if (cmds != [])
@@ -727,7 +736,7 @@ def integer2Cmd(value, size) {
 }
 
 private getCommandClassVersions() {
-	[0x20: 1, 0x25: 1, 0x70: 1, 0x98: 1, 0x32: 3]
+	[0x20: 1, 0x25: 1, 0x70: 1, 0x98: 1, 0x32: 3, 0x5B: 1]
 }
 
 def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cmd) {
@@ -982,11 +991,11 @@ def setAssociationGroup(group, nodes, action, endpoint = null){
         node = "${it}"
         switch (action) {
             case "Remove":
-            if (logEnable) log.debug "Removing node ${node} from association group ${group}"
+            if (infoEnable) log.info "Removing node ${node} from association group ${group}"
             associations = associations - node
             break
             case "Add":
-            if (logEnable) log.debug "Adding node ${node} to association group ${group}"
+            if (infoEnable) log.info "Adding node ${node} to association group ${group}"
             associations << node
             break
         }
@@ -997,7 +1006,7 @@ def setAssociationGroup(group, nodes, action, endpoint = null){
 
 def maxAssociationGroup(){
    if (!state.associationGroups) {
-       if (logEnable) log.debug "Getting supported association groups from device"
+       if (infoEnable) log.info "Getting supported association groups from device"
        zwave.associationV2.associationGroupingsGet() // execute the update immediately
    }
    (state.associationGroups?: 5) as int
@@ -1012,20 +1021,20 @@ def processAssociations(){
          if(state."desiredAssociation${i}" != null || state."defaultG${i}") {
             def refreshGroup = false
             ((state."desiredAssociation${i}"? state."desiredAssociation${i}" : [] + state."defaultG${i}") - state."actualAssociation${i}").each {
-                if (logEnable) log.debug "Adding node $it to group $i"
+                if (infoEnable) log.info "Adding node $it to group $i"
                 cmds << zwave.associationV2.associationSet(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
                 refreshGroup = true
             }
             ((state."actualAssociation${i}" - state."defaultG${i}") - state."desiredAssociation${i}").each {
-                if (logEnable) log.debug "Removing node $it from group $i"
+                if (infoEnable) log.info "Removing node $it from group $i"
                 cmds << zwave.associationV2.associationRemove(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
                 refreshGroup = true
             }
             if (refreshGroup == true) cmds << zwave.associationV2.associationGet(groupingIdentifier:i)
-            else if (logEnable) log.debug "There are no association actions to complete for group $i"
+            else if (infoEnable) log.info "There are no association actions to complete for group $i"
          }
       } else {
-         if (logEnable) log.debug "Association info not known for group $i. Requesting info from device."
+         if (infoEnable) log.info "Association info not known for group $i. Requesting info from device."
          cmds << zwave.associationV2.associationGet(groupingIdentifier:i)
       }
    }

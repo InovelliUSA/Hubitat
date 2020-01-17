@@ -78,6 +78,8 @@ def generate_preferences()
     }
     
     input "disableLocal", "enum", title: "Disable Local Control\n\nDisable ability to control switch from the wall", description: "Tap to set", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
+    input name: "debugEnable", type: "bool", title: "Enable debug logging", defaultValue: true
+    input name: "infoEnable", type: "bool", title: "Enable informational logging", defaultValue: true
 }
 
 private channelNumber(String dni) {
@@ -743,11 +745,11 @@ def setAssociationGroup(group, nodes, action, endpoint = null){
         node = "${it}"
         switch (action) {
             case "Remove":
-            if (logEnable) log.debug "Removing node ${node} from association group ${group}"
+            if (infoEnable) log.info "Removing node ${node} from association group ${group}"
             associations = associations - node
             break
             case "Add":
-            if (logEnable) log.debug "Adding node ${node} to association group ${group}"
+            if (infoEnable) log.info "Adding node ${node} to association group ${group}"
             associations << node
             break
         }
@@ -758,7 +760,7 @@ def setAssociationGroup(group, nodes, action, endpoint = null){
 
 def maxAssociationGroup(){
    if (!state.associationGroups) {
-       if (logEnable) log.debug "Getting supported association groups from device"
+       if (infoEnable) log.info "Getting supported association groups from device"
        zwave.associationV2.associationGroupingsGet() // execute the update immediately
    }
    (state.associationGroups?: 5) as int
@@ -773,20 +775,20 @@ def processAssociations(){
          if(state."desiredAssociation${i}" != null || state."defaultG${i}") {
             def refreshGroup = false
             ((state."desiredAssociation${i}"? state."desiredAssociation${i}" : [] + state."defaultG${i}") - state."actualAssociation${i}").each {
-                if (logEnable) log.debug "Adding node $it to group $i"
+                if (infoEnable) log.info "Adding node $it to group $i"
                 cmds << zwave.associationV2.associationSet(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
                 refreshGroup = true
             }
             ((state."actualAssociation${i}" - state."defaultG${i}") - state."desiredAssociation${i}").each {
-                if (logEnable) log.debug "Removing node $it from group $i"
+                if (infoEnable) log.info "Removing node $it from group $i"
                 cmds << zwave.associationV2.associationRemove(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
                 refreshGroup = true
             }
             if (refreshGroup == true) cmds << zwave.associationV2.associationGet(groupingIdentifier:i)
-            else if (logEnable) log.debug "There are no association actions to complete for group $i"
+            else if (infoEnable) log.info "There are no association actions to complete for group $i"
          }
       } else {
-         if (logEnable) log.debug "Association info not known for group $i. Requesting info from device."
+         if (infoEnable) log.info "Association info not known for group $i. Requesting info from device."
          cmds << zwave.associationV2.associationGet(groupingIdentifier:i)
       }
    }

@@ -107,7 +107,7 @@ metadata {
         input "group3remote", "bool", title: "Send command on z-wave action", description: "", required: false, defaultValue: true
         input "group3way", "bool", title: "Send command on 3-way action", description: "", required: false, defaultValue: true
         input "group3timer", "bool", title: "Send command on auto off timer", description: "", required: false, defaultValue: true
-	input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true
+	    input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true
     }
     
     tiles {
