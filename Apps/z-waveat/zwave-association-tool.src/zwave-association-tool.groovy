@@ -4,9 +4,9 @@ definition(
     author: "Eric Maycock",
     description: "Create direct associations from one Z-Wave device to another",
     category: "My Apps",
-    iconUrl: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience.png",
-    iconX2Url: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience@2x.png",
-    iconX3Url: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience@2x.png")
+    iconUrl: "",
+    iconX2Url: "",
+    iconX3Url: "")
 
 preferences {
     page(name: "mainPage", title: "Associations", install: true, uninstall: true,submitOnChange: true) {
