@@ -15,7 +15,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  2020-01-20: scott_inovelli changes:
+ *  2020-01-20: Scott_Inovelli changes:
  *              added PowerSource
  *              added powersource preference
  *              removed ST code
