@@ -14,7 +14,6 @@
  *
  *  Author: Eric Maycock
  *  Date: 2019-9-9
- *
  *  updated by bcopeland 1/7/2020 
  *		Added color pre-staging option
  *		Added power restored memory configuration
@@ -26,13 +25,15 @@
  *		Added importURL
  *		Added color name
  *	updated by bcopeland 1/9/2020
- *		Added firmware version reporting
- *		Fix for scene capture and level in setcolor
+ *		added firmware version reporting
+ *		fix for scene capture and level in setcolor
+ *	updated by bcopeland 1/10/2020
+ *		fix for hsl level from received color report
  */
 
 
 metadata {
-	definition (name: "Inovelli Bulb Multi-Color LZW42 DDD", namespace: "djdizzyd", author: "InovelliUSA", importUrl: "https://raw.githubusercontent.com/djdizzyd/Hubitat-Inovelli/master/Drivers/inovelli-bulb-multi-color-lzw42.src/inovelli-bulb-multi-color-lzw42.groovy") {
+	definition (name: "Inovelli Bulb Multi-Color LZW42", namespace: "InovelliUSA", author: "InovelliUSA", importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-bulb-multi-color-lzw42.src/inovelli-bulb-multi-color-lzw42.groovy") {
 		capability "Switch Level"
 		capability "Color Control"
 		capability "Color Temperature"
@@ -53,13 +54,12 @@ metadata {
 	}
 	preferences {
         	// added for official hubitat standards
-        	input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: false
+			input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: false
 			input name: "logEnable", type: "bool", description: "", title: "Enable Debug Logging", defaultVaule: true
 			input name: "bulbMemory", type: "enum", title: "Power outage state", options: [0:"Remembers Last State",1:"Bulb turns ON",2:"Bulb turns OFF"], defaultValue: 0
 	}
 	
 }
-
 
 private getCOLOR_TEMP_MIN() { 2700 }
 private getCOLOR_TEMP_MAX() { 6500 }
@@ -479,4 +479,3 @@ def setGenericName(hue){
 	sendEvent(name: "colorMode", value: "RGB", descriptionText: "${device.getDisplayName()} color mode is RGB")
     sendEvent(name: "colorName", value: colorName ,descriptionText: descriptionText)
 }
-

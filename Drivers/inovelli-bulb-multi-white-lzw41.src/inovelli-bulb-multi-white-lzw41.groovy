@@ -14,7 +14,6 @@
  *
  *  Author: Eric Maycock
  *  Date: 2019-9-9
- *
  *  updated by bcopeland 1/7/2020 
  *		Added color pre-staging option
  *		Added power restored memory configuration
@@ -25,12 +24,12 @@
  *		Removed SmartThings related code
  *		Added importURL
  *		Added color name
- *	updated by bcopeland 1/9/2020
- *		Added firmware version reporting
+  *	updated by bcopeland 1/9/2020
+ *		added firmware version reporting
  */
 
 metadata {
-	definition (name: "Inovelli Bulb Multi-White LZW41 DDD", namespace: "djdizzyd", author: "InovelliUSA", importUrl: "https://raw.githubusercontent.com/djdizzyd/Hubitat-Inovelli/master/Drivers/inovelli-bulb-multi-white-lzw41.src/inovelli-bulb-multi-white-lzw41.groovy") {
+	definition (name: "Inovelli Bulb Multi-White LZW41", namespace: "InovelliUSA", author: "InovelliUSA", importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-bulb-multi-white-lzw41.src/inovelli-bulb-multi-white-lzw41.groovy") {
 		capability "Switch Level"
 		capability "Color Temperature"
 		capability "Switch"
@@ -51,10 +50,11 @@ metadata {
 	preferences {
 		// added for official hubitat standards
 		input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: false
-        input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true
+		input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true
 		input name: "bulbMemory", type: "enum", title: "Power outage state", options: [0:"Remembers Last State",1:"Bulb turns ON",2:"Bulb turns OFF"], defaultValue: 0
-    }
+	}
 }
+
 private getCOLOR_TEMP_MIN() { 2700 }
 private getCOLOR_TEMP_MAX() { 6500 }
 private getWARM_WHITE_CONFIG() { 0x51 }
@@ -231,14 +231,14 @@ def setColorTemperature(temp) {
 	def coldValue = temp >= 5000 ? 255 : 0
 	def parameterNumber = temp < 5000 ? WARM_WHITE_CONFIG : COLD_WHITE_CONFIG
 	def cmds = []
-    if (temp < COLOR_TEMP_MIN) temp = 2700
+	if (temp < COLOR_TEMP_MIN) temp = 2700
     if (temp > COLOR_TEMP_MAX) temp = 6500
     cmds << zwave.configurationV1.configurationSet([scaledConfigurationValue: temp, parameterNumber: parameterNumber, size:2])
     cmds << zwave.switchColorV3.switchColorSet(warmWhite: warmValue, coldWhite: coldValue)
     if ((device.currentValue("switch") != "on") && (!colorStaging)) {
 		if (logEnable) log.debug "Bulb is off. Turning on"
 		cmds << zwave.basicV1.basicSet(value: 0xFF)
-		cmds << zwave.switchMultilevelV3.switchMultilevelGet()
+		cmds << zwave.switchMultiLevelV3.switchMultilevelGet()
 	}
 	commands(cmds + queryAllColors())
 }
