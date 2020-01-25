@@ -54,76 +54,6 @@
         input description: "If battery powered, the configuration options (aside from temp, humidity, & lux offsets) will not be updated until the sensor wakes up (once every 24-Hours). To manually wake up the sensor, press the button on the back 3 times quickly.", title: "Settings", displayDuringSetup: false, type: "paragraph", element: "paragraph"
         generate_preferences() 
     }
-	simulator {
-	}
-	tiles (scale: 2) {
-		multiAttributeTile(name:"main", type:"generic", width:6, height:4) {
-			tileAttribute("device.temperature", key: "PRIMARY_CONTROL") {
-            	attributeState "temperature",label:'${currentValue}°', icon:"st.motion.motion.inactive", backgroundColors:[
-                    [value: 31, color: "#153591"],
-                    [value: 44, color: "#1e9cbb"],
-                    [value: 59, color: "#90d2a7"],
-				    [value: 74, color: "#44b621"],
-				    [value: 84, color: "#f1d801"],
-				    [value: 95, color: "#d04e00"],
-				    [value: 96, color: "#bc2323"]
-			    ]
-            }
-            tileAttribute ("statusText", key: "SECONDARY_CONTROL") {
-				attributeState "statusText", label:'${currentValue}'
-			}
-		}
-        standardTile("motion","device.motion", inactiveLabel: false, width: 2, height: 2) {
-                state "inactive",label:'no motion',icon:"st.motion.motion.inactive",backgroundColor:"#ffffff"
-                state "active",label:'motion',icon:"st.motion.motion.active",backgroundColor:"#00a0dc"
-		}
-		valueTile("humidity","device.humidity", width: 2, height: 2) {
-           	state "humidity",label:'RH ${currentValue}%',unit:"%"
-		}
-		valueTile("illuminance", "device.illuminance", inactiveLabel: false, width: 2, height: 2) {
-           state "luminosity", label:'LUX ${currentValue}', unit:"lux", 
-                backgroundColors:[
-                	[value: 0, color: "#000000"],
-                    [value: 1, color: "#060053"],
-                    [value: 3, color: "#3E3900"],
-                    [value: 12, color: "#8E8400"],
-					[value: 24, color: "#C5C08B"],
-					[value: 36, color: "#DAD7B6"],
-					[value: 128, color: "#F3F2E9"],
-                    [value: 1000, color: "#FFFFFF"]
-				]
-		}
-		valueTile("battery", "device.battery", decoration: "flat", width: 2, height: 2) {
-			state "battery", label:'${currentValue}% battery', unit:""
-		}
-        valueTile("firmware", "device.firmware", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
-            state "default", label: 'Firmware: ${currentValue}', icon: ""
-        }
-        standardTile("refresh", "device.switch", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
-			state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
-		}
-        standardTile("configure", "device.needUpdate", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
-            state "NO" , label:'', action:"configuration.configure", icon:"st.secondary.configure"
-            state "YES", label:'', action:"configuration.configure", icon:"https://github.com/erocm123/SmartThingsPublic/raw/master/devicetypes/erocm123/qubino-flush-1d-relay.src/configure@2x.png"
-        }
-        /*valueTile(
-			"batteryRuntime", "device.batteryRuntime", decoration: "flat", width: 2, height: 2) {
-			state "batteryRuntime", label:'Battery: ${currentValue} Double tap to reset counter', unit:"", action:"resetBatteryRuntime"
-		}
-        standardTile(
-			"statusText2", "device.statusText2", decoration: "flat", width: 2, height: 2) {
-			state "statusText2", label:'${currentValue}', unit:"", action:"resetBatteryRuntime"
-		}*/
-        
-		main([
-        	"main", "motion"
-            ])
-		details([
-        	"main",
-            "humidity","illuminance", "battery",
-            "motion", "refresh", "firmware"
-            ])
-	}
 }
 
 def parse(description) {
@@ -570,8 +500,25 @@ private updateStatus(){
 
 def calculateParameter(number) {
     def value = 0
+	log.debug "parameter: ${number}: " + settings."parameter${number}"
+	if (!settings."parameter${number}") { return settings."parameter${number}" }
     switch (number){
       case "999":
+      break
+      case "111":
+        if (location.temperatureScale=="C") { 
+           value = (settings."parameter${number}" / 0.1).toDouble().Round(0).toInteger()
+        } else {
+            // this is ugly will try and find a better way
+			def calcValue = 0
+			calcValue = settings."parameter${number}"
+			calcValue -= 72 
+			calcValue *= 5 
+			calcValue /= 9 
+			calcValue += 40 
+			calcValue /= 0.1
+            value = calcValue
+		}
       break
       default:
           value = settings."parameter${number}"
@@ -623,7 +570,7 @@ def getParameterInfo(number, value){
     parameter.parameter103name="Luminance Reporting Interval"
     parameter.parameter104name="Battery Level Reporting Interval"
     parameter.parameter110name="Send Reports According to Threshold"
-    parameter.parameter111name="Temperature Threshold"
+    parameter.parameter111name="Temperature Threshold °" + location.temperatureScale
     parameter.parameter112name="Humidity Threshold"
     parameter.parameter113name="Luminance Threshold"
     parameter.parameter114name="Battery Threshold"
@@ -639,7 +586,11 @@ def getParameterInfo(number, value){
     parameter.parameter103options="0..2678400"
     parameter.parameter104options="0..2678400"
     parameter.parameter110options=["1":"Yes", "0":"No"]
-    parameter.parameter111options="1..500"
+    if (location.temperatureScale=="F") {
+        parameter.parameter111options=".1..90"   
+	} else {
+        parameter.parameter111options=".1..50"
+	}
     parameter.parameter112options="1..32"
     parameter.parameter113options="1..65528"
     parameter.parameter114options="1..100"
@@ -671,7 +622,7 @@ def getParameterInfo(number, value){
     parameter.parameter103type="number"
     parameter.parameter104type="number"
     parameter.parameter110type="enum"
-    parameter.parameter111type="number"
+    parameter.parameter111type="decimal"
     parameter.parameter112type="number"
     parameter.parameter113type="number"
     parameter.parameter114type="number"
@@ -687,7 +638,7 @@ def getParameterInfo(number, value){
     parameter.parameter103default=7200
     parameter.parameter104default=7200
     parameter.parameter110default=0
-    parameter.parameter111default=10
+    parameter.parameter111default=1
     parameter.parameter112default=5
     parameter.parameter113default=150
     parameter.parameter114default=10
@@ -715,6 +666,11 @@ def generate_preferences()
                     //displayDuringSetup: "${it.@displayDuringSetup}",
                     options: getParameterInfo(i, "options")
             break
+            case "decimal":
+                input "parameter${i}", "decimal",
+                    title:getParameterInfo(i, "name") + "\n" + getParameterInfo(i, "description") + "\nRange: " + getParameterInfo(i, "options") + "\nDefault: " + getParameterInfo(i, "default"),
+                    range: getParameterInfo(i, "options")
+            break
         }
     }
     input name: "temperatureOffset", type: "decimal", title: "Temperature Offset\nAdjust the reported temperature by this positive or negative value\nRange: -10.0..10.0\nDefault: 0.0", range: "-10.0..10.0", defaultValue: 0
@@ -725,8 +681,8 @@ def generate_preferences()
 }
 
 def setDefaultAssociations() {
-    def smartThingsHubID = (zwaveHubNodeId.toString().format( '%02x', zwaveHubNodeId )).toUpperCase()
-    state.defaultG1 = [smartThingsHubID]
+    def hubitatHubID = (zwaveHubNodeId.toString().format( '%02x', zwaveHubNodeId )).toUpperCase()
+    state.defaultG1 = [hubitatHubID]
     state.defaultG2 = []
     state.defaultG3 = []
 }
