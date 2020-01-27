@@ -303,23 +303,20 @@ def setColor(value) {
 
 def setColorTemperature(temp) {
 	if (logEnable) log.debug "setColorTemperature($temp)"
-	if ((device.currentValue("colorMode") != "CT") || (device.currentValue("colorTemperature") != temp)) {
-		def warmValue = temp < 5000 ? 255 : 0
-		def coldValue = temp >= 5000 ? 255 : 0
-		def parameterNumber = temp < 5000 ? WARM_WHITE_CONFIG : COLD_WHITE_CONFIG
-		def cmds = []
-		cmds << zwave.switchColorV2.switchColorSet(red: 0, green: 0, blue:0, warmWhite: warmValue, coldWhite: coldValue)
-		if (temp < COLOR_TEMP_MIN) temp = 2700
-		if (temp > COLOR_TEMP_MAX) temp = 6500
-		cmds << zwave.configurationV1.configurationSet([scaledConfigurationValue: temp, parameterNumber: parameterNumber, size:2])
-		if ((device.currentValue("switch") != "on") && (!colorStaging)) {
-			if (logEnable) log.debug "Bulb is off. Turning on"
-			cmds << zwave.basicV1.basicSet(value: 0xFF)
-			cmds << zwave.switchMultilevelV2.switchMultilevelGet()
-		}
-		commands(cmds + queryAllColors())
-        
+	def warmValue = temp < 5000 ? 255 : 0
+	def coldValue = temp >= 5000 ? 255 : 0
+	def parameterNumber = temp < 5000 ? WARM_WHITE_CONFIG : COLD_WHITE_CONFIG
+	def cmds = []
+	cmds << zwave.switchColorV2.switchColorSet(red: 0, green: 0, blue:0, warmWhite: warmValue, coldWhite: coldValue)
+	if (temp < COLOR_TEMP_MIN) temp = 2700
+	if (temp > COLOR_TEMP_MAX) temp = 6500
+	cmds << zwave.configurationV1.configurationSet([scaledConfigurationValue: temp, parameterNumber: parameterNumber, size:2])
+	if ((device.currentValue("switch") != "on") && (!colorStaging)) {
+		if (logEnable) log.debug "Bulb is off. Turning on"
+		cmds << zwave.basicV1.basicSet(value: 0xFF)
+		cmds << zwave.switchMultilevelV2.switchMultilevelGet()
 	}
+	commands(cmds + queryAllColors())
 }
 
 private queryAllColors() {
