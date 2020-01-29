@@ -3,7 +3,7 @@
  *  Inovelli 4-in-1 Sensor 
  *   
  *	github: InovelliUSA
- *	Date: 2020-01-17
+ *	Date: 2020-01-28
  *	Copyright Inovelli / Eric Maycock
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -14,6 +14,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-01-28: Update VersionReport parsing because of Hubitat change. Removing unnecessary reports.
  *
  *  2020-01-16: Support for all device configuration parameters.
  *              Offset options for temperature, humidity, and illuminance.
@@ -147,7 +149,7 @@ def parse(description) {
     else
     now = new Date().format("yyyy MMM dd EEE h:mm:ss a")
     sendEvent(name: "lastActivity", value: now, displayed:false)
-    updateStatus()
+    //updateStatus()
     result
 }
 
@@ -269,8 +271,8 @@ def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd) {
 			case 0:
                 if (infoEnable != false) log.info "${device.label?device.label:device.name}: event 0 (State Idle)"
                 result << motionEvent(0)
-				result << createEvent(name: "tamper", value: "clear", descriptionText: "$device.displayName tamper cleared")
-                result << createEvent(name: "acceleration", value: "inactive", descriptionText: "$device.displayName tamper cleared")
+				//result << createEvent(name: "tamper", value: "clear", descriptionText: "$device.displayName tamper cleared")
+                //result << createEvent(name: "acceleration", value: "inactive", descriptionText: "$device.displayName tamper cleared")
 				break
             case 1:
                 if (infoEnable != false) log.info "${device.label?device.label:device.name}: event 1 (Intrusion - location provided)"
@@ -322,7 +324,7 @@ def zwaveEvent(hubitat.zwave.Command cmd) {
 
 def refresh() {
    	if (infoEnable != false) log.info "${device.label?device.label:device.name}: refresh()"
-
+    updateStatus()
     def request = []
     if (state.lastRefresh != null && now() - state.lastRefresh < 5000) {
         log.debug "Refresh Double Press"
@@ -547,25 +549,25 @@ private updateStatus(){
    def result = []
    if(state.batteryRuntimeStart != null){
         sendEvent(name:"batteryRuntime", value:getBatteryRuntime(), displayed:false)
-        if (device.currentValue('currentFirmware') != null){
-            sendEvent(name:"statusText2", value: "Firmware: v${device.currentValue('currentFirmware')} - Battery: ${getBatteryRuntime()} Double tap to reset", displayed:false)
-        } else {
-            sendEvent(name:"statusText2", value: "Battery: ${getBatteryRuntime()} Double tap to reset", displayed:false)
-        }
+        //if (device.currentValue('currentFirmware') != null){
+        //    sendEvent(name:"statusText2", value: "Firmware: v${device.currentValue('currentFirmware')} - Battery: ${getBatteryRuntime()} Double tap to reset", displayed:false)
+        //} else {
+        //    sendEvent(name:"statusText2", value: "Battery: ${getBatteryRuntime()} Double tap to reset", displayed:false)
+        //}
     } else {
         state.batteryRuntimeStart = now()
     }
 
-    String statusText = ""
-    if(device.currentValue('humidity') != null)
-        statusText = "RH ${device.currentValue('humidity')}% - "
-    if(device.currentValue('illuminance') != null)
-        statusText = statusText + "LUX ${device.currentValue('illuminance')} - "
+    //String statusText = ""
+    //if(device.currentValue('humidity') != null)
+    //    statusText = "RH ${device.currentValue('humidity')}% - "
+    //if(device.currentValue('illuminance') != null)
+    //    statusText = statusText + "LUX ${device.currentValue('illuminance')} - "
         
-    if (statusText != ""){
-        statusText = statusText.substring(0, statusText.length() - 2)
-        sendEvent(name:"statusText", value: statusText, displayed:false)
-    }
+    //if (statusText != ""){
+    //    statusText = statusText.substring(0, statusText.length() - 2)
+    //    sendEvent(name:"statusText", value: statusText, displayed:false)
+    //}
 }
 
 def calculateParameter(number) {
@@ -806,14 +808,20 @@ def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationGroupingsReport c
 }
 
 def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
-    if (debugEnable != false) log.debug "${device.label?device.label:device.name}: ${cmd}"
-    if(cmd.firmware0Version != null && cmd.firmware0SubVersion != null) {
+    if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
+    if(cmd.applicationVersion != null && cmd.applicationSubVersion != null) {
+	    def firmware = "${cmd.applicationVersion}.${cmd.applicationSubVersion.toString().padLeft(2,'0')}"
+        if (infoEnable) log.info "${device.label?device.label:device.name}: Firmware report received: ${firmware}"
+        state.needfwUpdate = "false"
+        createEvent(name: "firmware", value: "${firmware}")
+    } else if(cmd.firmware0Version != null && cmd.firmware0SubVersion != null) {
 	    def firmware = "${cmd.firmware0Version}.${cmd.firmware0SubVersion.toString().padLeft(2,'0')}"
         if (infoEnable != false) log.info "${device.label?device.label:device.name}: Firmware report received: ${firmware}"
         state.needfwUpdate = "false"
         createEvent(name: "firmware", value: "${firmware}")
     }
 }
+
 
 def zwaveEvent(hubitat.zwave.commands.protectionv2.ProtectionReport cmd) {
     if (debugEnable != false) log.debug "${device.label?device.label:device.name}: ${device.label?device.label:device.name}: ${cmd}"
