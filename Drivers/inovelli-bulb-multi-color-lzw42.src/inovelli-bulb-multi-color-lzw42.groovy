@@ -33,6 +33,8 @@
  *		fixes for reported bugs 
  *		correct comand class versions to match what the hardware supports
  *		add z-wave color component ids manually as it didnt seem to match in correct command class version from he
+ *  updated by bcopeland 2/6/2020
+ *      added ChangeLevel capability and relevant commands 
  */
 
 
@@ -48,6 +50,7 @@ metadata {
 		capability "Health Check"
 		capability "Configuration"
 		capability "ColorMode"
+		capability "ChangeLevel"
 
 		attribute "colorName", "string"
 		attribute "firmware", "decimal"
@@ -114,6 +117,16 @@ def configure() {
 	cmds << zwave.configurationV1.configurationSet([scaledConfigurationValue: bulbMemory.toInteger(), parameterNumber: 2, size:1])
 	cmds << zwave.configurationV1.configurationGet([parameterNumber: 2])
 	commands(cmds)
+}
+
+def startLevelChange(direction) {
+    def upDownVal = direction == "down" ? true : false
+	if (logEnable) log.debug "got startLevelChange(${direction})"
+    commands([zwave.switchMultilevelV2.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal)])
+}
+
+def stopLevelChange() {
+    commands([zwave.switchMultilevelV1.switchMultilevelStopLevelChange()])
 }
 
 def parse(description) {
