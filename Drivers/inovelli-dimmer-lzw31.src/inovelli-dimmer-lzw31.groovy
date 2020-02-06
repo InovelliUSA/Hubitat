@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer LZW31
  *  Author: Eric Maycock (erocm123)
- *  Date: 2019-11-13
+ *  Date: 2020-01-28
  *
  *  Copyright 2019 Eric Maycock / Inovelli
  *
@@ -13,6 +13,10 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-01-28: Update VersionReport parsing because of Hubitat change. Removing unnecessary reports.
+ *
+ *  2019-12-03: Specify central scene command class version for upcoming Hubitat update.
  *
  *  2019-11-13: Bug fix for not being able to set default level back to 0
  */
@@ -360,7 +364,7 @@ def getParameter(number) {
     return zwave.configurationV1.configurationGet(parameterNumber: number)
 }
 def getParameterNumbers(){
-    return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,21,22]
+    return [1,2,3,4,5,6,7,8,9,10,11,13,14,15,17,21,22]
 }
 
 def getParameterInfo(number, value){
@@ -560,7 +564,7 @@ def integer2Cmd(value, size) {
 }
 
 private getCommandClassVersions() {
-	[0x20: 1, 0x25: 1, 0x70: 1, 0x98: 1, 0x32: 3]
+	[0x20: 1, 0x25: 1, 0x70: 1, 0x98: 1, 0x32: 3, 0x5B: 1]
 }
 
 def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cmd) {
@@ -790,13 +794,20 @@ def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationGroupingsReport c
 }
 
 def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
-    log.debug cmd
+    if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
     if(cmd.applicationVersion != null && cmd.applicationSubVersion != null) {
 	    def firmware = "${cmd.applicationVersion}.${cmd.applicationSubVersion.toString().padLeft(2,'0')}"
+        if (infoEnable) log.info "${device.label?device.label:device.name}: Firmware report received: ${firmware}"
+        state.needfwUpdate = "false"
+        createEvent(name: "firmware", value: "${firmware}")
+    } else if(cmd.firmware0Version != null && cmd.firmware0SubVersion != null) {
+	    def firmware = "${cmd.firmware0Version}.${cmd.firmware0SubVersion.toString().padLeft(2,'0')}"
+        if (infoEnable != false) log.info "${device.label?device.label:device.name}: Firmware report received: ${firmware}"
         state.needfwUpdate = "false"
         createEvent(name: "firmware", value: "${firmware}")
     }
 }
+
 
 def zwaveEvent(hubitat.zwave.commands.protectionv2.ProtectionReport cmd) {
     log.debug cmd

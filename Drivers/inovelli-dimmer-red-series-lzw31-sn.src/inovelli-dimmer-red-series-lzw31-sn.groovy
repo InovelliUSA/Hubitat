@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer Red Series LZW31-SN
  *  Author: Eric Maycock (erocm123)
- *  Date: 2019-12-03
+ *  Date: 2020-01-28
  *
  *  Copyright 2019 Eric Maycock / Inovelli
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-01-28: Update VersionReport parsing because of Hubitat change. Removing unnecessary reports.
  *
  *  2019-12-03: Specify central scene command class version for upcoming Hubitat update.
  *
@@ -1044,6 +1046,11 @@ def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
     if(cmd.applicationVersion != null && cmd.applicationSubVersion != null) {
 	    def firmware = "${cmd.applicationVersion}.${cmd.applicationSubVersion.toString().padLeft(2,'0')}"
         if (infoEnable) log.info "${device.label?device.label:device.name}: Firmware report received: ${firmware}"
+        state.needfwUpdate = "false"
+        createEvent(name: "firmware", value: "${firmware}")
+    } else if(cmd.firmware0Version != null && cmd.firmware0SubVersion != null) {
+	    def firmware = "${cmd.firmware0Version}.${cmd.firmware0SubVersion.toString().padLeft(2,'0')}"
+        if (infoEnable != false) log.info "${device.label?device.label:device.name}: Firmware report received: ${firmware}"
         state.needfwUpdate = "false"
         createEvent(name: "firmware", value: "${firmware}")
     }
