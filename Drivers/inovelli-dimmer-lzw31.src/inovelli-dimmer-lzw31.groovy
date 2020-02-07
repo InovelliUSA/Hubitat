@@ -102,7 +102,7 @@ def startLevelChange(direction) {
 }
 
 def stopLevelChange() {
-    commands([zwave.switchMultilevelV1.switchMultilevelStopLevelChange()])
+    commands([zwave.switchMultilevelV2.switchMultilevelStopLevelChange()])
 }
 
 def childSetLevel(String dni, value) {
