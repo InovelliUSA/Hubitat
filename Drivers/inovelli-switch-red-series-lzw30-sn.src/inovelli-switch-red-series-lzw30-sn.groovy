@@ -295,7 +295,7 @@ def initialize() {
     try {
         addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep101",
                 [completedSetup: true, label: "${device.displayName} (Disable Local Control)",
-                isComponent: true, componentName: "ep101", componentLabel: "Disable Local Control"])
+                isComponent: false, componentName: "ep101", componentLabel: "Disable Local Control"])
     } catch (e) {
         runIn(3, "sendAlert", [data: [message: "Child device creation failed. Make sure the device handler for \"Switch Level Child Device\" is installed"]])
     }
@@ -314,7 +314,7 @@ def initialize() {
     try {
         addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep102", 
                 [completedSetup: true, label: "${device.displayName} (Disable Remote Control)",
-                isComponent: true, componentName: "ep102", componentLabel: "Disable Remote Control"])
+                isComponent: false, componentName: "ep102", componentLabel: "Disable Remote Control"])
     } catch (e) {
         runIn(3, "sendAlert", [data: [message: "Child device creation failed. Make sure the device handler for \"Switch Level Child Device\" is installed"]])
     }
@@ -335,7 +335,7 @@ def initialize() {
     try {
         addChildDevice("Switch Child Device", "${device.deviceNetworkId}-ep${i}",
                 [completedSetup: true, label: "${device.displayName} (Notification ${i})",
-                isComponent: true, componentName: "ep${i}", componentLabel: "Notification ${i}"])
+                isComponent: false, componentName: "ep${i}", componentLabel: "Notification ${i}"])
     } catch (e) {
         runIn(3, "sendAlert", [data: [message: "Child device creation failed. Make sure the device handler for \"Switch Child Device\" is installed"]])
     }
