@@ -1,7 +1,7 @@
 /**
  *  Inovelli Switch LZW30
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-02-06
+ *  Date: 2020-02-07
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-02-07: Update preferences when user changes parameter or disables relay from switch or from child device.
  *
  *  2020-02-06: Fix for remote control child device being created when it shouldn't be.
  *              Fix for local protection being updated via hub after being changed with config button.
@@ -45,7 +47,6 @@ metadata {
         attribute "lastActivity", "String"
         attribute "lastEvent", "String"
         attribute "firmware", "String"
-        
         
         command "childOn"
         command "childOff"
@@ -123,15 +124,15 @@ def childSetLevel(String dni, value) {
     def cmds = []
     switch (channelNumber(dni)) {
         case 101:
-            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionSet(localProtectionState : level > 0 ? 1 : 0, rfProtectionState: state.rfProtectionState? state.rfProtectionState:0) ), hubitat.device.Protocol.ZWAVE)
-            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionGet() ), hubitat.device.Protocol.ZWAVE)
+            cmds << zwave.protectionV2.protectionSet(localProtectionState : level > 0 ? 1 : 0, rfProtectionState: state.rfProtectionState? state.rfProtectionState:0)
+            cmds << zwave.protectionV2.protectionGet()
         break
         case 102:
-            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionSet(localProtectionState : state.localProtectionState? state.localProtectionState:0, rfProtectionState : level > 0 ? 1 : 0) ), hubitat.device.Protocol.ZWAVE)
-            cmds << new hubitat.device.HubAction(command(zwave.protectionV2.protectionGet() ), hubitat.device.Protocol.ZWAVE)
+            cmds << zwave.protectionV2.protectionSet(localProtectionState : state.localProtectionState? state.localProtectionState:0, rfProtectionState : level > 0 ? 1 : 0)
+            cmds << zwave.protectionV2.protectionGet()
         break
     }
-	return cmds
+	return commands(cmds)
 }
 
 private toggleTiles(number, value) {
@@ -420,12 +421,6 @@ def getParameterInfo(number, type){
 def zwaveEvent(hubitat.zwave.commands.configurationv1.ConfigurationReport cmd) {
     if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
     if (infoEnable) log.info "${device.label?device.label:device.name}: parameter '${cmd.parameterNumber}' with a byte size of '${cmd.size}' is set to '${cmd2Integer(cmd.configurationValue)}'"
-    if (!state.lastRan || now() <= state.lastRan + 60000) {
-        state."parameter${cmd.parameterNumber}value" = cmd2Integer(cmd.configurationValue)
-    } else {
-        if (infoEnable) log.debug "${device.label?device.label:device.name}: Configuration report received more than 60 seconds after running updated(). Possible configuration made at switch"
-    }
-    if (infoEnable) log.info "${device.label?device.label:device.name}: ${device.displayName} parameter '${cmd.parameterNumber}' with a byte size of '${cmd.size}' is set to '${cmd2Integer(cmd.configurationValue)}'"
     state."parameter${cmd.parameterNumber}value" = cmd2Integer(cmd.configurationValue)
 }
 
@@ -679,14 +674,10 @@ def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
 def zwaveEvent(hubitat.zwave.commands.protectionv2.ProtectionReport cmd) {
     if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
     if (infoEnable) log.info "${device.label?device.label:device.name}: Protection report received: Local protection is ${cmd.localProtectionState > 0 ? "on" : "off"} & Remote protection is ${cmd.rfProtectionState > 0 ? "on" : "off"}"
-    if (!state.lastRan || now() <= state.lastRan + 60000) {
-        state.localProtectionState = cmd.localProtectionState
-        state.rfProtectionState = cmd.rfProtectionState
-    } else {
-        if (infoEnable) log.debug "${device.label?device.label:device.name}: Protection report received more than 60 seconds after running updated(). Possible configuration made at switch"
-    }
-    //device.updateSetting("disableLocal",[value:cmd.localProtectionState?cmd.localProtectionState:0,type:"enum"])
-    //device.updateSetting("disableRemote",[value:cmd.rfProtectionState?cmd.rfProtectionState:0,type:"enum"])
+    state.localProtectionState = cmd.localProtectionState
+    state.rfProtectionState = cmd.rfProtectionState
+    device.updateSetting("disableLocal",[value:cmd.localProtectionState?"1":"0",type:"enum"])
+    device.updateSetting("disableRemote",[value:cmd.rfProtectionState?"1":"0",type:"enum"])
     def children = childDevices
     def childDevice = children.find{it.deviceNetworkId.endsWith("ep101")}
     if (childDevice) {
