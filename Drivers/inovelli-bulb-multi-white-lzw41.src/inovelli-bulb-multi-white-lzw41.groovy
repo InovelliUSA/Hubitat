@@ -30,6 +30,8 @@
  *		fixes for reported bugs 
  *		correct comand class versions to match what the hardware supports
  *		add z-wave color component ids manually as it didnt seem to match in correct command class version from he
+ *  updated by bcopeland 2/6/2020
+ *      added ChangeLevel capability and relevant commands 
  */
 
 metadata {
@@ -42,6 +44,7 @@ metadata {
 		capability "Sensor"
 		capability "Health Check"
 		capability "Configuration"
+		capability "ChangeLevel"
 
 		attribute "firmware", "decimal"
 		attribute "colorName", "string"
@@ -98,6 +101,16 @@ def installed() {
 	sendEvent(name: "level", value: 100, unit: "%")
 	sendEvent(name: "colorTemperature", value: 2700)
 	initializeVars()
+}
+
+def startLevelChange(direction) {
+    def upDownVal = direction == "down" ? true : false
+	if (logEnable) log.debug "got startLevelChange(${direction})"
+    commands([zwave.switchMultilevelV2.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal)])
+}
+
+def stopLevelChange() {
+    commands([zwave.switchMultilevelV2.switchMultilevelStopLevelChange()])
 }
 
 def initializeVars() {

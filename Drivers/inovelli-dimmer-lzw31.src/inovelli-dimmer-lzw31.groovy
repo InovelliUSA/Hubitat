@@ -28,6 +28,7 @@
  *  2019-12-03: Specify central scene command class version for upcoming Hubitat update.
  *
  *  2019-11-13: Bug fix for not being able to set default level back to 0
+ *  2020-02-06: updated by bcopeland - added ChangeLevel capability and relevant commands 
  */
  
 metadata {
@@ -40,6 +41,7 @@ metadata {
         //capability "Health Check"
         capability "Switch Level"
         capability "Configuration"
+        capability "ChangeLevel"
         
         attribute "lastActivity", "String"
         attribute "lastEvent", "String"
@@ -108,6 +110,16 @@ private sendAlert(data) {
         value: "failed",
         displayed: true,
     )
+}
+
+def startLevelChange(direction) {
+    def upDownVal = direction == "down" ? true : false
+	if (logEnable) log.debug "got startLevelChange(${direction})"
+    commands([zwave.switchMultilevelV2.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal)])
+}
+
+def stopLevelChange() {
+    commands([zwave.switchMultilevelV2.switchMultilevelStopLevelChange()])
 }
 
 def childSetLevel(String dni, value) {
