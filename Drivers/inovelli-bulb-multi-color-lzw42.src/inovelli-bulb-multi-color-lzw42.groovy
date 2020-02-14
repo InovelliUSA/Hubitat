@@ -301,6 +301,7 @@ def setHue(value) {
 
 def setColor(value) {
 	if (value.hue == null || value.saturation == null) return
+	if (value.level == null) value.level=100
 	if (logEnable) log.debug "setColor($value)"
 	def result = []
 	def rgb = hubitat.helper.ColorUtils.hsvToRGB([value.hue, value.saturation, value.level])
