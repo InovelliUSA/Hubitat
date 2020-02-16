@@ -38,6 +38,7 @@
  *  updated by bcopeland 2/15/2020
  *		dramatically improved speed of CT operations and reduced packet count - Make sure to hit configure after updating.
  *		improved speed of on/off events also reducing packets
+ *		improved speed of setLevel events also reducing packets
  *		bug fix for null value in setColor 
  */
 
@@ -290,9 +291,8 @@ def setLevel(level, duration) {
 	if (logEnable) log.debug "setLevel($level, $duration)"
 	if(level > 99) level = 99
 	commands([
-		zwave.switchMultilevelV2.switchMultilevelSet(value: level, dimmingDuration: duration),
-		zwave.switchMultilevelV2.switchMultilevelGet()
-	], (duration && duration < 12) ? (duration * 1000).toLong() : 3500)
+		zwave.switchMultilevelV2.switchMultilevelSet(value: level, dimmingDuration: duration)
+	])
 }
 
 def setSaturation(percent) {
@@ -316,7 +316,6 @@ def setColor(value) {
 	if ((device.currentValue("switch") != "on") && (!colorStaging)){
 		if (logEnable) log.debug "Bulb is off. Turning on"
  		result << zwave.basicV1.basicSet(value: 0xFF)
-        result << zwave.switchMultilevelV2.switchMultilevelGet()
 	}
     commands(result+queryAllColors())
 }
@@ -332,7 +331,6 @@ def setColorTemperature(temp) {
 	if ((device.currentValue("switch") != "on") && (!colorStaging)) {
 		if (logEnable) log.debug "Bulb is off. Turning on"
 		cmds << zwave.basicV1.basicSet(value: 0xFF)
-		cmds << zwave.switchMultilevelV2.switchMultilevelGet()
 	}
 	commands(cmds + queryAllColors())
 }
