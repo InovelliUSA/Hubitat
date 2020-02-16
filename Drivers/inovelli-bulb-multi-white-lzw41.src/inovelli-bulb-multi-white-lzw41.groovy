@@ -31,7 +31,9 @@
  *		correct comand class versions to match what the hardware supports
  *		add z-wave color component ids manually as it didnt seem to match in correct command class version from he
  *  updated by bcopeland 2/6/2020
- *      added ChangeLevel capability and relevant commands 
+ *      added ChangeLevel capability and relevant commands
+ *  updated by bcopeland 2/15/2020
+ *		dramatically improved speed of CT operations and reduced packet count - Make sure to hit configure after updating.
  */
 
 metadata {
