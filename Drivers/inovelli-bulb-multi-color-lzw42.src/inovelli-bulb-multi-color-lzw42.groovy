@@ -37,6 +37,8 @@
  *      added ChangeLevel capability and relevant commands 
  *  updated by bcopeland 2/15/2020
  *		dramatically improved speed of CT operations and reduced packet count - Make sure to hit configure after updating.
+ *		improved speed of on/off events also reducing packets
+ *		bug fix for null value in setColor 
  */
 
 
@@ -241,11 +243,7 @@ def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cm
 def zwaveEvent(hubitat.zwave.commands.configurationv1.ConfigurationReport cmd) {
 	if (logEnable) log.debug "got ConfigurationReport: $cmd"
 	def result = null
-//	if (cmd.parameterNumber == WARM_WHITE_CONFIG || cmd.parameterNumber == COLD_WHITE_CONFIG) {
-//		result = createEvent(name: "colorTemperature", value: cmd.scaledConfigurationValue)
-//		setGenericTempName(cmd.scaledConfigurationValue)
-//	}
-		if (cmd.parameterNumber == 0x02) {
+	if (cmd.parameterNumber == 0x02) {
 		state.powerStateMem = cmd.scaledConfigurationValue
 	}
 	result
@@ -261,11 +259,11 @@ def buildOffOnEvent(cmd){
 }
 
 def on() {
-	commands(buildOffOnEvent(0xFF), 5000)
+	commands([zwave.basicV1.basicSet(value: 0xFF)])
 }
 
 def off() {
-	commands(buildOffOnEvent(0x00), 5000)
+	commands([zwave.basicV1.basicSet(value: 0x00)])
 }
 
 def refresh() {

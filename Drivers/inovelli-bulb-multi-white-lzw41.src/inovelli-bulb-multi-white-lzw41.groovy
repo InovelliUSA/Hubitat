@@ -34,6 +34,7 @@
  *      added ChangeLevel capability and relevant commands
  *  updated by bcopeland 2/15/2020
  *		dramatically improved speed of CT operations and reduced packet count - Make sure to hit configure after updating.
+ *		improved speed of on/off events also reducing packets
  */
 
 metadata {
@@ -227,11 +228,11 @@ def buildOffOnEvent(cmd){
 }
 
 def on() {
-	commands(buildOffOnEvent(0xFF), 5000)
+	commands([zwave.basicV1.basicSet(value: 0xFF)])
 }
 
 def off() {
-	commands(buildOffOnEvent(0x00), 5000)
+	commands([zwave.basicV1.basicSet(value: 0x00)])
 }
 
 def refresh() {
