@@ -1,7 +1,4 @@
 /**
- *
- *  Hubitat Import URL: https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-door-window-sensor-nzw1201.src/inovelli-door-window-sensor-nzw1201.groovy
- *
  *  Inovelli Door/Window Sensor NZW1201
  *  Author: Eric Maycock (erocm123)
  *  Date: 2018-02-26
@@ -23,7 +20,13 @@
  */
 
 metadata {
-    definition (name: "Inovelli Door/Window Sensor NZW1201", namespace: "InovelliUSA", author: "Eric Maycock", ocfDeviceType: "x.com.st.d.sensor.contact") {
+    definition (
+        name: "Inovelli Door/Window Sensor NZW1201", 
+        namespace: "InovelliUSA", 
+        author: "Eric Maycock", 
+        ocfDeviceType: "x.com.st.d.sensor.contact",
+        importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-door-window-sensor-nzw1201.src/inovelli-door-window-sensor-nzw1201.groovy"
+    ) {
         capability "Contact Sensor"
         capability "Sensor"
         capability "Battery"
