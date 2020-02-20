@@ -14,12 +14,32 @@
  *
  *  Author: Eric Maycock
  *  Date: 2019-9-9
+ *  updated by bcopeland 1/7/2020 
+ *		Added color pre-staging option
+ *		Added power restored memory configuration
+ *		Added debug logging configuration
+ *		Fixed color setting 
+ *		Fixed color temperature setting 
+ *		Fixed reporting 
+ *		Removed SmartThings related code
+ *		Added importURL
+ *		Added color name
+ *	updated by bcopeland 1/9/2020
+ *		added firmware version reporting
+ *  updated by bcopeland 1/21/2020
+ *		fixes for reported bugs 
+ *		correct comand class versions to match what the hardware supports
+ *		add z-wave color component ids manually as it didnt seem to match in correct command class version from he
+ *  updated by bcopeland 2/6/2020
+ *      added ChangeLevel capability and relevant commands
+ *  updated by bcopeland 2/15/2020
+ *		dramatically improved speed of CT operations and reduced packet count - Make sure to hit configure after updating.
+ *		improved speed of on/off events also reducing packets
+ *		improved speed of setLevel events also reducing packets
  */
 
 metadata {
-	definition (name: "Inovelli Bulb Multi-White LZW41", namespace: "InovelliUSA", author: "InovelliUSA",
-				ocfDeviceType: "oic.d.light", mnmn: "SmartThings", vid: "generic-rgbw-color-bulb",
-				runLocally: false, minHubCoreVersion: '000.017.0012', executeCommandsLocally: false) {
+	definition (name: "Inovelli Bulb Multi-White LZW41", namespace: "InovelliUSA", author: "InovelliUSA", importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-bulb-multi-white-lzw41.src/inovelli-bulb-multi-white-lzw41.groovy") {
 		capability "Switch Level"
 		capability "Color Temperature"
 		capability "Switch"
@@ -27,76 +47,99 @@ metadata {
 		capability "Actuator"
 		capability "Sensor"
 		capability "Health Check"
+		capability "Configuration"
+		capability "ChangeLevel"
+
+		attribute "firmware", "decimal"
+		attribute "colorName", "string"
         
-        fingerprint mfr: "0300", prod: "0006", model: "0001", deviceJoinName: "Inovelli Bulb Multi-White" //US
+        fingerprint mfr: "031E", prod: "0006", model: "0001", deviceJoinName: "Inovelli Bulb Multi-White" //US
         fingerprint deviceId: "0x1101", inClusters: "0x5E,0x85,0x59,0x86,0x72,0x5A,0x26,0x33,0x27,0x70,0x7A,0x73,0x98,0x7A"
         fingerprint deviceId: "0x1101", inClusters: "0x5E,0x98,0x86,0x85,0x59,0x72,0x73,0x26,0x33,0x70,0x27,0x5A,0x7A" // Secure
         fingerprint deviceId: "0x1101", inClusters: "0x5E,0x85,0x59,0x86,0x72,0x5A,0x26,0x33,0x27,0x70,0x73,0x98,0x7A"
 	}
-
-	simulator {
+	preferences {
+		// added for official hubitat standards
+		input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: false
+		input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true
+		input name: "bulbMemory", type: "enum", title: "Power outage state", options: [0:"Remembers Last State",1:"Bulb turns ON",2:"Bulb turns OFF"], defaultValue: 0
 	}
-
-	tiles(scale: 2) {
-		multiAttributeTile(name:"switch", type: "lighting", width: 1, height: 1, canChangeIcon: true) {
-			tileAttribute("device.switch", key: "PRIMARY_CONTROL") {
-				attributeState("on", label:'${name}', action:"switch.off", icon:"st.lights.philips.hue-single", backgroundColor:"#00a0dc", nextState:"turningOff")
-				attributeState("off", label:'${name}', action:"switch.on", icon:"st.lights.philips.hue-single", backgroundColor:"#ffffff", nextState:"turningOn")
-				attributeState("turningOn", label:'${name}', action:"switch.off", icon:"st.lights.philips.hue-single", backgroundColor:"#00a0dc", nextState:"turningOff")
-				attributeState("turningOff", label:'${name}', action:"switch.on", icon:"st.lights.philips.hue-single", backgroundColor:"#ffffff", nextState:"turningOn")
-			}
-
-			tileAttribute ("device.level", key: "SLIDER_CONTROL") {
-				attributeState "level", action:"switch level.setLevel"
-			}
-		}
-	}
-
-	controlTile("colorTempSliderControl", "device.colorTemperature", "slider", width: 4, height: 2, inactiveLabel: false, range:"(2700..6500)") {
-		state "colorTemperature", action:"color temperature.setColorTemperature"
-	}
-    standardTile("refresh", "device.switch", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
-			state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
-		}
-
-	main(["switch"])
-	details(["switch", "levelSliderControl", "colorTempSliderControl", "refresh"])
 }
 
+private getCOLOR_TEMP_MIN() { 2700 }
+private getCOLOR_TEMP_MAX() { 6500 }
 private getWARM_WHITE_CONFIG() { 0x51 }
 private getCOLD_WHITE_CONFIG() { 0x52 }
 private getWARM_WHITE() { "warmWhite" }
 private getCOLD_WHITE() { "coldWhite" }
+private getZWAVE_COLOR_COMPONENT_ID() { [warmWhite: 0, coldWhite: 1, red: 2, green: 3, blue: 4] }
 private getWHITE_NAMES() { [WARM_WHITE, COLD_WHITE] }
+private getCOLOR_TEMP_DIFF() { COLOR_TEMP_MAX - COLOR_TEMP_MIN }
+
+def logsOff(){
+    log.warn "debug logging disabled..."
+    device.updateSetting("logEnable",[value:"false",type:"bool"])
+}
 
 def updated() {
-	log.debug "updated().."
+	log.info "updated().."
+	log.warn "debug logging is: ${logEnable}"
+	log.warn "color staging is: ${colorStaging}"
+	if (!state.powerStateMem) initializeVars()
+	if (state.powerStateMem.toInteger() != bulbMemory.toInteger()) device.configure() 
+	if (logEnable) runIn(1800,logsOff)
 	response(refresh())
 }
 
+def configure() {
+	def cmds = []
+	cmds << zwave.configurationV1.configurationSet([scaledConfigurationValue: bulbMemory.toInteger(), parameterNumber: 2, size:1])
+	cmds << zwave.configurationV1.configurationGet([parameterNumber: 2])
+	cmds << zwave.configurationV1.configurationSet([scaledConfigurationValue: COLOR_TEMP_MIN, parameterNumber: WARM_WHITE_CONFIG, size: 2])
+	cmds << zwave.configurationV1.configurationSet([scaledConfigurationValue: COLOR_TEMP_MAX, parameterNumber: COLD_WHITE_CONFIG, size: 2])
+	commands(cmds)
+}
+
 def installed() {
-	log.debug "installed()..."
+	if (logEnable) log.debug "installed()..."
 	sendEvent(name: "checkInterval", value: 1860, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID, offlinePingable: "0"])
 	sendEvent(name: "level", value: 100, unit: "%")
 	sendEvent(name: "colorTemperature", value: 2700)
+	initializeVars()
+}
+
+def startLevelChange(direction) {
+    def upDownVal = direction == "down" ? true : false
+	if (logEnable) log.debug "got startLevelChange(${direction})"
+    commands([zwave.switchMultilevelV2.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal)])
+}
+
+def stopLevelChange() {
+    commands([zwave.switchMultilevelV2.switchMultilevelStopLevelChange()])
+}
+
+def initializeVars() {
+	if (!state.powerStateMem) state.powerStateMem=0
+    if (!state.colorReceived) state.colorReceived = [red: null, green: null, blue: null, warmWhite: null, coldWhite: null]
 }
 
 def parse(description) {
 	def result = null
 	if (description != "updated") {
-		def cmd = zwave.parse(description)
+        if (logEnable) log.debug("description: $description")
+		def cmd = zwave.parse(description,[0x33:2,0x26:2,0x86:2,0x70:1])
 		if (cmd) {
 			result = zwaveEvent(cmd)
-			log.debug("'$description' parsed to $result")
+			if(debugLogging) log.debug("'$description' parsed to $result")
 		} else {
-			log.debug("Couldn't zwave.parse '$description'")
+			log.warn("Couldn't zwave.parse '$description'")
 		}
 	}
 	result
 }
 
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd) {
-    log.debug cmd
+    if (logEnable) log.debug cmd
 	dimmerEvents(cmd)
 }
 
@@ -104,21 +147,48 @@ def zwaveEvent(hubitat.zwave.commands.basicv1.BasicSet cmd) {
 	dimmerEvents(cmd)
 }
 
-def zwaveEvent(hubitat.zwave.commands.switchmultilevelv3.SwitchMultilevelReport cmd) {
-    log.debug cmd
+def zwaveEvent(hubitat.zwave.commands.versionv2.VersionReport cmd) {
+	if (logEnable) log.debug "got version report"
+	BigDecimal fw = cmd.firmware0Version + (cmd.firmware0SubVersion / 100)
+	state.firmware = fw
+}
+
+def zwaveEvent(hubitat.zwave.commands.switchmultilevelv2.SwitchMultilevelReport cmd) {
+    if (logEnable) log.debug cmd
 	unschedule(offlinePing)
 	dimmerEvents(cmd)
 }
 
-def zwaveEvent(hubitat.zwave.commands.switchcolorv3.SwitchColorReport cmd) {
-	log.debug "got SwitchColorReport: $cmd"
+def zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorSupportedReport cmd) {
+	log.debug cmd
+}
+
+def zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorReport cmd) {
+	if (logEnable) log.debug "got SwitchColorReport: $cmd"
 	def result = []
-	if (cmd.value == 255) {
-		def parameterNumber = (cmd.colorComponent == WARM_WHITE) ? WARM_WHITE_CONFIG : COLD_WHITE_CONFIG
-		result << response(command(zwave.configurationV2.configurationGet([parameterNumber: parameterNumber])))
+    if (!state.colorReceived) initializeVars()
+	state.colorReceived[cmd.colorComponent] = cmd.value
+    if (WHITE_NAMES.every { state.colorReceived[it] != null}) {
+		def warmWhite = state.colorReceived[WARM_WHITE]
+		def coldWhite = state.colorReceived[COLD_WHITE]
+		if (logEnable) log.debug "warmWhite: $warmWhite, coldWhite: $coldWhite"
+		if (warmWhite == 0 && coldWhite == 0) {
+			result = createEvent(name: "colorTemperature", value: COLOR_TEMP_MIN)
+		} else {
+			def colorTemp = COLOR_TEMP_MIN + (COLOR_TEMP_DIFF / 2)
+			if (warmWhite != coldWhite) {
+				colorTemp = (COLOR_TEMP_MAX - (COLOR_TEMP_DIFF * warmWhite) / 255) as Integer
+			}
+			result << createEvent(name: "colorTemperature", value: colorTemp)
+			setGenericTempName(colorTemp)
+		}
+		// Reset the values
+		WHITE_NAMES.collect { state.colorReceived[it] = null }
 	}
 	result
 }
+
+
 
 private dimmerEvents(hubitat.zwave.Command cmd) {
 	def value = (cmd.value ? "on" : "off")
@@ -130,7 +200,7 @@ private dimmerEvents(hubitat.zwave.Command cmd) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cmd) {
-	def encapsulatedCommand = cmd.encapsulatedCommand()
+	def encapsulatedCommand = cmd.encapsulatedCommand([0x33:2,0x26:2,0x86:2,0x70:1])
 	if (encapsulatedCommand) {
 		zwaveEvent(encapsulatedCommand)
 	} else {
@@ -139,35 +209,14 @@ def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cm
 	}
 }
 
-/*def zwaveEvent(hubitat.zwave.commands.configurationv2.ConfigurationReport cmd) {
-	log.debug "got ConfigurationReport: $cmd"
-	def result = null
-	if (cmd.parameterNumber == WARM_WHITE_CONFIG || cmd.parameterNumber == COLD_WHITE_CONFIG)
-		result = createEvent(name: "colorTemperature", value: cmd.scaledConfigurationValue)
-	result
-}*/
-
-def zwaveEvent(hubitat.zwave.commands.configurationv2.ConfigurationReport cmd) {
+def zwaveEvent(hubitat.zwave.commands.configurationv1.ConfigurationReport cmd) {
     //log.debug cmd
-    log.debug "${device.displayName} parameter '${cmd.parameterNumber}' with a byte size of '${cmd.size}' is set to '${cmd2Integer(cmd.configurationValue)}'"
-    state."parameter${cmd.parameterNumber}value" = cmd2Integer(cmd.configurationValue)
-}
-
-def cmd2Integer(array) {
-    switch(array.size()) {
-        case 1:
-            array[0]
-            break
-        case 2:
-            ((array[0] & 0xFF) << 8) | (array[1] & 0xFF)
-            break
-        case 3:
-            ((array[0] & 0xFF) << 16) | ((array[1] & 0xFF) << 8) | (array[2] & 0xFF)
-            break
-        case 4:
-            ((array[0] & 0xFF) << 24) | ((array[1] & 0xFF) << 16) | ((array[2] & 0xFF) << 8) | (array[3] & 0xFF)
-            break
-    }
+    if (logEnable) log.debug "got ConfigurationReport: $cmd"
+    def result = null
+	if (cmd.parameterNumber == 0x02) {
+		state.powerStateMem = cmd.scaledConfigurationValue
+	}
+	result    
 }
 
 def zwaveEvent(hubitat.zwave.Command cmd) {
@@ -176,39 +225,31 @@ def zwaveEvent(hubitat.zwave.Command cmd) {
 }
 
 def buildOffOnEvent(cmd){
-	[zwave.basicV1.basicSet(value: cmd), zwave.switchMultilevelV3.switchMultilevelGet()]
+	[zwave.basicV1.basicSet(value: cmd), zwave.switchMultilevelV2.switchMultilevelGet()]
 }
 
 def on() {
-	commands(buildOffOnEvent(0xFF), 5000)
+	commands([zwave.basicV1.basicSet(value: 0xFF)])
 }
 
 def off() {
-	commands(buildOffOnEvent(0x00), 5000)
+	commands([zwave.basicV1.basicSet(value: 0x00)])
 }
 
 def refresh() {
-	//commands([zwave.switchMultilevelV3.switchMultilevelGet()] + queryAllColors(), 500)
-    //def commands = []
-    def commands = processAssociations()
-    //commands << zwave.configurationV1.configurationSet(parameterNumber: 80, scaledConfigurationValue: 1, size: 1).format()
-
-    //[2,80,81,82].each { i ->
-    //    commands << zwave.configurationV1.configurationGet(parameterNumber: i).format()
-    //}
-    delayBetween(commands,1000)
+    commands([zwave.switchMultilevelV2.switchMultilevelGet()] + queryAllColors() + zwave.versionV1.versionGet())
 }
 
 def ping() {
-	log.debug "ping().."
+	if (logEnable) log.debug "ping().."
 	unschedule(offlinePing)
 	runEvery30Minutes(offlinePing)
-	command(zwave.switchMultilevelV3.switchMultilevelGet())
+	command(zwave.switchMultilevelV2.switchMultilevelGet())
 }
 
 def offlinePing() {
-	log.debug "offlinePing()..."
-	sendHubCommand(new hubitat.device.HubAction(command(zwave.switchMultilevelV3.switchMultilevelGet())))
+	if (logEnable) log.debug "offlinePing()..."
+	sendHubCommand(new hubitat.device.HubAction(command(zwave.switchMultilevelV2.switchMultilevelGet())))
 }
 
 def setLevel(level) {
@@ -216,29 +257,31 @@ def setLevel(level) {
 }
 
 def setLevel(level, duration) {
-	log.debug "setLevel($level, $duration)"
+	if (logEnable) log.debug "setLevel($level, $duration)"
 	if(level > 99) level = 99
 	commands([
-		zwave.switchMultilevelV3.switchMultilevelSet(value: level, dimmingDuration: duration),
-		zwave.switchMultilevelV3.switchMultilevelGet(),
-	], (duration && duration < 12) ? (duration * 1000) : 3500)
+		zwave.switchMultilevelV2.switchMultilevelSet(value: level, dimmingDuration: duration)
+	])
 }
 
 def setColorTemperature(temp) {
-	log.debug "setColorTemperature($temp)"
-	def warmValue = temp < 5000 ? 255 : 0
-	def coldValue = temp >= 5000 ? 255 : 0
-	def parameterNumber = temp < 5000 ? WARM_WHITE_CONFIG : COLD_WHITE_CONFIG
-	def cmds = [zwave.switchColorV3.switchColorSet(warmWhite: warmValue, coldWhite: coldValue)]
-    if (device.currentValue("switch") != "on") {
-        log.debug "Bulb is off. Turning on"
-        cmds << zwave.basicV1.basicSet(value: 0xFF)
-    }
-	commands(cmds) + "delay 4000" + commands(queryAllColors(), 500)
+	if (logEnable) log.debug "setColorTemperature($temp)"
+	def cmds = []
+	if (temp < COLOR_TEMP_MIN) temp = COLOR_TEMP_MIN
+	if (temp > COLOR_TEMP_MAX) temp = COLOR_TEMP_MAX
+	def warmValue = ((COLOR_TEMP_MAX - temp) / COLOR_TEMP_DIFF * 255) as Integer
+	def coldValue = 255 - warmValue
+	cmds << zwave.switchColorV2.switchColorSet(warmWhite: warmValue, coldWhite: coldValue)
+	if ((device.currentValue("switch") != "on") && (!colorStaging)) {
+		if (logEnable) log.debug "Bulb is off. Turning on"
+		cmds << zwave.basicV1.basicSet(value: 0xFF)
+	}
+	commands(cmds + queryAllColors())
 }
 
 private queryAllColors() {
-	[zwave.basicV1.basicGet()] /*+ WHITE_NAMES.collect { zwave.switchColorV3.switchColorGet(colorComponentId: it) }*/
+	WHITE_NAMES.collect { zwave.switchColorV2.switchColorGet(colorComponent: it, colorComponentId: ZWAVE_COLOR_COMPONENT_ID[it]) }
+	//[zwave.basicV1.basicGet()] /*+ WHITE_NAMES.collect { zwave.switchColorV2.switchColorGet(colorComponentId: it) }*/
 }
 
 private secEncap(hubitat.zwave.Command cmd) {
@@ -261,9 +304,31 @@ private commands(commands, delay=200) {
 	delayBetween(commands.collect{ command(it) }, delay)
 }
 
+
+def setGenericTempName(temp){
+    if (!temp) return
+    def genericName
+    def value = temp.toInteger()
+    if (value <= 2000) genericName = "Sodium"
+    else if (value <= 2100) genericName = "Starlight"
+    else if (value < 2400) genericName = "Sunrise"
+    else if (value < 2800) genericName = "Incandescent"
+    else if (value < 3300) genericName = "Soft White"
+    else if (value < 3500) genericName = "Warm White"
+    else if (value < 4150) genericName = "Moonlight"
+    else if (value <= 5000) genericName = "Horizon"
+    else if (value < 5500) genericName = "Daylight"
+    else if (value < 6000) genericName = "Electronic"
+    else if (value <= 6500) genericName = "Skylight"
+    else if (value < 20000) genericName = "Polar"
+    def descriptionText = "${device.getDisplayName()} color is ${genericName}"
+    if (txtEnable) log.info "${descriptionText}"
+    sendEvent(name: "colorName", value: genericName ,descriptionText: descriptionText)
+}
+
 def setDefaultAssociations() {
-    def smartThingsHubID = zwaveHubNodeId.toString().format( '%02x', zwaveHubNodeId )
-    state.defaultG1 = [smartThingsHubID]
+    def hubitatHubID = zwaveHubNodeId.toString().format( '%02x', zwaveHubNodeId )
+    state.defaultG1 = [hubitatHubID]
     state.defaultG2 = []
     state.defaultG3 = []
 }
@@ -287,11 +352,11 @@ def processAssociations(){
    def cmds = []
    setDefaultAssociations()
    def associationGroups = 5
-   log.debug state.associationGroups
+   if (logEnable) log.debug state.associationGroups
    if (state.associationGroups) {
        associationGroups = state.associationGroups
    } else {
-       log.debug "Getting supported association groups from device"
+       if (logEnable) log.debug "Getting supported association groups from device"
        cmds <<  zwave.associationV2.associationGroupingsGet().format()
    }
    for (int i = 1; i <= associationGroups; i++){
@@ -299,12 +364,12 @@ def processAssociations(){
          if(state."desiredAssociation${i}" != null || state."defaultG${i}") {
             def refreshGroup = false
             ((state."desiredAssociation${i}"? state."desiredAssociation${i}" : [] + state."defaultG${i}") - state."actualAssociation${i}").each {
-                log.debug "Adding node $it to group $i"
+                if (logEnable) log.debug "Adding node $it to group $i"
                 cmds << zwave.associationV2.associationSet(groupingIdentifier:i, nodeId:Integer.parseInt(it,16)).format()
                 refreshGroup = true
             }
             ((state."actualAssociation${i}" - state."defaultG${i}") - state."desiredAssociation${i}").each {
-                log.debug "Removing node $it from group $i"
+                if (logEnable) log.debug "Removing node $it from group $i"
                 cmds << zwave.associationV2.associationRemove(groupingIdentifier:i, nodeId:Integer.parseInt(it,16)).format()
                 refreshGroup = true
             }
@@ -312,7 +377,7 @@ def processAssociations(){
             else log.debug "There are no association actions to complete for group $i"
          }
       } else {
-         log.debug "Association info not known for group $i. Requesting info from device."
+         if (logEnable) log.debug "Association info not known for group $i. Requesting info from device."
          cmds << zwave.associationV2.associationGet(groupingIdentifier:i).format()
       }
    }
