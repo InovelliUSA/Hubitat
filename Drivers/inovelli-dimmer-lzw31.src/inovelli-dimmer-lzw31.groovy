@@ -14,7 +14,11 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ *  2020-02-20: Fix for missing logsoff method and ability to set custom LED color.
+ *
  *  2020-02-07: Update preferences when user changes parameter or disables relay from switch or from child device.
+ *
+ *  2020-02-06: updated by bcopeland - added ChangeLevel capability and relevant commands 
  *
  *  2020-02-06: Fix for remote control child device being created when it shouldn't be.
  *              Fix for local protection being updated via hub after being changed with config button.
@@ -28,7 +32,7 @@
  *  2019-12-03: Specify central scene command class version for upcoming Hubitat update.
  *
  *  2019-11-13: Bug fix for not being able to set default level back to 0
- *  2020-02-06: updated by bcopeland - added ChangeLevel capability and relevant commands 
+ *
  */
  
 metadata {
@@ -85,6 +89,13 @@ def generate_preferences()
                     options: getParameterInfo(i, "options")
             break
         }  
+        if (i == 13){
+            input "parameter13custom", "number", 
+                title: "Custom LED RGB Value", 
+                description: "\nInput a custom value in this field to override the above setting. The value should be between 0 - 360 and can be determined by using the typical hue color wheel.", 
+                required: false,
+                range: "0..360"
+        }
     }
     
     input "disableLocal", "enum", title: "Disable Local Control", description: "\nDisable ability to control switch from the wall", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
@@ -227,6 +238,12 @@ def updated() {
     } else {
         log.debug "updated() ran within the last 2 seconds. Skipping execution."
     }
+}
+
+def logsOff(){
+    log.warn "${device.label?device.label:device.name}: Disabling logging after timeout"
+    //device.updateSetting("debugEnable",[value:"false",type:"bool"])
+    device.updateSetting("infoEnable",[value:"false",type:"bool"])
 }
 
 def initialize() {
