@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer LZW31
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-02-07
+ *  Date: 2020-02-25
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -14,6 +14,9 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ *  2020-02-25: Switch over to using Hubitat child device drivers. Should still be backwards compatible with
+ *              Inovelli child drivers.
+ * 
  *  2020-02-20: Fix for missing logsoff method and ability to set custom LED color.
  *
  *  2020-02-07: Update preferences when user changes parameter or disables relay from switch or from child device.
@@ -51,8 +54,16 @@ metadata {
         attribute "lastEvent", "String"
         attribute "firmware", "String"
         
-        command "reset"
         command "setAssociationGroup", ["number", "enum", "number", "number"] // group number, nodes, action (0 - remove, 1 - add), multi-channel endpoint (optional)
+        
+        command "childOn"
+        command "childOff"
+        command "childSetLevel"
+        command "childRefresh"
+        command "componentOn"
+        command "componentOff"
+        command "componentSetLevel"
+        command "componentRefresh"
 
         fingerprint mfr: "031E", prod: "0003", model: "0001", deviceJoinName: "Inovelli Dimmer"
         fingerprint deviceId: "0x1101", inClusters: "0x5E,0x55,0x98,0x9F,0x6C,0x22,0x26,0x70,0x85,0x59,0x86,0x72,0x5A,0x73,0x75,0x7A" 
@@ -99,7 +110,7 @@ def generate_preferences()
     }
     
     input "disableLocal", "enum", title: "Disable Local Control", description: "\nDisable ability to control switch from the wall", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
-    input "disableRemote", "enum", title: "Disable Remote Control", description: "\nDisable ability to control switch from inside SmartThings", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
+    input "disableRemote", "enum", title: "Disable Remote Control", description: "\nDisable ability to control switch from inside Hubitat", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
     input description: "Use the below options to enable child devices for the specified settings. This will allow you to adjust these settings using SmartApps such as Smart Lighting. If any of the options are enabled, make sure you have the appropriate child device handlers installed.\n(Firmware 1.02+)", title: "Child Devices", displayDuringSetup: false, type: "paragraph", element: "paragraph"
     input "enableDisableLocalChild", "bool", title: "Disable Local Control", description: "", required: false, defaultValue: false
     input "enableDisableRemoteChild", "bool", title: "Disable Remote Control", description: "", required: false, defaultValue: false
@@ -202,6 +213,26 @@ def childOff(String dni) {
 
 void childRefresh(String dni) {
     if (infoEnable) log.info "${device.label?device.label:device.name}: childRefresh($dni)"
+}
+
+
+def componentSetLevel(cd,level,transitionTime = null) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: componentSetLevel($cd, $value)"
+	return childSetLevel(cd.deviceNetworkId,level)
+}
+
+def componentOn(cd) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: componentOn($cd)"
+    return childOn(cd.deviceNetworkId)
+}
+
+def componentOff(cd) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: componentOff($cd)"
+    return childOff(cd.deviceNetworkId)
+}
+
+void componentRefresh(cd) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: componentRefresh($cd)"
 }
 
 
