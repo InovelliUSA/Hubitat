@@ -1,7 +1,7 @@
 /**
  *  Inovelli Switch Red Series
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-02-07
+ *  Date: 2020-02-25
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -14,6 +14,9 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ *  2020-02-25: Switch over to using Hubitat child device drivers. Should still be backwards compatible with
+ *              Inovelli child drivers.
+ * 
  *  2020-02-07: Update preferences when user changes parameter or disables relay from switch or from child device.
  *
  *  2020-02-06: Fix for remote control child device being created when it shouldn't be.
@@ -69,6 +72,9 @@ metadata {
         command "childOn"
         command "childOff"
         command "childRefresh"
+        command "componentOn"
+        command "componentOff"
+        command "componentRefresh"
         command "reset"
         
         command "setAssociationGroup", ["number", "enum", "number", "number"] // group number, nodes, action (0 - remove, 1 - add), multi-channel endpoint (optional)
@@ -250,6 +256,20 @@ def childOff(String dni) {
     }
 }
 
+def componentOn(cd) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: componentOn($cd)"
+    return childOn(cd.deviceNetworkId)
+}
+
+def componentOff(cd) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: componentOff($cd)"
+    return childOff(cd.deviceNetworkId)
+}
+
+void componentRefresh(cd) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: componentRefresh($cd)"
+}
+
 void childRefresh(String dni) {
     if (infoEnable) log.info "${device.label?device.label:device.name}: childRefresh($dni)"
 }
@@ -294,7 +314,7 @@ def initialize() {
     
     if (enableDisableLocalChild && !childExists("ep101")) {
     try {
-        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep101",
+        addChildDevice("hubitat", "Generic Component Switch", "${device.deviceNetworkId}-ep101",
                 [completedSetup: true, label: "${device.displayName} (Disable Local Control)",
                 isComponent: false, componentName: "ep101", componentLabel: "Disable Local Control"])
     } catch (e) {
@@ -313,7 +333,7 @@ def initialize() {
     }
     if (enableDisableRemoteChild && !childExists("ep102")) {
     try {
-        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep102", 
+        addChildDevice("hubitat", "Generic Component Switch", "${device.deviceNetworkId}-ep102", 
                 [completedSetup: true, label: "${device.displayName} (Disable Remote Control)",
                 isComponent: false, componentName: "ep102", componentLabel: "Disable Remote Control"])
     } catch (e) {
@@ -334,7 +354,7 @@ def initialize() {
     [1,2,3,4,5].each { i ->
     if ((settings."parameter8-${i}a"!=null && settings."parameter8-${i}b"!=null && settings."parameter8-${i}c"!=null && settings."parameter8-${i}d"!=null) && !childExists("ep${i}")) {
     try {
-        addChildDevice("Switch Child Device", "${device.deviceNetworkId}-ep${i}",
+        addChildDevice("hubitat", "Generic Component Switch", "${device.deviceNetworkId}-ep${i}",
                 [completedSetup: true, label: "${device.displayName} (Notification ${i})",
                 isComponent: false, componentName: "ep${i}", componentLabel: "Notification ${i}"])
     } catch (e) {
