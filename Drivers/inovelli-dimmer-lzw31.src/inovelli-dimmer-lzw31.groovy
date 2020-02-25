@@ -283,7 +283,7 @@ def initialize() {
     
     if (enableDefaultLocalChild && !childExists("ep9")) {
     try {
-        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep9", 
+        addChildDevice("hubitat", "Generic Component Dimmer", "${device.deviceNetworkId}-ep9", 
                 [completedSetup: true, label: "${device.displayName} (Default Local Level)",
                 isComponent: false, componentName: "ep9", componentLabel: "Default Local Level"])
     } catch (e) {
@@ -302,7 +302,7 @@ def initialize() {
     }
     if (enableDefaultZWaveChild && !childExists("ep10")) {
     try {
-        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep10", 
+        addChildDevice("hubitat", "Generic Component Dimmer", "${device.deviceNetworkId}-ep10", 
                 [completedSetup: true, label: "${device.displayName} (Default Z-Wave Level)",
                 isComponent: false, componentName: "ep10", componentLabel: "Default Z-Wave Level"])
     } catch (e) {
@@ -321,7 +321,7 @@ def initialize() {
     }
     if (enableDisableLocalChild && !childExists("ep101")) {
     try {
-        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep101", 
+        addChildDevice("hubitat", "Generic Component Dimmer", "${device.deviceNetworkId}-ep101", 
                 [completedSetup: true, label: "${device.displayName} (Disable Local Control)",
                 isComponent: false, componentName: "ep101", componentLabel: "Disable Local Control"])
     } catch (e) {
@@ -340,7 +340,7 @@ def initialize() {
     }
     if (enableDisableRemoteChild && !childExists("ep102")) {
     try {
-        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep102",
+        addChildDevice("hubitat", "Generic Component Dimmer", "${device.deviceNetworkId}-ep102",
                 [completedSetup: true, label: "${device.displayName} (Disable Remote Control)",
                 isComponent: false, componentName: "ep102", componentLabel: "Disable Remote Control"])
     } catch (e) {
