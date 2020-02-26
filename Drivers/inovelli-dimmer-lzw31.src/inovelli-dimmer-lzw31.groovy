@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer LZW31
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-02-07
+ *  Date: 2020-02-25
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -14,7 +14,14 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ *  2020-02-25: Switch over to using Hubitat child device drivers. Should still be backwards compatible with
+ *              Inovelli child drivers.
+ * 
+ *  2020-02-20: Fix for missing logsoff method and ability to set custom LED color.
+ *
  *  2020-02-07: Update preferences when user changes parameter or disables relay from switch or from child device.
+ *
+ *  2020-02-06: updated by bcopeland - added ChangeLevel capability and relevant commands 
  *
  *  2020-02-06: Fix for remote control child device being created when it shouldn't be.
  *              Fix for local protection being updated via hub after being changed with config button.
@@ -28,7 +35,7 @@
  *  2019-12-03: Specify central scene command class version for upcoming Hubitat update.
  *
  *  2019-11-13: Bug fix for not being able to set default level back to 0
- *  2020-02-06: updated by bcopeland - added ChangeLevel capability and relevant commands 
+ *
  */
  
 metadata {
@@ -47,8 +54,16 @@ metadata {
         attribute "lastEvent", "String"
         attribute "firmware", "String"
         
-        command "reset"
         command "setAssociationGroup", ["number", "enum", "number", "number"] // group number, nodes, action (0 - remove, 1 - add), multi-channel endpoint (optional)
+        
+        command "childOn"
+        command "childOff"
+        command "childSetLevel"
+        command "childRefresh"
+        command "componentOn"
+        command "componentOff"
+        command "componentSetLevel"
+        command "componentRefresh"
 
         fingerprint mfr: "031E", prod: "0003", model: "0001", deviceJoinName: "Inovelli Dimmer"
         fingerprint deviceId: "0x1101", inClusters: "0x5E,0x55,0x98,0x9F,0x6C,0x22,0x26,0x70,0x85,0x59,0x86,0x72,0x5A,0x73,0x75,0x7A" 
@@ -85,10 +100,17 @@ def generate_preferences()
                     options: getParameterInfo(i, "options")
             break
         }  
+        if (i == 13){
+            input "parameter13custom", "number", 
+                title: "Custom LED RGB Value", 
+                description: "\nInput a custom value in this field to override the above setting. The value should be between 0 - 360 and can be determined by using the typical hue color wheel.", 
+                required: false,
+                range: "0..360"
+        }
     }
     
     input "disableLocal", "enum", title: "Disable Local Control", description: "\nDisable ability to control switch from the wall", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
-    input "disableRemote", "enum", title: "Disable Remote Control", description: "\nDisable ability to control switch from inside SmartThings", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
+    input "disableRemote", "enum", title: "Disable Remote Control", description: "\nDisable ability to control switch from inside Hubitat", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
     input description: "Use the below options to enable child devices for the specified settings. This will allow you to adjust these settings using SmartApps such as Smart Lighting. If any of the options are enabled, make sure you have the appropriate child device handlers installed.\n(Firmware 1.02+)", title: "Child Devices", displayDuringSetup: false, type: "paragraph", element: "paragraph"
     input "enableDisableLocalChild", "bool", title: "Disable Local Control", description: "", required: false, defaultValue: false
     input "enableDisableRemoteChild", "bool", title: "Disable Remote Control", description: "", required: false, defaultValue: false
@@ -194,6 +216,26 @@ void childRefresh(String dni) {
 }
 
 
+def componentSetLevel(cd,level,transitionTime = null) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: componentSetLevel($cd, $value)"
+	return childSetLevel(cd.deviceNetworkId,level)
+}
+
+def componentOn(cd) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: componentOn($cd)"
+    return childOn(cd.deviceNetworkId)
+}
+
+def componentOff(cd) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: componentOff($cd)"
+    return childOff(cd.deviceNetworkId)
+}
+
+void componentRefresh(cd) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: componentRefresh($cd)"
+}
+
+
 def childExists(ep) {
     def children = childDevices
     def childDevice = children.find{it.deviceNetworkId.endsWith(ep)}
@@ -229,13 +271,19 @@ def updated() {
     }
 }
 
+def logsOff(){
+    log.warn "${device.label?device.label:device.name}: Disabling logging after timeout"
+    //device.updateSetting("debugEnable",[value:"false",type:"bool"])
+    device.updateSetting("infoEnable",[value:"false",type:"bool"])
+}
+
 def initialize() {
     sendEvent(name: "checkInterval", value: 3 * 60 * 60 + 2 * 60, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID, offlinePingable: "1"])
     sendEvent(name: "numberOfButtons", value: 7, displayed: true)
     
     if (enableDefaultLocalChild && !childExists("ep9")) {
     try {
-        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep9", 
+        addChildDevice("hubitat", "Generic Component Dimmer", "${device.deviceNetworkId}-ep9", 
                 [completedSetup: true, label: "${device.displayName} (Default Local Level)",
                 isComponent: false, componentName: "ep9", componentLabel: "Default Local Level"])
     } catch (e) {
@@ -246,7 +294,7 @@ def initialize() {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep9")}
         try {
-            log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            log.debug "Hubitat has issues trying to delete the child device when it is in use. Need to manually delete them."
             //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
@@ -254,7 +302,7 @@ def initialize() {
     }
     if (enableDefaultZWaveChild && !childExists("ep10")) {
     try {
-        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep10", 
+        addChildDevice("hubitat", "Generic Component Dimmer", "${device.deviceNetworkId}-ep10", 
                 [completedSetup: true, label: "${device.displayName} (Default Z-Wave Level)",
                 isComponent: false, componentName: "ep10", componentLabel: "Default Z-Wave Level"])
     } catch (e) {
@@ -265,7 +313,7 @@ def initialize() {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep10")}
         try {
-            log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            log.debug "Hubitat has issues trying to delete the child device when it is in use. Need to manually delete them."
             //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
@@ -273,7 +321,7 @@ def initialize() {
     }
     if (enableDisableLocalChild && !childExists("ep101")) {
     try {
-        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep101", 
+        addChildDevice("hubitat", "Generic Component Dimmer", "${device.deviceNetworkId}-ep101", 
                 [completedSetup: true, label: "${device.displayName} (Disable Local Control)",
                 isComponent: false, componentName: "ep101", componentLabel: "Disable Local Control"])
     } catch (e) {
@@ -284,7 +332,7 @@ def initialize() {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep101")}
         try {
-            log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            log.debug "Hubitat has issues trying to delete the child device when it is in use. Need to manually delete them."
             //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
@@ -292,7 +340,7 @@ def initialize() {
     }
     if (enableDisableRemoteChild && !childExists("ep102")) {
     try {
-        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep102",
+        addChildDevice("hubitat", "Generic Component Dimmer", "${device.deviceNetworkId}-ep102",
                 [completedSetup: true, label: "${device.displayName} (Disable Remote Control)",
                 isComponent: false, componentName: "ep102", componentLabel: "Disable Remote Control"])
     } catch (e) {
@@ -303,7 +351,7 @@ def initialize() {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep102")}
         try {
-            if (infoEnable) log.info "${device.label?device.label:device.name}: SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            if (infoEnable) log.info "${device.label?device.label:device.name}: Hubitat has issues trying to delete the child device when it is in use. Need to manually delete them."
             //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])

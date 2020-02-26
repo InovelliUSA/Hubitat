@@ -31,7 +31,11 @@
  *		correct comand class versions to match what the hardware supports
  *		add z-wave color component ids manually as it didnt seem to match in correct command class version from he
  *  updated by bcopeland 2/6/2020
- *      added ChangeLevel capability and relevant commands 
+ *      added ChangeLevel capability and relevant commands
+ *  updated by bcopeland 2/15/2020
+ *		dramatically improved speed of CT operations and reduced packet count - Make sure to hit configure after updating.
+ *		improved speed of on/off events also reducing packets
+ *		improved speed of setLevel events also reducing packets
  */
 
 metadata {
@@ -69,8 +73,8 @@ private getCOLD_WHITE_CONFIG() { 0x52 }
 private getWARM_WHITE() { "warmWhite" }
 private getCOLD_WHITE() { "coldWhite" }
 private getZWAVE_COLOR_COMPONENT_ID() { [warmWhite: 0, coldWhite: 1, red: 2, green: 3, blue: 4] }
-private getWARM_WHITE_ID() { 0 }
 private getWHITE_NAMES() { [WARM_WHITE, COLD_WHITE] }
+private getCOLOR_TEMP_DIFF() { COLOR_TEMP_MAX - COLOR_TEMP_MIN }
 
 def logsOff(){
     log.warn "debug logging disabled..."
@@ -91,7 +95,8 @@ def configure() {
 	def cmds = []
 	cmds << zwave.configurationV1.configurationSet([scaledConfigurationValue: bulbMemory.toInteger(), parameterNumber: 2, size:1])
 	cmds << zwave.configurationV1.configurationGet([parameterNumber: 2])
-	cmds << zwave.switchColorV2.switchColorSupportedGet()
+	cmds << zwave.configurationV1.configurationSet([scaledConfigurationValue: COLOR_TEMP_MIN, parameterNumber: WARM_WHITE_CONFIG, size: 2])
+	cmds << zwave.configurationV1.configurationSet([scaledConfigurationValue: COLOR_TEMP_MAX, parameterNumber: COLD_WHITE_CONFIG, size: 2])
 	commands(cmds)
 }
 
@@ -114,7 +119,8 @@ def stopLevelChange() {
 }
 
 def initializeVars() {
-	state.powerStateMem=0
+	if (!state.powerStateMem) state.powerStateMem=0
+    if (!state.colorReceived) state.colorReceived = [red: null, green: null, blue: null, warmWhite: null, coldWhite: null]
 }
 
 def parse(description) {
@@ -160,10 +166,24 @@ def zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorSupportedReport c
 def zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorReport cmd) {
 	if (logEnable) log.debug "got SwitchColorReport: $cmd"
 	def result = []
-	if (cmd.value == 255) {
-		def parameterNumber = (cmd.colorComponent == WARM_WHITE) ? WARM_WHITE_CONFIG : COLD_WHITE_CONFIG
-		if (logEnable) log.debug "got value 255 from $parameterNumber"
-		result << response(command(zwave.configurationV1.configurationGet([parameterNumber: parameterNumber])))
+    if (!state.colorReceived) initializeVars()
+	state.colorReceived[cmd.colorComponent] = cmd.value
+    if (WHITE_NAMES.every { state.colorReceived[it] != null}) {
+		def warmWhite = state.colorReceived[WARM_WHITE]
+		def coldWhite = state.colorReceived[COLD_WHITE]
+		if (logEnable) log.debug "warmWhite: $warmWhite, coldWhite: $coldWhite"
+		if (warmWhite == 0 && coldWhite == 0) {
+			result = createEvent(name: "colorTemperature", value: COLOR_TEMP_MIN)
+		} else {
+			def colorTemp = COLOR_TEMP_MIN + (COLOR_TEMP_DIFF / 2)
+			if (warmWhite != coldWhite) {
+				colorTemp = (COLOR_TEMP_MAX - (COLOR_TEMP_DIFF * warmWhite) / 255) as Integer
+			}
+			result << createEvent(name: "colorTemperature", value: colorTemp)
+			setGenericTempName(colorTemp)
+		}
+		// Reset the values
+		WHITE_NAMES.collect { state.colorReceived[it] = null }
 	}
 	result
 }
@@ -171,7 +191,6 @@ def zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorReport cmd) {
 
 
 private dimmerEvents(hubitat.zwave.Command cmd) {
-	
 	def value = (cmd.value ? "on" : "off")
 	def result = [createEvent(name: "switch", value: value, descriptionText: "$device.displayName was turned $value")]
 	if (cmd.value) {
@@ -194,10 +213,6 @@ def zwaveEvent(hubitat.zwave.commands.configurationv1.ConfigurationReport cmd) {
     //log.debug cmd
     if (logEnable) log.debug "got ConfigurationReport: $cmd"
     def result = null
-	if (cmd.parameterNumber == WARM_WHITE_CONFIG || cmd.parameterNumber == COLD_WHITE_CONFIG) {
-        result = createEvent(name: "colorTemperature", value: cmd.scaledConfigurationValue)
-		setGenericTempName(cmd.scaledConfigurationValue)
-    }
 	if (cmd.parameterNumber == 0x02) {
 		state.powerStateMem = cmd.scaledConfigurationValue
 	}
@@ -214,11 +229,11 @@ def buildOffOnEvent(cmd){
 }
 
 def on() {
-	commands(buildOffOnEvent(0xFF), 5000)
+	commands([zwave.basicV1.basicSet(value: 0xFF)])
 }
 
 def off() {
-	commands(buildOffOnEvent(0x00), 5000)
+	commands([zwave.basicV1.basicSet(value: 0x00)])
 }
 
 def refresh() {
@@ -245,27 +260,22 @@ def setLevel(level, duration) {
 	if (logEnable) log.debug "setLevel($level, $duration)"
 	if(level > 99) level = 99
 	commands([
-		zwave.switchMultilevelV2.switchMultilevelSet(value: level, dimmingDuration: duration),
-		zwave.switchMultilevelV2.switchMultilevelGet(),
-	], (duration && duration < 12) ? (duration * 1000).toLong() : 3500)
+		zwave.switchMultilevelV2.switchMultilevelSet(value: level, dimmingDuration: duration)
+	])
 }
 
 def setColorTemperature(temp) {
 	if (logEnable) log.debug "setColorTemperature($temp)"
-	def warmValue = temp < 5000 ? 255 : 0
-	def coldValue = temp >= 5000 ? 255 : 0
-	def parameterNumber = temp < 5000 ? WARM_WHITE_CONFIG : COLD_WHITE_CONFIG
 	def cmds = []
-	if (temp < COLOR_TEMP_MIN) temp = 2700
-    if (temp > COLOR_TEMP_MAX) temp = 6500
-    cmds << zwave.configurationV1.configurationSet([scaledConfigurationValue: temp, parameterNumber: parameterNumber, size:2])
-    cmds << zwave.switchColorV2.switchColorSet(warmWhite: warmValue, coldWhite: coldValue)
-    if ((device.currentValue("switch") != "on") && (!colorStaging)) {
+	if (temp < COLOR_TEMP_MIN) temp = COLOR_TEMP_MIN
+	if (temp > COLOR_TEMP_MAX) temp = COLOR_TEMP_MAX
+	def warmValue = ((COLOR_TEMP_MAX - temp) / COLOR_TEMP_DIFF * 255) as Integer
+	def coldValue = 255 - warmValue
+	cmds << zwave.switchColorV2.switchColorSet(warmWhite: warmValue, coldWhite: coldValue)
+	if ((device.currentValue("switch") != "on") && (!colorStaging)) {
 		if (logEnable) log.debug "Bulb is off. Turning on"
 		cmds << zwave.basicV1.basicSet(value: 0xFF)
-		cmds << zwave.switchMultilevelV2.switchMultilevelGet()
 	}
-	//log.debug "Commands: " + cmds + queryAllColors()
 	commands(cmds + queryAllColors())
 }
 
