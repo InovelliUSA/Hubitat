@@ -14,6 +14,8 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ *  Changes:
+ *  2020-03-03 Allows the use of fan speed control for hubitat users - sgrayban
  * 
  */
  
