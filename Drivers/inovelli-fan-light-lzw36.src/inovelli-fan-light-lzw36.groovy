@@ -871,10 +871,10 @@ private channelNumber(String dni) {
 private void createChildDevices() {
     state.oldLabel = device.label
     //for (i in 1..2) {
-        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep1", [completedSetup: true, label: "${device.displayName} (Light)",
+        addChildDevice("Inovelli Fan Child Device", "${device.deviceNetworkId}-ep1", [completedSetup: true, label: "${device.displayName} (Light)",
             isComponent: false, componentName: "ep1", componentLabel: "Channel 1"
         ])
-        addChildDevice("Switch Level Child Device", "${device.deviceNetworkId}-ep2", [completedSetup: true, label: "${device.displayName} (Fan)",
+        addChildDevice("Inovelli Fan Child Device", "${device.deviceNetworkId}-ep2", [completedSetup: true, label: "${device.displayName} (Fan)",
             isComponent: false, componentName: "ep2", componentLabel: "Channel 2"
         ])
     //}
