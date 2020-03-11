@@ -40,8 +40,12 @@
  *		improved speed of on/off events also reducing packets
  *		improved speed of setLevel events also reducing packets
  *		bug fix for null value in setColor 
+ *	updated by bcopeland 3/11/2020
+ *		improved speed / reduced packets on CT set operations
+ *		added color fade time preference for smoother CT transitions
  */
 
+ import groovy.transform.Field
 
 metadata {
 	definition (name: "Inovelli Bulb Multi-Color LZW42", namespace: "InovelliUSA", author: "InovelliUSA", importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-bulb-multi-color-lzw42.src/inovelli-bulb-multi-color-lzw42.groovy") {
@@ -67,11 +71,14 @@ metadata {
 	preferences {
         	// added for official hubitat standards
 			input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: false
+			input name: "colorTransition", type: "number", description: "", title: "Color fade time:", defaultValue: 0
 			input name: "logEnable", type: "bool", description: "", title: "Enable Debug Logging", defaultVaule: true
 			input name: "bulbMemory", type: "enum", title: "Power outage state", options: [0:"Remembers Last State",1:"Bulb turns ON",2:"Bulb turns OFF"], defaultValue: 0
 	}
 	
 }
+
+@Field static Map colorReceived = [red: null, green: null, blue: null, warmWhite: null, coldWhite: null]
 
 private getCOLOR_TEMP_MIN() { 2700 }
 private getCOLOR_TEMP_MAX() { 6500 }
@@ -114,7 +121,6 @@ def installed() {
 }
 
 def initializeVars() {
-	if (!state.colorReceived) state.colorReceived = [red: null, green: null, blue: null, warmWhite: null, coldWhite: null]
 	if (!state.powerStateMem) state.powerStateMem=0
 }
 
@@ -178,13 +184,12 @@ def zwaveEvent(hubitat.zwave.commands.switchmultilevelv2.SwitchMultilevelReport 
 }
 
 def zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorReport cmd) {
-	if (!state.colorReceived) initializeVars()
 	if (logEnable) log.debug "got SwitchColorReport: $cmd"
-	state.colorReceived[cmd.colorComponent] = cmd.value
+	colorReceived[cmd.colorComponent] = cmd.value
 	def result = []
 	// Check if we got all the RGB color components
-	if (RGB_NAMES.every { state.colorReceived[it] != null }) {
-		def colors = RGB_NAMES.collect { state.colorReceived[it] }
+	if (RGB_NAMES.every { colorReceived[it] != null }) {
+		def colors = RGB_NAMES.collect { colorReceived[it] }
 		if (logEnable) log.debug "colors: $colors"
 		// Send the color as hex format
 		def hexColor = "#" + colors.collect { Integer.toHexString(it).padLeft(2, "0") }.join("")
@@ -199,12 +204,12 @@ def zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorReport cmd) {
 			result << createEvent(name: "level", value: hsv[2].round())
 		}
 		// Reset the values
-		RGB_NAMES.collect { state.colorReceived[it] = null}
+		RGB_NAMES.collect { colorReceived[it] = null}
 	}
 	// Check if we got all the color temperature values
-	if (WHITE_NAMES.every { state.colorReceived[it] != null}) {
-		def warmWhite = state.colorReceived[WARM_WHITE]
-		def coldWhite = state.colorReceived[COLD_WHITE]
+	if (WHITE_NAMES.every { colorReceived[it] != null}) {
+		def warmWhite = colorReceived[WARM_WHITE]
+		def coldWhite = colorReceived[COLD_WHITE]
 		if (logEnable) log.debug "warmWhite: $warmWhite, coldWhite: $coldWhite"
 		if (warmWhite == 0 && coldWhite == 0) {
 			result = createEvent(name: "colorTemperature", value: COLOR_TEMP_MIN)
@@ -217,7 +222,7 @@ def zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorReport cmd) {
 			setGenericTempName(colorTemp)
 		}
 		// Reset the values
-		WHITE_NAMES.collect { state.colorReceived[it] = null }
+		WHITE_NAMES.collect { colorReceived[it] = null }
 	}
 	result
 }
@@ -309,30 +314,34 @@ def setColor(value) {
 	if (value.hue == null || value.saturation == null) return
 	if (value.level == null) value.level=100
 	if (logEnable) log.debug "setColor($value)"
+	def dimmingDuration=0
+	if (colorTransition) dimmingDuration=colorTransition
 	def result = []
 	def rgb = hubitat.helper.ColorUtils.hsvToRGB([value.hue, value.saturation, value.level])
     log.debug "r:" + rgb[0] + ", g: " + rgb[1] +", b: " + rgb[2]
-	result << zwave.switchColorV2.switchColorSet(red: rgb[0], green: rgb[1], blue: rgb[2], warmWhite:0, coldWhite:0)
+	result << zwave.switchColorV2.switchColorSet(red: rgb[0], green: rgb[1], blue: rgb[2], warmWhite:0, coldWhite:0, dimmingDuration: dimmingDuration)
 	if ((device.currentValue("switch") != "on") && (!colorStaging)){
 		if (logEnable) log.debug "Bulb is off. Turning on"
  		result << zwave.basicV1.basicSet(value: 0xFF)
 	}
-    commands(result+queryAllColors())
+    commands(result)
 }
 
 def setColorTemperature(temp) {
 	if (logEnable) log.debug "setColorTemperature($temp)"
 	def cmds = []
+	def dimmingDuration=0
+	if (colorTransition) dimmingDuration=colorTransition
 	if (temp < COLOR_TEMP_MIN) temp = COLOR_TEMP_MIN
 	if (temp > COLOR_TEMP_MAX) temp = COLOR_TEMP_MAX
 	def warmValue = ((COLOR_TEMP_MAX - temp) / COLOR_TEMP_DIFF * 255) as Integer
 	def coldValue = 255 - warmValue
-	cmds << zwave.switchColorV2.switchColorSet(red: 0, green: 0, blue:0, warmWhite: warmValue, coldWhite: coldValue)
+	cmds << zwave.switchColorV2.switchColorSet(red: 0, green: 0, blue:0, warmWhite: warmValue, coldWhite: coldValue, dimmingDuration: dimmingDuration)
 	if ((device.currentValue("switch") != "on") && (!colorStaging)) {
 		if (logEnable) log.debug "Bulb is off. Turning on"
 		cmds << zwave.basicV1.basicSet(value: 0xFF)
 	}
-	commands(cmds + queryAllColors())
+	commands(cmds)
 }
 
 private queryAllColors() {

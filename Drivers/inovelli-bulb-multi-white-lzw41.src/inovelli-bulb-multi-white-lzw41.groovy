@@ -36,7 +36,12 @@
  *		dramatically improved speed of CT operations and reduced packet count - Make sure to hit configure after updating.
  *		improved speed of on/off events also reducing packets
  *		improved speed of setLevel events also reducing packets
+ *	updated by bcopeland 3/11/2020
+ *		improved speed reduced packets on CT set operations
+ *		added color fade time preference for smoother CT transitions
  */
+
+ import groovy.transform.Field
 
 metadata {
 	definition (name: "Inovelli Bulb Multi-White LZW41", namespace: "InovelliUSA", author: "InovelliUSA", importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-bulb-multi-white-lzw41.src/inovelli-bulb-multi-white-lzw41.groovy") {
@@ -61,10 +66,13 @@ metadata {
 	preferences {
 		// added for official hubitat standards
 		input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: false
+		input name: "colorTransition", type: "number", description: "", title: "Color fade time:", defaultValue: 0
 		input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true
 		input name: "bulbMemory", type: "enum", title: "Power outage state", options: [0:"Remembers Last State",1:"Bulb turns ON",2:"Bulb turns OFF"], defaultValue: 0
 	}
 }
+
+@Field static Map colorReceived = [red: null, green: null, blue: null, warmWhite: null, coldWhite: null]
 
 private getCOLOR_TEMP_MIN() { 2700 }
 private getCOLOR_TEMP_MAX() { 6500 }
@@ -120,7 +128,6 @@ def stopLevelChange() {
 
 def initializeVars() {
 	if (!state.powerStateMem) state.powerStateMem=0
-    if (!state.colorReceived) state.colorReceived = [red: null, green: null, blue: null, warmWhite: null, coldWhite: null]
 }
 
 def parse(description) {
@@ -166,11 +173,10 @@ def zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorSupportedReport c
 def zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorReport cmd) {
 	if (logEnable) log.debug "got SwitchColorReport: $cmd"
 	def result = []
-    if (!state.colorReceived) initializeVars()
-	state.colorReceived[cmd.colorComponent] = cmd.value
-    if (WHITE_NAMES.every { state.colorReceived[it] != null}) {
-		def warmWhite = state.colorReceived[WARM_WHITE]
-		def coldWhite = state.colorReceived[COLD_WHITE]
+	colorReceived[cmd.colorComponent] = cmd.value
+    if (WHITE_NAMES.every { colorReceived[it] != null}) {
+		def warmWhite = colorReceived[WARM_WHITE]
+		def coldWhite = colorReceived[COLD_WHITE]
 		if (logEnable) log.debug "warmWhite: $warmWhite, coldWhite: $coldWhite"
 		if (warmWhite == 0 && coldWhite == 0) {
 			result = createEvent(name: "colorTemperature", value: COLOR_TEMP_MIN)
@@ -183,7 +189,7 @@ def zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorReport cmd) {
 			setGenericTempName(colorTemp)
 		}
 		// Reset the values
-		WHITE_NAMES.collect { state.colorReceived[it] = null }
+		WHITE_NAMES.collect { colorReceived[it] = null }
 	}
 	result
 }
@@ -266,17 +272,19 @@ def setLevel(level, duration) {
 
 def setColorTemperature(temp) {
 	if (logEnable) log.debug "setColorTemperature($temp)"
+	def dimmingDuration=0
+	if (colorTransition) dimmingDuration=colorTransition
 	def cmds = []
 	if (temp < COLOR_TEMP_MIN) temp = COLOR_TEMP_MIN
 	if (temp > COLOR_TEMP_MAX) temp = COLOR_TEMP_MAX
 	def warmValue = ((COLOR_TEMP_MAX - temp) / COLOR_TEMP_DIFF * 255) as Integer
 	def coldValue = 255 - warmValue
-	cmds << zwave.switchColorV2.switchColorSet(warmWhite: warmValue, coldWhite: coldValue)
+	cmds << zwave.switchColorV2.switchColorSet(warmWhite: warmValue, coldWhite: coldValue, dimmingDuration: dimmingDuration)
 	if ((device.currentValue("switch") != "on") && (!colorStaging)) {
 		if (logEnable) log.debug "Bulb is off. Turning on"
 		cmds << zwave.basicV1.basicSet(value: 0xFF)
 	}
-	commands(cmds + queryAllColors())
+	commands(cmds)
 }
 
 private queryAllColors() {
