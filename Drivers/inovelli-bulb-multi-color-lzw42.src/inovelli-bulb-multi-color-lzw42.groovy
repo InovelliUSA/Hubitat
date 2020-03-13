@@ -269,17 +269,17 @@ def buildOffOnEvent(cmd){
 }
 
 def on() {
-    def duration=0
+	def duration=0
 	if (dimmingSpeed) duration=dimmingSpeed
-    commands([
+	commands([
 		zwave.switchMultilevelV2.switchMultilevelSet(value: 0xFF, dimmingDuration: duration)
 	])
 }
 
 def off() {
-    def duration=0
+	def duration=0
 	if (dimmingSpeed) duration=dimmingSpeed
-    commands([
+	commands([
 		zwave.switchMultilevelV2.switchMultilevelSet(value: 0x00, dimmingDuration: duration)
 	])
 }
@@ -301,7 +301,7 @@ def offlinePing() {
 }
 
 def setLevel(level) {
-    def duration=1
+	def duration=1
 	if (dimmingSpeed) duration=dimmingSpeed
 	setLevel(level, duration)
 }
