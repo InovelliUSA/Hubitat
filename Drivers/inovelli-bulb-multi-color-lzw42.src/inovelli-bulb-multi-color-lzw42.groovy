@@ -43,6 +43,9 @@
  *	updated by bcopeland 3/11/2020
  *		improved speed / reduced packets on CT set operations
  *		added color fade time preference for smoother CT transitions
+ *  updated by npk22 3/12/2020
+ *      added dimming speed parameter
+ *      added dimming speed to on / off
  */
 
  import groovy.transform.Field
@@ -72,6 +75,7 @@ metadata {
         	// added for official hubitat standards
 			input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: false
 			input name: "colorTransition", type: "number", description: "", title: "Color fade time:", defaultValue: 0
+			input name: "dimmingSpeed", type: "number", description: "", title: "Dimming speed:", defaultValue: 0
 			input name: "logEnable", type: "bool", description: "", title: "Enable Debug Logging", defaultVaule: true
 			input name: "bulbMemory", type: "enum", title: "Power outage state", options: [0:"Remembers Last State",1:"Bulb turns ON",2:"Bulb turns OFF"], defaultValue: 0
 	}
@@ -265,11 +269,19 @@ def buildOffOnEvent(cmd){
 }
 
 def on() {
-	commands([zwave.basicV1.basicSet(value: 0xFF)])
+    def duration=0
+	if (dimmingSpeed) duration=dimmingSpeed
+    commands([
+		zwave.switchMultilevelV2.switchMultilevelSet(value: 0xFF, dimmingDuration: duration)
+	])
 }
 
 def off() {
-	commands([zwave.basicV1.basicSet(value: 0x00)])
+    def duration=0
+	if (dimmingSpeed) duration=dimmingSpeed
+    commands([
+		zwave.switchMultilevelV2.switchMultilevelSet(value: 0x00, dimmingDuration: duration)
+	])
 }
 
 def refresh() {
@@ -289,7 +301,9 @@ def offlinePing() {
 }
 
 def setLevel(level) {
-	setLevel(level, 1)
+    def duration=1
+	if (dimmingSpeed) duration=dimmingSpeed
+	setLevel(level, duration)
 }
 
 def setLevel(level, duration) {
