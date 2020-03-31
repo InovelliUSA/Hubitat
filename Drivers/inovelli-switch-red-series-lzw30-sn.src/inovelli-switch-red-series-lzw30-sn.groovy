@@ -1,7 +1,7 @@
 /**
  *  Inovelli Switch Red Series
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-03-27
+ *  Date: 2020-03-31
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -583,9 +583,9 @@ def initialize() {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep101")}
         try {
-            if (infoEnable) log.info "${device.label?device.label:device.name}: Hubitat has issues trying to delete the child device when it is in use. Need to manually delete them."
-            //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
+            if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
+            if (infoEnable) log.info "Hubitat may have issues trying to delete the child device when it is in use. Need to manually delete them."
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
         }
     }
@@ -602,15 +602,15 @@ def initialize() {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep102")}
         try {
-            if (infoEnable) log.info "${device.label?device.label:device.name}: Hubitat has issues trying to delete the child device when it is in use. Need to manually delete them."
-            //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
+            if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
+            if (infoEnable) log.info "Hubitat may have issues trying to delete the child device when it is in use. Need to manually delete them."
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
         }
     }
     
     [1,2,3,4,5].each { i ->
-    if ((settings."parameter8-${i}a"!=null && settings."parameter8-${i}b"!=null && settings."parameter8-${i}c"!=null && settings."parameter8-${i}d"!=null) && !childExists("ep${i}")) {
+    if ((settings."parameter8-${i}a"!=null && settings."parameter8-${i}b"!=null && settings."parameter8-${i}c"!=null && settings."parameter8-${i}d"!=null && settings."parameter8-${i}d"!="0") && !childExists("ep${i}")) {
     try {
         addChildDevice("hubitat", "Generic Component Switch", "${device.deviceNetworkId}-ep${i}",
                 [completedSetup: true, label: "${device.displayName} (Notification ${i})",
@@ -618,14 +618,14 @@ def initialize() {
     } catch (e) {
         runIn(3, "sendAlert", [data: [message: "Child device creation failed. Make sure the device handler for \"Switch Child Device\" is installed"]])
     }
-    } else if ((settings."parameter8-${i}a"==null || settings."parameter8-${i}b"==null || settings."parameter8-${i}c"==null || settings."parameter8-${i}d"==null) && childExists("ep${i}")) {
+    } else if ((settings."parameter8-${i}a"==null || settings."parameter8-${i}b"==null || settings."parameter8-${i}c"==null || settings."parameter8-${i}d"==null) && childExists("ep${i}" && settings."parameter8-${i}d"=="0")) {
         if (infoEnable) log.info "${device.label?device.label:device.name}: Trying to delete child device ep${i}. If this fails it is likely that there is a SmartApp using the child device in question."
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep${i}")}
         try {
-            if (infoEnable) log.info "${device.label?device.label:device.name}: Hubitat has issues trying to delete the child device when it is in use. Need to manually delete them."
-            //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
+            if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
+            if (infoEnable) log.info "Hubitat may have issues trying to delete the child device when it is in use. Need to manually delete them."
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
         }
     }}
