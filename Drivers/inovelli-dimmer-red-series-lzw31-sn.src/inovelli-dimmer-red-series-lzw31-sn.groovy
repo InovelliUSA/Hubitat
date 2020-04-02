@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer Red Series LZW31-SN
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-02-25
+ *  Date: 2020-03-31
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -13,6 +13,11 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-03-27: Adding additional duration options for Notifications. Also adding the commands  
+ *              startNotification(value) and stopNotification() to be used in apps like
+ *              WebCoRE or Rule Machine to directly control notifications instead of through child Devices.
+ *              To determine "value": https://nathanfiscus.github.io/inovelli-notification-calc/
  *
  *  2020-02-25: Switch over to using Hubitat child device drivers. Should still be backwards compatible with
  *              Inovelli child drivers.
@@ -58,7 +63,7 @@ metadata {
         attribute "lastActivity", "String"
         attribute "lastEvent", "String"
         attribute "firmware", "String"
-        
+        /*
         command "pressUpX1"
         command "pressDownX1"
         command "pressUpX2"
@@ -71,18 +76,19 @@ metadata {
         command "pressDownX5"
         command "holdUp"
         command "holdDown"
-        
-        command "childOn"
-        command "childOff"
-        command "childSetLevel"
-        command "childRefresh"
+        */
+        command "childOn", ["string"]
+        command "childOff", ["string"]
+        command "childSetLevel", ["string"]
+        command "childRefresh", ["string"]
         command "componentOn"
         command "componentOff"
         command "componentSetLevel"
         command "componentRefresh"
 
         command "reset"
-        
+        command "startNotification", ["number", "number"]
+        command "stopNotification", ["number"]
         command "setAssociationGroup", ["number", "enum", "number", "number"] // group number, nodes, action (0 - remove, 1 - add), multi-channel endpoint (optional)
 
         fingerprint mfr: "031E", prod: "0001", model: "0001", deviceJoinName: "Inovelli Dimmer Red Series"
@@ -154,6 +160,7 @@ def generate_preferences()
                     9:"90%",
                     10:"100%"]
                 input "parameter16-${i}c", "enum", title: "LED Effect Duration - Notification $i", description: "Tap to set", displayDuringSetup: false, required: false, options: [
+                    255:"Indefinitely",
                     1:"1 Second",
                     2:"2 Seconds",
                     3:"3 Seconds",
@@ -164,16 +171,248 @@ def generate_preferences()
                     8:"8 Seconds",
                     9:"9 Seconds",
                     10:"10 Seconds",
+                    11:"11 Seconds",
+                    12:"12 Seconds",
+                    13:"13 Seconds",
+                    14:"14 Seconds",
+                    15:"15 Seconds",
+                    16:"16 Seconds",
+                    17:"17 Seconds",
+                    18:"18 Seconds",
+                    19:"19 Seconds",
                     20:"20 Seconds",
+                    21:"21 Seconds",
+                    22:"22 Seconds",
+                    23:"23 Seconds",
+                    24:"24 Seconds",
+                    25:"25 Seconds",
+                    26:"26 Seconds",
+                    27:"27 Seconds",
+                    28:"28 Seconds",
+                    29:"29 Seconds",
                     30:"30 Seconds",
+                    31:"31 Seconds",
+                    32:"32 Seconds",
+                    33:"33 Seconds",
+                    34:"34 Seconds",
+                    35:"35 Seconds",
+                    36:"36 Seconds",
+                    37:"37 Seconds",
+                    38:"38 Seconds",
+                    39:"39 Seconds",
                     40:"40 Seconds",
+                    41:"41 Seconds",
+                    42:"42 Seconds",
+                    43:"43 Seconds",
+                    44:"44 Seconds",
+                    45:"45 Seconds",
+                    46:"46 Seconds",
+                    47:"47 Seconds",
+                    48:"48 Seconds",
+                    49:"49 Seconds",
                     50:"50 Seconds",
-                    60:"60 Seconds",
+                    51:"51 Seconds",
+                    52:"52 Seconds",
+                    53:"53 Seconds",
+                    54:"54 Seconds",
+                    55:"55 Seconds",
+                    56:"56 Seconds",
+                    57:"57 Seconds",
+                    58:"58 Seconds",
+                    59:"59 Seconds",
+                    61:"1 Minute",
                     62:"2 Minutes",
                     63:"3 Minutes",
                     64:"4 Minutes",
                     65:"5 Minutes",
-                    255:"Indefinetly"]
+                    66:"6 Minutes",
+                    67:"7 Minutes",
+                    68:"8 Minutes",
+                    69:"9 Minutes",
+                    70:"10 Minutes",
+                    71:"11 Minutes",
+                    72:"12 Minutes",
+                    73:"13 Minutes",
+                    74:"14 Minutes",
+                    75:"15 Minutes",
+                    76:"16 Minutes",
+                    77:"17 Minutes",
+                    78:"18 Minutes",
+                    79:"19 Minutes",
+                    80:"20 Minutes",
+                    81:"21 Minutes",
+                    82:"22 Minutes",
+                    83:"23 Minutes",
+                    84:"24 Minutes",
+                    85:"25 Minutes",
+                    86:"26 Minutes",
+                    87:"27 Minutes",
+                    88:"28 Minutes",
+                    89:"29 Minutes",
+                    90:"30 Minutes",
+                    91:"31 Minutes",
+                    92:"32 Minutes",
+                    93:"33 Minutes",
+                    94:"34 Minutes",
+                    95:"35 Minutes",
+                    96:"36 Minutes",
+                    97:"37 Minutes",
+                    98:"38 Minutes",
+                    99:"39 Minutes",
+                    100:"40 Minutes",
+                    101:"41 Minutes",
+                    102:"42 Minutes",
+                    103:"43 Minutes",
+                    104:"44 Minutes",
+                    105:"45 Minutes",
+                    106:"46 Minutes",
+                    107:"47 Minutes",
+                    108:"48 Minutes",
+                    109:"49 Minutes",
+                    110:"50 Minutes",
+                    111:"51 Minutes",
+                    112:"52 Minutes",
+                    113:"53 Minutes",
+                    114:"54 Minutes",
+                    115:"55 Minutes",
+                    116:"56 Minutes",
+                    117:"57 Minutes",
+                    118:"58 Minutes",
+                    119:"59 Minutes",
+                    121:"1 Hour",
+                    122:"2 Hours",
+                    123:"3 Hours",
+                    124:"4 Hours",
+                    125:"5 Hours",
+                    126:"6 Hours",
+                    127:"7 Hours",
+                    128:"8 Hours",
+                    129:"9 Hours",
+                    130:"10 Hours",
+                    131:"11 Hours",
+                    132:"12 Hours",
+                    133:"13 Hours",
+                    134:"14 Hours",
+                    135:"15 Hours",
+                    136:"16 Hours",
+                    137:"17 Hours",
+                    138:"18 Hours",
+                    139:"19 Hours",
+                    140:"20 Hours",
+                    141:"21 Hours",
+                    142:"22 Hours",
+                    143:"23 Hours",
+                    144:"24 Hours",
+                    145:"25 Hours",
+                    146:"26 Hours",
+                    147:"27 Hours",
+                    148:"28 Hours",
+                    149:"29 Hours",
+                    150:"30 Hours",
+                    151:"31 Hours",
+                    152:"32 Hours",
+                    153:"33 Hours",
+                    154:"34 Hours",
+                    155:"35 Hours",
+                    156:"36 Hours",
+                    157:"37 Hours",
+                    158:"38 Hours",
+                    159:"39 Hours",
+                    160:"40 Hours",
+                    161:"41 Hours",
+                    162:"42 Hours",
+                    163:"43 Hours",
+                    164:"44 Hours",
+                    165:"45 Hours",
+                    166:"46 Hours",
+                    167:"47 Hours",
+                    168:"48 Hours",
+                    169:"49 Hours",
+                    170:"50 Hours",
+                    171:"51 Hours",
+                    172:"52 Hours",
+                    173:"53 Hours",
+                    174:"54 Hours",
+                    175:"55 Hours",
+                    176:"56 Hours",
+                    177:"57 Hours",
+                    178:"58 Hours",
+                    179:"59 Hours",
+                    180:"60 Hours",
+                    181:"61 Hours",
+                    182:"62 Hours",
+                    183:"63 Hours",
+                    184:"64 Hours",
+                    185:"65 Hours",
+                    186:"66 Hours",
+                    187:"67 Hours",
+                    188:"68 Hours",
+                    189:"69 Hours",
+                    190:"70 Hours",
+                    191:"71 Hours",
+                    192:"72 Hours",
+                    193:"73 Hours",
+                    194:"74 Hours",
+                    195:"75 Hours",
+                    196:"76 Hours",
+                    197:"77 Hours",
+                    198:"78 Hours",
+                    199:"79 Hours",
+                    200:"80 Hours",
+                    201:"81 Hours",
+                    202:"82 Hours",
+                    203:"83 Hours",
+                    204:"84 Hours",
+                    205:"85 Hours",
+                    206:"86 Hours",
+                    207:"87 Hours",
+                    208:"88 Hours",
+                    209:"89 Hours",
+                    210:"90 Hours",
+                    211:"91 Hours",
+                    212:"92 Hours",
+                    213:"93 Hours",
+                    214:"94 Hours",
+                    215:"95 Hours",
+                    216:"96 Hours",
+                    217:"97 Hours",
+                    218:"98 Hours",
+                    219:"99 Hours",
+                    220:"100 Hours",
+                    221:"101 Hours",
+                    222:"102 Hours",
+                    223:"103 Hours",
+                    224:"104 Hours",
+                    225:"105 Hours",
+                    226:"106 Hours",
+                    227:"107 Hours",
+                    228:"108 Hours",
+                    229:"109 Hours",
+                    230:"110 Hours",
+                    231:"111 Hours",
+                    232:"112 Hours",
+                    233:"113 Hours",
+                    234:"114 Hours",
+                    235:"115 Hours",
+                    236:"116 Hours",
+                    237:"117 Hours",
+                    238:"118 Hours",
+                    239:"119 Hours",
+                    240:"120 Hours",
+                    241:"121 Hours",
+                    242:"122 Hours",
+                    243:"123 Hours",
+                    244:"124 Hours",
+                    245:"125 Hours",
+                    246:"126 Hours",
+                    247:"127 Hours",
+                    248:"128 Hours",
+                    249:"129 Hours",
+                    250:"130 Hours",
+                    251:"131 Hours",
+                    252:"132 Hours",
+                    253:"133 Hours",
+                    254:"134 Hours"]
                 input "parameter16-${i}d", "enum", title: "LED Effect Type - Notification $i", description: "Tap to set", displayDuringSetup: false, required: false, options: [
                     0:"Off",
                     1:"Solid",
@@ -229,6 +468,24 @@ private toggleTiles(number, value) {
            }
        }
    }
+}
+
+def startNotification(value, ep = null){
+    if (infoEnable) log.info "${device.label?device.label:device.name}: startNotification($value)"
+    def parameterNumbers = [16]
+    def cmds = []
+    cmds << zwave.configurationV1.configurationSet(configurationValue: integer2Cmd(value.toInteger(),4), parameterNumber: parameterNumbers[(ep == null)? 0:ep?.toInteger()-1], size: 4)
+    cmds << zwave.configurationV1.configurationGet(parameterNumber: parameterNumbers[(ep == null)? 0:ep?.toInteger()-1])
+    return commands(cmds)
+}
+
+def stopNotification(ep = null){
+    if (infoEnable) log.info "${device.label?device.label:device.name}: stopNotification()"
+    def parameterNumbers = [16]
+    def cmds = []
+    cmds << zwave.configurationV1.configurationSet(configurationValue: integer2Cmd(0,4), parameterNumber: parameterNumbers[(ep == null)? 0:ep?.toInteger()-1], size: 4)
+    cmds << zwave.configurationV1.configurationGet(parameterNumber: parameterNumbers[(ep == null)? 0:ep?.toInteger()-1])
+    return commands(cmds)
 }
 
 def startLevelChange(direction) {
@@ -369,9 +626,9 @@ def initialize() {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep9")}
         try {
-            if (infoEnable) log.info "Hubitat has issues trying to delete the child device when it is in use. Need to manually delete them."
-            //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
+            if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
+            if (infoEnable) log.info "Hubitat may have issues trying to delete the child device when it is in use. Need to manually delete them."
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
         }
     }
@@ -388,9 +645,9 @@ def initialize() {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep10")}
         try {
-            if (infoEnable) log.info "Hubitat has issues trying to delete the child device when it is in use. Need to manually delete them."
-            //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
+            if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
+            if (infoEnable) log.info "Hubitat may have issues trying to delete the child device when it is in use. Need to manually delete them."
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
         }
     }
@@ -407,9 +664,9 @@ def initialize() {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep101")}
         try {
-            if (infoEnable) log.info "${device.label?device.label:device.name}: Hubitat has issues trying to delete the child device when it is in use. Need to manually delete them."
-            //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
+            if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
+            if (infoEnable) log.info "Hubitat may have issues trying to delete the child device when it is in use. Need to manually delete them."
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
         }
     }
@@ -426,15 +683,14 @@ def initialize() {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep102")}
         try {
-            if (infoEnable) log.info "${device.label?device.label:device.name}: Hubitat has issues trying to delete the child device when it is in use. Need to manually delete them."
-            //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
+            if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
+            if (infoEnable) log.info "Hubitat may have issues trying to delete the child device when it is in use. Need to manually delete them."
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
         }
     }
-    
     [1,2,3,4,5].each { i ->
-    if ((settings."parameter16-${i}a"!=null && settings."parameter16-${i}b"!=null && settings."parameter16-${i}c"!=null && settings."parameter16-${i}d"!=null) && !childExists("ep${i}")) {
+    if ((settings."parameter16-${i}a"!=null && settings."parameter16-${i}b"!=null && settings."parameter16-${i}c"!=null && settings."parameter16-${i}d"!=null && settings."parameter16-${i}d"!="0") && !childExists("ep${i}")) {
     try {
         addChildDevice("hubitat", "Generic Component Switch", "${device.deviceNetworkId}-ep${i}", 
                 [completedSetup: true, label: "${device.displayName} (Notification ${i})",
@@ -442,14 +698,14 @@ def initialize() {
     } catch (e) {
         runIn(3, "sendAlert", [data: [message: "Child device creation failed. Make sure the device handler for \"Switch Child Device\" is installed"]])
     }
-    } else if ((settings."parameter16-${i}a"==null || settings."parameter16-${i}b"==null || settings."parameter16-${i}c"==null || settings."parameter16-${i}d"==null) && childExists("ep${i}")) {
+    } else if ((settings."parameter16-${i}a"==null || settings."parameter16-${i}b"==null || settings."parameter16-${i}c"==null || settings."parameter16-${i}d"==null || settings."parameter16-${i}d"=="0") && childExists("ep${i}")) {
         if (infoEnable) log.info "Trying to delete child device ep${i}. If this fails it is likely that there is a SmartApp using the child device in question."
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep${i}")}
         try {
-            if (infoEnable) log.info "Hubitat has issues trying to delete the child device when it is in use. Need to manually delete them."
-            //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
+            if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
+            if (infoEnable) log.info "Hubitat may have issues trying to delete the child device when it is in use. Need to manually delete them."
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
         }
     }}
