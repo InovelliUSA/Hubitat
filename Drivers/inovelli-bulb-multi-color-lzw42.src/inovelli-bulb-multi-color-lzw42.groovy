@@ -365,7 +365,7 @@ private void setGenericName(hue){
 		case 346..360: colorName = "Red"
 			break
 	}
-	def descriptionText = "${device.getDisplayName()} color is ${colorName}"
+	String descriptionText = "${device.getDisplayName()} color is ${colorName}"
 	sendEvent(name: "colorName", value: colorName ,descriptionText: descriptionText)
 }
 
