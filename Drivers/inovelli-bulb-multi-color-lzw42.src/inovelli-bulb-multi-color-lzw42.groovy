@@ -10,7 +10,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Inovelli Bulb Multi-White LZW41
+ *  Inovelli Bulb Multi-Color LZW42
  *
  *  Author: Eric Maycock
  *  Date: 2019-9-9
@@ -26,6 +26,9 @@
  *		Added color name
  *	updated by bcopeland 1/9/2020
  *		added firmware version reporting
+ *		fix for scene capture and level in setcolor
+ *	updated by bcopeland 1/10/2020
+ *		fix for hsl level from received color report
  *  updated by bcopeland 1/21/2020
  *		fixes for reported bugs
  *		correct comand class versions to match what the hardware supports
@@ -36,11 +39,10 @@
  *		dramatically improved speed of CT operations and reduced packet count - Make sure to hit configure after updating.
  *		improved speed of on/off events also reducing packets
  *		improved speed of setLevel events also reducing packets
+ *		bug fix for null value in setColor
  *	updated by bcopeland 3/11/2020
- *		improved speed reduced packets on CT set operations
+ *		improved speed / reduced packets on CT set operations
  *		added color fade time preference for smoother CT transitions
- *  updated by bcopeland 3/15/2020
- *		fix for issue with reporting when using more than 1 device with the same driver
  *	update by bcopeland 4/9/2020
  *      major re-write for new coding standards / cleanup
  *      stabilization of color temp and color reporting
