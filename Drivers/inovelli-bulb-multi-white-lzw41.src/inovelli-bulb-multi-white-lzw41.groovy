@@ -39,6 +39,8 @@
  *	updated by bcopeland 3/11/2020
  *		improved speed reduced packets on CT set operations
  *		added color fade time preference for smoother CT transitions
+ *  updated by bcopeland 3/15/2020
+ *		fix for issue with reporting when using more than 1 device with the same driver
  */
 
  import groovy.transform.Field
@@ -71,8 +73,6 @@ metadata {
 		input name: "bulbMemory", type: "enum", title: "Power outage state", options: [0:"Remembers Last State",1:"Bulb turns ON",2:"Bulb turns OFF"], defaultValue: 0
 	}
 }
-
-@Field static Map colorReceived = [red: null, green: null, blue: null, warmWhite: null, coldWhite: null]
 
 private getCOLOR_TEMP_MIN() { 2700 }
 private getCOLOR_TEMP_MAX() { 6500 }
@@ -173,10 +173,11 @@ def zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorSupportedReport c
 def zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorReport cmd) {
 	if (logEnable) log.debug "got SwitchColorReport: $cmd"
 	def result = []
-	colorReceived[cmd.colorComponent] = cmd.value
-    if (WHITE_NAMES.every { colorReceived[it] != null}) {
-		def warmWhite = colorReceived[WARM_WHITE]
-		def coldWhite = colorReceived[COLD_WHITE]
+	if (!state.colorReceived) state.colorReceived=[red: null, green: null, blue: null, warmWhite: null, coldWhite: null]
+	state.colorReceived[cmd.colorComponent] = cmd.value
+    if (WHITE_NAMES.every { state.colorReceived[it] != null}) {
+		def warmWhite = state.colorReceived[WARM_WHITE]
+		def coldWhite = state.colorReceived[COLD_WHITE]
 		if (logEnable) log.debug "warmWhite: $warmWhite, coldWhite: $coldWhite"
 		if (warmWhite == 0 && coldWhite == 0) {
 			result = createEvent(name: "colorTemperature", value: COLOR_TEMP_MIN)
@@ -189,7 +190,7 @@ def zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorReport cmd) {
 			setGenericTempName(colorTemp)
 		}
 		// Reset the values
-		WHITE_NAMES.collect { colorReceived[it] = null }
+		WHITE_NAMES.collect { state.colorReceived[it] = null }
 	}
 	result
 }
