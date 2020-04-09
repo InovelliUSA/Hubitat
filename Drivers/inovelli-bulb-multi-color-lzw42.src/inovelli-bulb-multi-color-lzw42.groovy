@@ -44,7 +44,7 @@
  *	update by bcopeland 4/9/2020
  *      major re-write for new coding standards / cleanup
  *      stabilization of color temp and color reporting
- *      re-organization of device data for standardization / addition of serialnuber, hardware ver, protocol ver, firmware
+ *      re-organization of device data for standardization / addition of serialnumber, hardware ver, protocol ver, firmware
  *      re-work of associations
  */
 
