@@ -43,8 +43,6 @@
  *	updated by bcopeland 3/11/2020
  *		improved speed / reduced packets on CT set operations
  *		added color fade time preference for smoother CT transitions
- *  updated by bcopeland 3/15/2020
- *		fix for issue with reporting when using more than 1 device with the same driver
  */
 
  import groovy.transform.Field
@@ -79,6 +77,8 @@ metadata {
 	}
 	
 }
+
+@Field static Map colorReceived = [red: null, green: null, blue: null, warmWhite: null, coldWhite: null]
 
 private getCOLOR_TEMP_MIN() { 2700 }
 private getCOLOR_TEMP_MAX() { 6500 }
@@ -185,12 +185,11 @@ def zwaveEvent(hubitat.zwave.commands.switchmultilevelv2.SwitchMultilevelReport 
 
 def zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorReport cmd) {
 	if (logEnable) log.debug "got SwitchColorReport: $cmd"
-	if (!state.colorReceived) state.colorReceived=[red: null, green: null, blue: null, warmWhite: null, coldWhite: null]
-	state.colorReceived[cmd.colorComponent] = cmd.value
+	colorReceived[cmd.colorComponent] = cmd.value
 	def result = []
 	// Check if we got all the RGB color components
-	if (RGB_NAMES.every { state.colorReceived[it] != null }) {
-		def colors = RGB_NAMES.collect { state.colorReceived[it] }
+	if (RGB_NAMES.every { colorReceived[it] != null }) {
+		def colors = RGB_NAMES.collect { colorReceived[it] }
 		if (logEnable) log.debug "colors: $colors"
 		// Send the color as hex format
 		def hexColor = "#" + colors.collect { Integer.toHexString(it).padLeft(2, "0") }.join("")
@@ -205,12 +204,12 @@ def zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorReport cmd) {
 			result << createEvent(name: "level", value: hsv[2].round())
 		}
 		// Reset the values
-		RGB_NAMES.collect { state.colorReceived[it] = null}
+		RGB_NAMES.collect { colorReceived[it] = null}
 	}
 	// Check if we got all the color temperature values
-	if (WHITE_NAMES.every { state.colorReceived[it] != null}) {
-		def warmWhite = state.colorReceived[WARM_WHITE]
-		def coldWhite = state.colorReceived[COLD_WHITE]
+	if (WHITE_NAMES.every { colorReceived[it] != null}) {
+		def warmWhite = colorReceived[WARM_WHITE]
+		def coldWhite = colorReceived[COLD_WHITE]
 		if (logEnable) log.debug "warmWhite: $warmWhite, coldWhite: $coldWhite"
 		if (warmWhite == 0 && coldWhite == 0) {
 			result = createEvent(name: "colorTemperature", value: COLOR_TEMP_MIN)
@@ -223,7 +222,7 @@ def zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorReport cmd) {
 			setGenericTempName(colorTemp)
 		}
 		// Reset the values
-		WHITE_NAMES.collect { state.colorReceived[it] = null }
+		WHITE_NAMES.collect { colorReceived[it] = null }
 	}
 	result
 }
