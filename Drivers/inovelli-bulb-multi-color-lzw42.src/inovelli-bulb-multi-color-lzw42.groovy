@@ -48,6 +48,9 @@
  *      stabilization of color temp and color reporting
  *      re-organization of device data for standardization / addition of serialnumber, hardware ver, protocol ver, firmware
  *      re-work of associations
+ *	updated by npk22 4/9/2020
+ *		added dimming speed parameter
+ *		added dimming speed to on / off
  */
 
 import groovy.transform.Field
@@ -73,6 +76,7 @@ metadata {
 		configParams.each { input it.value.input }
 		input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: false
 		input name: "colorTransition", type: "number", description: "", title: "Color fade time:", defaultValue: 0
+		input name: "dimmingSpeed", type: "number", description: "", title: "Dimming speed:", defaultValue: 0
 		input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true
 	}
 }
@@ -250,15 +254,27 @@ private void dimmerEvents(hubitat.zwave.Command cmd) {
 }
 
 void on() {
-	sendToDevice(zwave.basicV1.basicSet(value: 0xFF))
+	//Check if dimming speed exists and set the durration
+	def duration=0
+	if (dimmingSpeed) duration=dimmingSpeed	
+
+	sendToDevice(zwave.switchMultilevelV2.switchMultilevelSet(value: 0xFF, dimmingDuration: duration))
 }
 
 void off() {
-	sendToDevice(zwave.basicV1.basicSet(value: 0x00))
+	//Check if dimming speed exists and set the durration
+	def duration=0
+	if (dimmingSpeed) duration=dimmingSpeed	
+
+	sendToDevice(zwave.switchMultilevelV2.switchMultilevelSet(value: 0x00, dimmingDuration: duration))
 }
 
 void setLevel(level) {
-	setLevel(level, 1)
+	//Check if dimming speed exists and set the durration
+	def duration=1
+	if (dimmingSpeed) duration=dimmingSpeed
+
+	setLevel(level, duration)
 }
 
 void setLevel(level, duration) {
