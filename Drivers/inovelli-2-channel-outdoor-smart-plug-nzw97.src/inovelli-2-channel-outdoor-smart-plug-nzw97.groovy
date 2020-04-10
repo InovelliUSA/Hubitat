@@ -1,9 +1,9 @@
 /**
  *  Inovelli 2-Channel Outdoor Smart Plug NZW97
  *  Author: Eric Maycock (erocm123)
- *  Date: 2018-05-02
+ *  Date: 2020-04-03
  *
- *  Copyright 2018 Eric Maycock
+ *  Copyright 2020 Eric Maycock / Inovelli
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -53,6 +53,7 @@ metadata {
         fingerprint manufacturer: "015D", prod: "0221", model: "611C", deviceJoinName: "Inovelli 2-Channel Outdoor Smart Plug"
         fingerprint manufacturer: "0312", prod: "0221", model: "611C", deviceJoinName: "Inovelli 2-Channel Outdoor Smart Plug"
         fingerprint deviceId: "0x1101", inClusters: "0x5E,0x25,0x27,0x85,0x8E,0x59,0x55,0x86,0x72,0x5A,0x73,0x70,0x71,0x60,0x6C,0x7A"
+        fingerprint deviceId: "0x1101", inClusters: "0x5E,0x25,0x85,0x8E,0x59,0x55,0x86,0x72,0x5A,0x73,0x70,0x71,0x60,0x6C,0x7A"
     }
     
     simulator {}
@@ -149,7 +150,7 @@ def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd, ep 
             def allOff = true
             childDevices.each {
                 n->
-                    if (n.deviceNetworkId != "$device.deviceNetworkId-ep$ep" && n.currentState("switch").value != "off") allOff = false
+                    if (n.deviceNetworkId != "$device.deviceNetworkId-ep$ep" && n.currentState("switch")?.value != "off") allOff = false
             }
             if (allOff) {
                 event = [createEvent([name: "switch", value: "off"])]
@@ -160,10 +161,10 @@ def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd, ep 
         return event
     } else {
         def result = createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "digital")
-        def cmds = []
-        cmds << encap(zwave.switchBinaryV1.switchBinaryGet(), 1)
-        cmds << encap(zwave.switchBinaryV1.switchBinaryGet(), 2)
-        return [result, response(commands(cmds))] // returns the result of reponse()
+        //def cmds = []
+        //cmds << encap(zwave.switchBinaryV1.switchBinaryGet(), 1)
+        //cmds << encap(zwave.switchBinaryV1.switchBinaryGet(), 2)
+        return [result] // returns the result of reponse()
     }
 }
 
@@ -191,18 +192,18 @@ def zwaveEvent(hubitat.zwave.Command cmd) {
 def on() {
     log.debug "on()"
     commands([
-            zwave.switchAllV1.switchAllOn(),
-            encap(zwave.switchBinaryV1.switchBinaryGet(), 1),
-            encap(zwave.switchBinaryV1.switchBinaryGet(), 2)
+            //zwave.switchAllV1.switchAllOn(),
+            encap(zwave.basicV1.basicSet(value: 0xFF), 1),
+            encap(zwave.basicV1.basicSet(value: 0xFF), 2)
     ])
 }
 
 def off() {
     log.debug "off()"
     commands([
-            zwave.switchAllV1.switchAllOff(),
-            encap(zwave.switchBinaryV1.switchBinaryGet(), 1),
-            encap(zwave.switchBinaryV1.switchBinaryGet(), 2)
+            //zwave.switchAllV1.switchAllOff(),
+            encap(zwave.basicV1.basicSet(value: 0x00), 1),
+            encap(zwave.basicV1.basicSet(value: 0x00), 2)
     ])
 }
 
@@ -210,7 +211,7 @@ def childOn(String dni) {
     log.debug "childOn($dni)"
     def cmds = []
     cmds << new hubitat.device.HubAction(command(encap(zwave.basicV1.basicSet(value: 0xFF), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
-    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    //cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
     cmds
 }
 
@@ -218,7 +219,7 @@ def childOff(String dni) {
     log.debug "childOff($dni)"
     def cmds = []
     cmds << new hubitat.device.HubAction(command(encap(zwave.basicV1.basicSet(value: 0x00), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
-    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    //cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
     cmds
 }
 

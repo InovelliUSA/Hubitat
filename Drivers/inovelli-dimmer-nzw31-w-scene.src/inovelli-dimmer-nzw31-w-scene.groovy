@@ -113,9 +113,9 @@ metadata {
         input "defaultLocal", "number", title: "Default Level (Local)\n\nDefault level when light is turned on at the switch\nRange: 0 to 99\nNote: 0 = Previous Level\n(Firmware 1.02+)", description: "Tap to set", required: false, range: "0..99", defaultValue: "0"
         input "defaultZWave", "number", title: "Default Level (Z-Wave)\n\nDefault level when light is turned on via Z-Wave command\nRange: 0 to 99\nNote: 0 = Previous Level\n(Firmware 1.02+)", description: "Tap to set", required: false, range: "0..99", defaultValue: "0"
         input "disableLocal", "enum", title: "Disable Local Control\n\nDisable ability to control switch from the wall\n(Firmware 1.03+)", description: "Tap to set", required: false, options:[["2": "Yes"], ["0": "No"]], defaultValue: "0"
-        input "disableRemote", "enum", title: "Disable Remote Control\n\nDisable ability to control switch from inside SmartThings", description: "Tap to set", required: false, options:[["2": "Yes"], ["0": "No"]], defaultValue: "0"
-        input "buttonOn", "enum", title: "Send Button Event On\n\nSend the button 1 pushed event when switch turned on from inside SmartThings", description: "Tap to set", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
-        input "buttonOff", "enum", title: "Send Button Event Off\n\nSend the button 1 held event when switch turned off from inside SmartThings", description: "Tap to set", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
+        input "disableRemote", "enum", title: "Disable Remote Control\n\nDisable ability to control switch from inside Hubitat", description: "Tap to set", required: false, options:[["2": "Yes"], ["0": "No"]], defaultValue: "0"
+        input "buttonOn", "enum", title: "Send Button Event On\n\nSend the button 1 pushed event when switch turned on from inside Hubitat", description: "Tap to set", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
+        input "buttonOff", "enum", title: "Send Button Event Off\n\nSend the button 1 held event when switch turned off from inside Hubitat", description: "Tap to set", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
         input description: "Use the below options to enable child devices for the specified settings. This will allow you to adjust these settings using SmartApps such as Smart Lighting. If any of the options are enabled, make sure you have the appropriate child device handlers installed.\n(Firmware 1.02+)", title: "Child Devices", displayDuringSetup: false, type: "paragraph", element: "paragraph"
         input "enableDefaultLocalChild", "bool", title: "Default Local Level", description: "", required: false, defaultValue: false
         input "enableDefaultZWaveChild", "bool", title: "Default Z-Wave Level", description: "", required: false, defaultValue: false
@@ -359,7 +359,7 @@ def initialize() {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep8")}
         try {
-            if (logEnable) log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            if (logEnable) log.debug "Hubitat has issues trying to delete the child device when it is in use. Need to manually delete them."
             //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
@@ -378,7 +378,7 @@ def initialize() {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep9")}
         try {
-            if (logEnable) log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            if (logEnable) log.debug "Hubitat has issues trying to delete the child device when it is in use. Need to manually delete them."
             //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
@@ -397,7 +397,7 @@ def initialize() {
         def children = childDevices
         def childDevice = children.find{it.deviceNetworkId.endsWith("ep101")}
         try {
-            if (logEnable) log.debug "SmartThings has issues trying to delete the child device when it is in use. Need to manually delete them."
+            if (logEnable) log.debug "Hubitat has issues trying to delete the child device when it is in use. Need to manually delete them."
             //if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
         } catch (e) {
             runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any SmartApp."]])
@@ -538,7 +538,7 @@ def parse(description) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd) {
-    // Since SmartThings isn't filtering duplicate events, we are skipping these
+    // Since Hubitat isn't filtering duplicate events, we are skipping these
     // Switch is sending SwitchMultilevelReport as well (which we will use)
     //dimmerEvents(cmd)
 }
