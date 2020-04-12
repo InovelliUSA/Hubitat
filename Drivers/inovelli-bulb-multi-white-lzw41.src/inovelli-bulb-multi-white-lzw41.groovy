@@ -49,6 +49,9 @@
  *	updated by npk22 4/9/2020
  *		added dimming speed parameter
  *		added dimming speed to on / off
+ *	updated by bcopeland 4/11/2020
+ *		fixed type definitions
+ *		fixed fingerprint
  */
 
 import groovy.transform.Field
@@ -228,26 +231,24 @@ private void dimmerEvents(hubitat.zwave.Command cmd) {
 }
 
 void on() {
-	//Check if dimming speed exists and set the durration
-	def duration=0
-	if (dimmingSpeed) duration=dimmingSpeed	
-
+	//Check if dimming speed exists and set the duration
+	int duration=0
+	if (dimmingSpeed) duration=dimmingSpeed.toInteger()
 	sendToDevice(zwave.switchMultilevelV2.switchMultilevelSet(value: 0xFF, dimmingDuration: duration))
 }
 
 void off() {
 	//Check if dimming speed exists and set the durration
 	def duration=0
-	if (dimmingSpeed) duration=dimmingSpeed	
+	if (dimmingSpeed) duration=dimmingSpeed.toInteger()
 
 	sendToDevice(zwave.switchMultilevelV2.switchMultilevelSet(value: 0x00, dimmingDuration: duration))
 }
 
 void setLevel(level) {
-	//Check if dimming speed exists and set the durration
-	def duration=1
-	if (dimmingSpeed) duration=dimmingSpeed
-
+	//Check if dimming speed exists and set the duration
+	int duration=1
+	if (dimmingSpeed) duration=dimmingSpeed.toInteger()
 	setLevel(level, duration)
 }
 
