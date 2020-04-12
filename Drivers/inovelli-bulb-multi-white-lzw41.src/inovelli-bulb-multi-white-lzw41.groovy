@@ -52,6 +52,9 @@
  *	updated by bcopeland 4/11/2020
  *		fixed type definitions
  *		fixed fingerprint
+ *	updated by bcopeland 4/12/2020
+ *    	added duplicate event filtering (optional as it has a slight possibility of causing issues with voice assistants)
+ *      changed dimming speed default to 1 to match previous default functionality
  */
 
 import groovy.transform.Field
@@ -75,8 +78,9 @@ metadata {
 	preferences {
 		configParams.each { input it.value.input }
 		input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: false
-		input name: "colorTransition", type: "number", description: "", title: "Color fade time:", defaultValue: 0		
-		input name: "dimmingSpeed", type: "number", description: "", title: "Dimming speed:", defaultValue: 0
+		input name: "colorTransition", type: "number", description: "", title: "Color fade time:", defaultValue: 0
+		input name: "dimmingSpeed", type: "number", description: "", title: "Dimming speed:", defaultValue: 1
+		input name: "eventFilter", type: "bool", title: "Filter out duplicate events", defaultValue: false
 		input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true
 	}
 }
@@ -181,6 +185,13 @@ private List<hubitat.zwave.Command> queryAllColors() {
 	return cmds
 }
 
+void eventProcess(Map evt) {
+	if (device.currentValue(evt.name).toString() != evt.value.toString() || !eventFilter) {
+		evt.isStateChange=true
+		sendEvent(evt)
+	}
+}
+
 void startLevelChange(direction) {
 	boolean upDownVal = direction == "down" ? true : false
 	if (logEnable) log.debug "got startLevelChange(${direction})"
@@ -210,13 +221,13 @@ void zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorReport cmd) {
 		int coldWhite = state.colorReceived[COLD_WHITE]
 		if (logEnable) log.debug "warmWhite: $warmWhite, coldWhite: $coldWhite"
 		if (warmWhite == 0 && coldWhite == 0) {
-			sendEvent(name: "colorTemperature", value: COLOR_TEMP_MIN, isStateChange: true)
+			eventProcess(name: "colorTemperature", value: COLOR_TEMP_MIN)
 		} else {
 			int colorTemp = COLOR_TEMP_MIN + (COLOR_TEMP_DIFF / 2)
 			if (warmWhite != coldWhite) {
 				colorTemp = (COLOR_TEMP_MAX - (COLOR_TEMP_DIFF * warmWhite) / 255) as Integer
 			}
-			sendEvent(name: "colorTemperature", value: colorTemp, isStateChange:true)
+			eventProcess(name: "colorTemperature", value: colorTemp)
 			setGenericTempName(colorTemp)
 		}
 	}
@@ -224,9 +235,9 @@ void zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorReport cmd) {
 
 private void dimmerEvents(hubitat.zwave.Command cmd) {
 	def value = (cmd.value ? "on" : "off")
-	sendEvent(name: "switch", value: value, descriptionText: "$device.displayName was turned $value", isStateChange: true)
+	eventProcess(name: "switch", value: value, descriptionText: "$device.displayName was turned $value")
 	if (cmd.value) {
-		sendEvent(name: "level", value: cmd.value == 99 ? 100 : cmd.value , unit: "%", isStateChange: true)
+		eventProcess(name: "level", value: cmd.value == 99 ? 100 : cmd.value , unit: "%")
 	}
 }
 
@@ -293,7 +304,7 @@ private void setGenericTempName(temp){
 	else if (value <= 6500) genericName = "Skylight"
 	else if (value < 20000) genericName = "Polar"
 	String descriptionText = "${device.getDisplayName()} color is ${genericName}"
-	sendEvent(name: "colorName", value: genericName ,descriptionText: descriptionText)
+	eventProcess(name: "colorName", value: genericName ,descriptionText: descriptionText)
 }
 
 void zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cmd) {
