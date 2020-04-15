@@ -59,6 +59,10 @@
  *  	changed dimming speed default to 1 to match previous default functionality
  *  updated by InovelliUSA 4/15/2020
  *  	corrected incorrect options for parameter 2
+ *  updated by bcopeland 4/15/2020
+ *  	fixed bug in CT report
+ *    	added gamma correction as an optional setting
+ *
  */
 
 import groovy.transform.Field
@@ -87,6 +91,7 @@ metadata {
 		input name: "colorTransition", type: "number", description: "", title: "Color fade time:", defaultValue: 0
 		input name: "dimmingSpeed", type: "number", description: "", title: "Dimming speed:", defaultValue: 1
 		input name: "eventFilter", type: "bool", title: "Filter out duplicate events", defaultValue: false
+		input name: "enableGammaCorrect", type: "bool", description: "May cause a slight difference in reported color", title: "Enable gamma correction on setColor", defaultValue: false
 		input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true
 	}
 }
@@ -256,7 +261,7 @@ void zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorReport cmd) {
 			if (warmWhite != coldWhite) {
 				colorTemp = (COLOR_TEMP_MAX - (COLOR_TEMP_DIFF * warmWhite) / 255) as Integer
 			}
-			eventProess(name: "colorTemperature", value: colorTemp)
+			eventProcess(name: "colorTemperature", value: colorTemp)
 			setGenericTempName(colorTemp)
 		}
 	}
@@ -316,7 +321,11 @@ void setColor(value) {
 	List<hubitat.zwave.Command> cmds = []
 	List rgb = hubitat.helper.ColorUtils.hsvToRGB([value.hue, value.saturation, value.level])
 	log.debug "r:" + rgb[0] + ", g: " + rgb[1] +", b: " + rgb[2]
-	cmds.add(zwave.switchColorV2.switchColorSet(red: rgb[0], green: rgb[1], blue: rgb[2], warmWhite:0, coldWhite:0, dimmingDuration: dimmingDuration))
+	if (enableGammaCorrect) {
+		cmds.add(zwave.switchColorV3.switchColorSet(red: gammaCorrect(rgb[0]), green: gammaCorrect(rgb[1]), blue: gammaCorrect(rgb[2]), warmWhite: 0, coldWhite: 0, dimmingDuration: dimmingDuration))
+	} else {
+		cmds.add(zwave.switchColorV2.switchColorSet(red: rgb[0], green: rgb[1], blue: rgb[2], warmWhite: 0, coldWhite: 0, dimmingDuration: dimmingDuration))
+	}
 	if ((device.currentValue("switch") != "on") && (!colorStaging)){
 		if (logEnable) log.debug "Bulb is off. Turning on"
 		cmds.add(zwave.basicV1.basicSet(value: 0xFF))
@@ -510,4 +519,10 @@ void zwaveEvent(hubitat.zwave.commands.associationv2.AssociationGroupingsReport 
 	if (logEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
 	log.info "${device.label?device.label:device.name}: Supported association groups: ${cmd.supportedGroupings}"
 	state.associationGroups = cmd.supportedGroupings
+}
+
+private int gammaCorrect(value) {
+	def temp=value/255
+	def correctedValue=(temp>0.4045) ? Math.pow((temp+0.055)/ 1.055, 2.4) : (temp / 12.92)
+	return Math.round(correctedValue * 255) as Integer
 }
