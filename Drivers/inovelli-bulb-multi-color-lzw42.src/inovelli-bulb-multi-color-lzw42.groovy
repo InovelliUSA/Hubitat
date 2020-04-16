@@ -62,6 +62,8 @@
  *  updated by bcopeland 4/15/2020
  *  	fixed bug in CT report
  *    	added gamma correction as an optional setting
+ *  updated by bcopeland 4/16/2020
+ *      updated ambiguous language
  *
  */
 
@@ -96,7 +98,7 @@ metadata {
 	}
 }
 @Field static Map configParams = [
-		2: [input: [name: "configParam2", type: "enum", title: "State after power restored", description: "", defaultValue: 0, options: [0:"Remembers Last ON State",1:"Remembers Last State"]], parameterSize: 1],
+		2: [input: [name: "configParam2", type: "enum", title: "Power fail load state restore", description: "", defaultValue: 0, options: [0:"Bulb turns ON",1:"Bulb remembers last state"]], parameterSize: 1]
 ]
 @Field static Map CMD_CLASS_VERS=[0x33:2,0x26:2,0x86:2,0x70:1]
 @Field static int COLOR_TEMP_MIN=2700
