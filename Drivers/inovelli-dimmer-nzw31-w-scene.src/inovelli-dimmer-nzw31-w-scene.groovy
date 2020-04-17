@@ -14,6 +14,8 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ *  2019-11-20: Added upgraded NZW31 fingerpint.  Fixed Association Group management.
+ *
  *  2019-09-02: Added Hubitat's method of disabling debug messages
  *
  *  2018-12-04: Added option to "Disable Remote Control" and to send button events 1,pushed / 1,held for on / off.
@@ -77,7 +79,11 @@ metadata {
         command "holdUp"
         command "holdDown"
         
-        command "setAssociationGroup", ["number", "enum", "number", "number"] // group number, nodes, action (0 - remove, 1 - add), multi-channel endpoint (optional)
+        command "setAssociationGroup", [[name: "Group Number*",type:"NUMBER", description: "Provide the association group number to edit"], 
+                                        [name: "Z-Wave Node*", type:"STRING", description: "Enter the node number (in hex) associated with the node"], 
+                                        [name: "Action*", type:"ENUM", constraints: ["Add", "Remove"]],
+                                        [name:"Multi-channel Endpoint", type:"NUMBER", description: "Currently not implemented"]] 
+
         command "childOn"
         command "childOff"
         command "childRefresh"
@@ -87,15 +93,18 @@ metadata {
         fingerprint mfr: "051D", prod: "B111", model: "251C", deviceJoinName: "Inovelli Dimmer"
         fingerprint mfr: "015D", prod: "1F00", model: "1F00", deviceJoinName: "Inovelli Dimmer"
         fingerprint mfr: "0312", prod: "1F00", model: "1F00", deviceJoinName: "Inovelli Dimmer"
+        fingerprint mfr: "0312", prod: "1F01", model: "1F01", deviceJoinName: "Inovelli Dimmer" // Add for NZW31 upgrades to NZW31S
         fingerprint mfr: "0312", prod: "1F02", model: "1F02", deviceJoinName: "Inovelli Dimmer" // Toggle version NZW31T
         fingerprint deviceId: "0x1101", inClusters: "0x5E,0x26,0x27,0x70,0x5B,0x75,0x22,0x85,0x8E,0x59,0x55,0x86,0x72,0x5A,0x73,0x6C,0x7A"
-        
+        fingerprint deviceId: "0x1F01", inClusters: "0x5E,0x26,0x70,0x75,0x22,0x85,0x8E,0x59,0x55,0x86,0x72,0x5A,0x73,0x9F,0x6C,0x7A" // Add for NZW31 upgrades to NZW31S
+
     }
 
     simulator {
     }
     
     preferences {
+        def maxGroups
         input "minimumLevel", "number", title: "Minimum Level\n\nMinimum dimming level for attached light\nRange: 1 to 99", description: "Tap to set", required: false, range: "1..99", defaultValue: "1"
         input "dimmingStep", "number", title: "Dimming Step Size\n\nPercentage of step when switch is dimming up or down\nRange: 0 to 99 (0 - Instant)", description: "Tap to set", required: false, range: "0..99", defaultValue: "3"
         input "autoOff", "number", title: "Auto Off\n\nAutomatically turn switch off after this number of seconds\nRange: 0 to 32767", description: "Tap to set", required: false, range: "0..32767", defaultValue: "0"
@@ -132,7 +141,7 @@ metadata {
         input "pressDownX5Label", "text", title: "Label for \"Tap ▼▼▼▼▼\"", description: "Tap to set", required: false
         input "pressHoldUpLabel", "text", title: "Label for \"Hold ▲\"", description: "Tap to set", required: false
         input "pressHoldDownLabel", "text", title: "Label for \"Hold ▼\"", description: "Tap to set", required: false
-	input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true
+	    input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true
 
     }
     
@@ -730,49 +739,70 @@ def holdDown() {
 }
 
 def setDefaultAssociations() {
-    def smartThingsHubID = (zwaveHubNodeId.toString().format( '%02x', zwaveHubNodeId )).toUpperCase()
+    def smartThingsHubID = String.format('%02x', zwaveHubNodeId).toUpperCase()
     state.defaultG1 = [smartThingsHubID]
     state.defaultG2 = []
     state.defaultG3 = []
 }
 
 def setAssociationGroup(group, nodes, action, endpoint = null){
-    if (!state."desiredAssociation${group}") {
-        state."desiredAssociation${group}" = nodes
-    } else {
+    // Normalize the arguments to be backwards compatible with the old method
+    action = "${action}" == "1" ? "Add" : "${action}" == "0" ? "Remove" : "${action}" // convert 1/0 to Add/Remove
+    group  = "${group}" =~ /\d+/ ? (group as int) : group                             // convert group to int (if possible)
+    nodes  = [] + nodes ?: [nodes]                                                    // convert to collection if not already a collection
+
+    if (! nodes.every { it =~ /[0-9A-F]+/ }) {
+        log.error "invalid Nodes ${nodes}"
+        return
+    }
+
+    if (group < 1 || group > maxAssociationGroup()) {
+        log.error "Association group is invalid 1 <= ${group} <= ${maxAssociationGroup()}"
+        return
+    }
+    
+    def associations = state."desiredAssociation${group}"?:[]
+    nodes.each { 
+        node = "${it}"
         switch (action) {
-            case 0:
-                state."desiredAssociation${group}" = state."desiredAssociation${group}" - nodes
+            case "Remove":
+            if (logEnable) log.debug "Removing node ${node} from association group ${group}"
+            associations = associations - node
             break
-            case 1:
-                state."desiredAssociation${group}" = state."desiredAssociation${group}" + nodes
+            case "Add":
+            if (logEnable) log.debug "Adding node ${node} to association group ${group}"
+            associations << node
             break
         }
     }
+    state."desiredAssociation${group}" = associations.unique()
+    return
+}
+
+def maxAssociationGroup(){
+   if (!state.associationGroups) {
+       if (logEnable) log.debug "Getting supported association groups from device"
+       zwave.associationV2.associationGroupingsGet() // execute the update immediately
+   }
+   (state.associationGroups?: 5) as int
 }
 
 def processAssociations(){
    def cmds = []
    setDefaultAssociations()
-   def associationGroups = 5
-   if (state.associationGroups) {
-       associationGroups = state.associationGroups
-   } else {
-       if (logEnable) log.debug "Getting supported association groups from device"
-       cmds <<  zwave.associationV2.associationGroupingsGet()
-   }
+   def associationGroups = maxAssociationGroup()
    for (int i = 1; i <= associationGroups; i++){
       if(state."actualAssociation${i}" != null){
          if(state."desiredAssociation${i}" != null || state."defaultG${i}") {
             def refreshGroup = false
             ((state."desiredAssociation${i}"? state."desiredAssociation${i}" : [] + state."defaultG${i}") - state."actualAssociation${i}").each {
                 if (logEnable) log.debug "Adding node $it to group $i"
-                cmds << zwave.associationV2.associationSet(groupingIdentifier:i, nodeId:Integer.parseInt(it,16))
+                cmds << zwave.associationV2.associationSet(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
                 refreshGroup = true
             }
             ((state."actualAssociation${i}" - state."defaultG${i}") - state."desiredAssociation${i}").each {
                 if (logEnable) log.debug "Removing node $it from group $i"
-                cmds << zwave.associationV2.associationRemove(groupingIdentifier:i, nodeId:Integer.parseInt(it,16))
+                cmds << zwave.associationV2.associationRemove(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
                 refreshGroup = true
             }
             if (refreshGroup == true) cmds << zwave.associationV2.associationGet(groupingIdentifier:i)
@@ -822,3 +852,6 @@ def zwaveEvent(hubitat.zwave.commands.protectionv2.ProtectionReport cmd) {
         childDevice.sendEvent(name: "switch", value: integerValue > 0 ? "on" : "off")        
     }
 }
+
+
+

@@ -14,6 +14,8 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ *  2019-11-20: Fixed Association Group management.
+ *
  *  2018-02-26: Added support for Z-Wave Association Tool SmartApp.
  *              https://github.com/erocm123/SmartThingsPublic/tree/master/smartapps/erocm123/z-waveat
  *
@@ -37,7 +39,10 @@ metadata {
         attribute "lastActivity", "String"
         attribute "lastEvent", "String"
         
-        command "setAssociationGroup", ["number", "enum", "number", "number"] // group number, nodes, action (0 - remove, 1 - add), multi-channel endpoint (optional)
+        command "setAssociationGroup", [[name: "Group Number*",type:"NUMBER", description: "Provide the association group number to edit"], 
+                                        [name: "Z-Wave Node*", type:"STRING", description: "Enter the node number (in hex) associated with the node"], 
+                                        [name: "Action*", type:"ENUM", constraints: ["Add", "Remove"]],
+                                        [name:"Multi-channel Endpoint", type:"NUMBER", description: "Currently not implemented"]] 
 
         fingerprint mfr:"015D", prod:"2003", model:"B41C", deviceJoinName: "Inovelli Door/Window Sensor"
         fingerprint mfr:"0312", prod:"2003", model:"C11C", deviceJoinName: "Inovelli Door/Window Sensor"
@@ -312,57 +317,77 @@ private commands(commands, delay=500) {
 }
 
 def setDefaultAssociations() {
-    state.associationGroups = 3
-    def smartThingsHubID = zwaveHubNodeId.toString().format( '%02x', zwaveHubNodeId )
+    def smartThingsHubID = String.format('%02x', zwaveHubNodeId).toUpperCase()
     state.defaultG1 = [smartThingsHubID]
     state.defaultG2 = []
     state.defaultG3 = []
 }
 
 def setAssociationGroup(group, nodes, action, endpoint = null){
-    if (!state."desiredAssociation${group}") {
-        state."desiredAssociation${group}" = nodes
-    } else {
+    // Normalize the arguments to be backwards compatible with the old method
+    action = "${action}" == "1" ? "Add" : "${action}" == "0" ? "Remove" : "${action}" // convert 1/0 to Add/Remove
+    group  = "${group}" =~ /\d+/ ? (group as int) : group                             // convert group to int (if possible)
+    nodes  = [] + nodes ?: [nodes]                                                    // convert to collection if not already a collection
+
+    if (! nodes.every { it =~ /[0-9A-F]+/ }) {
+        log.error "invalid Nodes ${nodes}"
+        return
+    }
+
+    if (group < 1 || group > maxAssociationGroup()) {
+        log.error "Association group is invalid 1 <= ${group} <= ${maxAssociationGroup()}"
+        return
+    }
+    
+    def associations = state."desiredAssociation${group}"?:[]
+    nodes.each { 
+        node = "${it}"
         switch (action) {
-            case 0:
-                state."desiredAssociation${group}" = state."desiredAssociation${group}" - nodes
+            case "Remove":
+            if (logEnable) log.debug "Removing node ${node} from association group ${group}"
+            associations = associations - node
             break
-            case 1:
-                state."desiredAssociation${group}" = state."desiredAssociation${group}" + nodes
+            case "Add":
+            if (logEnable) log.debug "Adding node ${node} to association group ${group}"
+            associations << node
             break
         }
     }
+    state."desiredAssociation${group}" = associations.unique()
+    return
+}
+
+def maxAssociationGroup(){
+   if (!state.associationGroups) {
+       if (logEnable) log.debug "Getting supported association groups from device"
+       zwave.associationV2.associationGroupingsGet() // execute the update immediately
+   }
+   (state.associationGroups?: 5) as int
 }
 
 def processAssociations(){
    def cmds = []
    setDefaultAssociations()
-   def supportedGroupings = 5
-   if (state.supportedGroupings) {
-       supportedGroupings = state.supportedGroupings
-   } else {
-       log.debug "Getting supported association groups from device"
-       cmds <<  zwave.associationV2.associationGroupingsGet()
-   }
-   for (int i = 1; i <= supportedGroupings; i++){
+   def associationGroups = maxAssociationGroup()
+   for (int i = 1; i <= associationGroups; i++){
       if(state."actualAssociation${i}" != null){
          if(state."desiredAssociation${i}" != null || state."defaultG${i}") {
             def refreshGroup = false
             ((state."desiredAssociation${i}"? state."desiredAssociation${i}" : [] + state."defaultG${i}") - state."actualAssociation${i}").each {
-                log.debug "Adding node $it to group $i"
-                cmds << zwave.associationV2.associationSet(groupingIdentifier:i, nodeId:Integer.parseInt(it,16))
+                if (logEnable) log.debug "Adding node $it to group $i"
+                cmds << zwave.associationV2.associationSet(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
                 refreshGroup = true
             }
             ((state."actualAssociation${i}" - state."defaultG${i}") - state."desiredAssociation${i}").each {
-                log.debug "Removing node $it from group $i"
-                cmds << zwave.associationV2.associationRemove(groupingIdentifier:i, nodeId:Integer.parseInt(it,16))
+                if (logEnable) log.debug "Removing node $it from group $i"
+                cmds << zwave.associationV2.associationRemove(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
                 refreshGroup = true
             }
             if (refreshGroup == true) cmds << zwave.associationV2.associationGet(groupingIdentifier:i)
-            else log.debug "There are no association actions to complete for group $i"
+            else if (logEnable) log.debug "There are no association actions to complete for group $i"
          }
       } else {
-         log.debug "Association info not known for group $i. Requesting info from device."
+         if (logEnable) log.debug "Association info not known for group $i. Requesting info from device."
          cmds << zwave.associationV2.associationGet(groupingIdentifier:i)
       }
    }
