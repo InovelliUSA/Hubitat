@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer Red Series LZW31-SN
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-03-31
+ *  Date: 2020-04-24
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -65,6 +65,7 @@ metadata {
         attribute "lastActivity", "String"
         attribute "lastEvent", "String"
         attribute "firmware", "String"
+        attribute "groups", "Number"
         /*
         command "pressUpX1"
         command "pressDownX1"
@@ -1214,7 +1215,7 @@ def refresh() {
 }
 
 private command(hubitat.zwave.Command cmd) {
-    if (state.sec) {
+    if (getDataValue("zwaveSecurePairingComplete") == "true") {
         zwave.securityV1.securityMessageEncapsulation().encapsulate(cmd).format()
     } else {
         cmd.format()
@@ -1321,7 +1322,7 @@ def setAssociationGroup(group, nodes, action, endpoint = null){
 def maxAssociationGroup(){
    if (!state.associationGroups) {
        if (infoEnable) log.info "Getting supported association groups from device"
-       zwave.associationV2.associationGroupingsGet() // execute the update immediately
+       sendHubCommand(new hubitat.device.HubAction(command(zwave.associationV2.associationGroupingsGet()), hubitat.device.Protocol.ZWAVE )) // execute the update immediately
    }
    (state.associationGroups?: 5) as int
 }
