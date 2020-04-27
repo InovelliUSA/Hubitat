@@ -485,7 +485,7 @@ def childOff(String dni) {
             cmds << encap(zwave.switchMultilevelV1.switchMultilevelSet(value: 0x00), channelNumber(dni).toInteger())
         break
     }
-    if(cmds) sendHubCommand(commands(cmds))
+    if(cmds) commands(cmds)
 }
 
 void childRefresh(String dni) {
