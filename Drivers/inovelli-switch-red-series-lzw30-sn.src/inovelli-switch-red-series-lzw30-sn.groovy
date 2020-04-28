@@ -775,7 +775,7 @@ def getParameterInfo(number, type){
     parameter.parameter12size=1
     parameter.parameter13size=1
     
-	parameter.parameter1options=["0":"Previous", "1":"On", "2":"Off"]
+    parameter.parameter1options=["0":"Previous", "1":"On", "2":"Off"]
     parameter.parameter2options=["1":"Yes", "0":"No"]
     parameter.parameter3options="1..32767"
     parameter.parameter4options="0..15"
@@ -805,7 +805,7 @@ def getParameterInfo(number, type){
     
     
     parameter.parameter1description="The state the switch should return to once power is restored after power failure."
-	parameter.parameter2description="Inverts the orientation of the switch. Useful when the switch is installed upside down. Essentially up becomes down and down becomes up."
+    parameter.parameter2description="Inverts the orientation of the switch. Useful when the switch is installed upside down. Essentially up becomes down and down becomes up."
     parameter.parameter3description="Automatically turns the switch off after this many seconds. When the switch is turned on a timer is started that is the duration of this setting. When the timer expires, the switch is turned off."
     parameter.parameter4description="When should the switch send commands to associated devices?\n\n01 - local\n02 - 3way\n03 - 3way & local\n04 - z-wave hub\n05 - z-wave hub & local\n06 - z-wave hub & 3-way\n07 - z-wave hub & local & 3way\n08 - timer\n09 - timer & local\n10 - timer & 3-way\n11 - timer & 3-way & local\n12 - timer & z-wave hub\n13 - timer & z-wave hub & local\n14 - timer & z-wave hub & 3-way\n15 - all"
     parameter.parameter5description="This is the color of the LED strip."
