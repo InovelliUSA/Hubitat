@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer LZW31
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-04-24
+ *  Date: 2020-04-28
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -47,7 +47,6 @@ metadata {
         capability "Polling"
         capability "Actuator"
         capability "Sensor"
-        //capability "Health Check"
         capability "Switch Level"
         capability "Configuration"
         capability "ChangeLevel"
@@ -62,10 +61,10 @@ metadata {
                                         [name: "Action*", type:"ENUM", constraints: ["Add", "Remove"]],
                                         [name:"Multi-channel Endpoint", type:"NUMBER", description: "Currently not implemented"]] 
         
-        command "childOn"
-        command "childOff"
-        command "childSetLevel"
-        command "childRefresh"
+        command "childOn", ["string"]
+        command "childOff", ["string"]
+        command "childSetLevel", ["string"]
+        command "childRefresh", ["string"]
         command "componentOn"
         command "componentOff"
         command "componentSetLevel"
@@ -390,8 +389,8 @@ def initialize() {
         childDevice = children.find{it.deviceNetworkId.endsWith("ep102")}
         if (childDevice)
         childDevice.setLabel("${device.displayName} (Disable Remote Control)")
-        state.oldLabel = device.label
     }
+    state.oldLabel = device.label
 
     def cmds = processAssociations()
     
@@ -823,12 +822,12 @@ def setAssociationGroup(group, nodes, action, endpoint = null){
     nodes  = [] + nodes ?: [nodes]                                                    // convert to collection if not already a collection
 
     if (! nodes.every { it =~ /[0-9A-F]+/ }) {
-        log.error "invalid Nodes ${nodes}"
+        log.error "${device.label?device.label:device.name}: invalid Nodes ${nodes}"
         return
     }
 
     if (group < 1 || group > maxAssociationGroup()) {
-        log.error "Association group is invalid 1 <= ${group} <= ${maxAssociationGroup()}"
+        log.error "${device.label?device.label:device.name}: Association group is invalid 1 <= ${group} <= ${maxAssociationGroup()}"
         return
     }
     
@@ -837,11 +836,11 @@ def setAssociationGroup(group, nodes, action, endpoint = null){
         node = "${it}"
         switch (action) {
             case "Remove":
-            if (infoEnable) log.info "Removing node ${node} from association group ${group}"
+            if (infoEnable) log.info "${device.label?device.label:device.name}: Removing node ${node} from association group ${group}"
             associations = associations - node
             break
             case "Add":
-            if (infoEnable) log.info "Adding node ${node} to association group ${group}"
+            if (infoEnable) log.info "${device.label?device.label:device.name}: Adding node ${node} to association group ${group}"
             associations << node
             break
         }
@@ -852,7 +851,7 @@ def setAssociationGroup(group, nodes, action, endpoint = null){
 
 def maxAssociationGroup(){
    if (!state.associationGroups) {
-       if (infoEnable) log.info "Getting supported association groups from device"
+       if (infoEnable) log.info "${device.label?device.label:device.name}: Getting supported association groups from device"
        sendHubCommand(new hubitat.device.HubAction(command(zwave.associationV2.associationGroupingsGet()), hubitat.device.Protocol.ZWAVE )) // execute the update immediately
    }
    (state.associationGroups?: 5) as int
@@ -867,14 +866,14 @@ def processAssociations(){
          if(state."desiredAssociation${i}" != null || state."defaultG${i}") {
             def refreshGroup = false
             ((state."desiredAssociation${i}"? state."desiredAssociation${i}" : [] + state."defaultG${i}") - state."actualAssociation${i}").each {
-                if (it != null){
+                if (it){
                     if (infoEnable) log.info "${device.label?device.label:device.name}: Adding node $it to group $i"
                     cmds << zwave.associationV2.associationSet(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
                     refreshGroup = true
                 }
             }
             ((state."actualAssociation${i}" - state."defaultG${i}") - state."desiredAssociation${i}").each {
-                if (it != null){
+                if (it){
                     if (infoEnable) log.info "${device.label?device.label:device.name}: Removing node $it from group $i"
                     cmds << zwave.associationV2.associationRemove(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
                     refreshGroup = true
