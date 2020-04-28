@@ -1,7 +1,7 @@
 /**
  *  Inovelli Switch Red Series
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-04-21
+ *  Date: 2020-04-28
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -727,7 +727,7 @@ def getParameter(number) {
 }
 
 def getParameterNumbers(){
-    return [1,2,3,4,5,6,7,10,11,12]
+    return [1,2,3,4,5,6,7,10,11,12,13]
 }
 
 def getParameterInfo(number, type){
@@ -745,6 +745,7 @@ def getParameterInfo(number, type){
     parameter.parameter10default=10
     parameter.parameter11default=3600
     parameter.parameter12default=10
+    parameter.parameter13default=0
     
     parameter.parameter1type="enum"
     parameter.parameter2type="enum"
@@ -758,6 +759,7 @@ def getParameterInfo(number, type){
     parameter.parameter10type="number"
     parameter.parameter11type="number"
     parameter.parameter12type="number"
+    parameter.parameter13type="enum"
     
     parameter.parameter1size=1
     parameter.parameter2size=1
@@ -771,6 +773,7 @@ def getParameterInfo(number, type){
     parameter.parameter10size=1
     parameter.parameter11size=2
     parameter.parameter12size=1
+    parameter.parameter13size=1
     
 	parameter.parameter1options=["0":"Previous", "1":"On", "2":"Off"]
     parameter.parameter2options=["1":"Yes", "0":"No"]
@@ -784,6 +787,7 @@ def getParameterInfo(number, type){
     parameter.parameter10options="0..100"
     parameter.parameter11options="0..32767"
     parameter.parameter12options="0..100"
+    parameter.parameter13options=["0":"Default", "1":"Special Load (T8)"]
     
     parameter.parameter1name="State After Power Restored"
     parameter.parameter2name="Invert Switch"
@@ -797,6 +801,7 @@ def getParameterInfo(number, type){
     parameter.parameter10name="Active Power Reports"
     parameter.parameter11name="Periodic Power & Energy Reports"
     parameter.parameter12name="Energy Reports"
+    parameter.parameter13name="Load Type"
     
     
     parameter.parameter1description="The state the switch should return to once power is restored after power failure."
@@ -811,6 +816,7 @@ def getParameterInfo(number, type){
     parameter.parameter10description="The power level change that will result in a new power report being sent. The value is a percentage of the previous report. 0 = disabled."
     parameter.parameter11description="Time period between consecutive power & energy reports being sent (in seconds). The timer is reset after each report is sent."
     parameter.parameter12description="The energy level change that will result in a new energy report being sent. The value is a percentage of the previous report."
+    parameter.parameter13description="The default of the switch is to auto detect the load. In some situations you may want to try the option for a special load type. (firmware 1.17+)"
     
     return parameter."parameter${number}${type}"
 }
@@ -1103,12 +1109,12 @@ def setAssociationGroup(group, nodes, action, endpoint = null){
     nodes  = [] + nodes ?: [nodes]                                                    // convert to collection if not already a collection
 
     if (! nodes.every { it =~ /[0-9A-F]+/ }) {
-        log.error "invalid Nodes ${nodes}"
+        log.error "${device.label?device.label:device.name}: invalid Nodes ${nodes}"
         return
     }
 
     if (group < 1 || group > maxAssociationGroup()) {
-        log.error "Association group is invalid 1 <= ${group} <= ${maxAssociationGroup()}"
+        log.error "${device.label?device.label:device.name}: Association group is invalid 1 <= ${group} <= ${maxAssociationGroup()}"
         return
     }
     
@@ -1117,11 +1123,11 @@ def setAssociationGroup(group, nodes, action, endpoint = null){
         node = "${it}"
         switch (action) {
             case "Remove":
-            if (infoEnable) log.info "Removing node ${node} from association group ${group}"
+            if (infoEnable) log.info "${device.label?device.label:device.name}: Removing node ${node} from association group ${group}"
             associations = associations - node
             break
             case "Add":
-            if (infoEnable) log.info "Adding node ${node} to association group ${group}"
+            if (infoEnable) log.info "${device.label?device.label:device.name}: Adding node ${node} to association group ${group}"
             associations << node
             break
         }
@@ -1132,7 +1138,7 @@ def setAssociationGroup(group, nodes, action, endpoint = null){
 
 def maxAssociationGroup(){
    if (!state.associationGroups) {
-       if (infoEnable) log.info "Getting supported association groups from device"
+       if (infoEnable) log.info "${device.label?device.label:device.name}: Getting supported association groups from device"
        sendHubCommand(new hubitat.device.HubAction(command(zwave.associationV2.associationGroupingsGet()), hubitat.device.Protocol.ZWAVE )) // execute the update immediately
    }
    (state.associationGroups?: 5) as int
@@ -1147,20 +1153,24 @@ def processAssociations(){
          if(state."desiredAssociation${i}" != null || state."defaultG${i}") {
             def refreshGroup = false
             ((state."desiredAssociation${i}"? state."desiredAssociation${i}" : [] + state."defaultG${i}") - state."actualAssociation${i}").each {
-                if (infoEnable) log.info "Adding node $it to group $i"
-                cmds << zwave.associationV2.associationSet(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
-                refreshGroup = true
+                if (it){
+                    if (infoEnable) log.info "${device.label?device.label:device.name}: Adding node $it to group $i"
+                    cmds << zwave.associationV2.associationSet(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
+                    refreshGroup = true
+                }
             }
             ((state."actualAssociation${i}" - state."defaultG${i}") - state."desiredAssociation${i}").each {
-                if (infoEnable) log.info "Removing node $it from group $i"
-                cmds << zwave.associationV2.associationRemove(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
-                refreshGroup = true
+                if (it){
+                    if (infoEnable) log.info "${device.label?device.label:device.name}: Removing node $it from group $i"
+                    cmds << zwave.associationV2.associationRemove(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
+                    refreshGroup = true
+                }
             }
             if (refreshGroup == true) cmds << zwave.associationV2.associationGet(groupingIdentifier:i)
-            else if (infoEnable) log.info "There are no association actions to complete for group $i"
+            else if (infoEnable) log.info "${device.label?device.label:device.name}: There are no association actions to complete for group $i"
          }
       } else {
-         if (infoEnable) log.info "Association info not known for group $i. Requesting info from device."
+         if (infoEnable) log.info "${device.label?device.label:device.name}: Association info not known for group $i. Requesting info from device."
          cmds << zwave.associationV2.associationGet(groupingIdentifier:i)
       }
    }
@@ -1203,7 +1213,7 @@ def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.protectionv2.ProtectionReport cmd) {
-    if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
+    if (debugEnable) log.debug "${device.label?device.label:device.name}: ${device.label?device.label:device.name}: ${cmd}"
     if (infoEnable) log.info "${device.label?device.label:device.name}: Protection report received: Local protection is ${cmd.localProtectionState > 0 ? "on" : "off"} & Remote protection is ${cmd.rfProtectionState > 0 ? "on" : "off"}"
     state.localProtectionState = cmd.localProtectionState
     state.rfProtectionState = cmd.rfProtectionState
