@@ -1292,12 +1292,12 @@ def setAssociationGroup(group, nodes, action, endpoint = null){
     nodes  = [] + nodes ?: [nodes]                                                    // convert to collection if not already a collection
 
     if (! nodes.every { it =~ /[0-9A-F]+/ }) {
-        log.error "invalid Nodes ${nodes}"
+        log.error "${device.label?device.label:device.name}: invalid Nodes ${nodes}"
         return
     }
 
     if (group < 1 || group > maxAssociationGroup()) {
-        log.error "Association group is invalid 1 <= ${group} <= ${maxAssociationGroup()}"
+        log.error "${device.label?device.label:device.name}: Association group is invalid 1 <= ${group} <= ${maxAssociationGroup()}"
         return
     }
     
@@ -1306,11 +1306,11 @@ def setAssociationGroup(group, nodes, action, endpoint = null){
         node = "${it}"
         switch (action) {
             case "Remove":
-            if (infoEnable) log.info "Removing node ${node} from association group ${group}"
+            if (infoEnable) log.info "${device.label?device.label:device.name}: Removing node ${node} from association group ${group}"
             associations = associations - node
             break
             case "Add":
-            if (infoEnable) log.info "Adding node ${node} to association group ${group}"
+            if (infoEnable) log.info "${device.label?device.label:device.name}: Adding node ${node} to association group ${group}"
             associations << node
             break
         }
@@ -1321,7 +1321,7 @@ def setAssociationGroup(group, nodes, action, endpoint = null){
 
 def maxAssociationGroup(){
    if (!state.associationGroups) {
-       if (infoEnable) log.info "Getting supported association groups from device"
+       if (infoEnable) log.info "${device.label?device.label:device.name}: Getting supported association groups from device"
        sendHubCommand(new hubitat.device.HubAction(command(zwave.associationV2.associationGroupingsGet()), hubitat.device.Protocol.ZWAVE )) // execute the update immediately
    }
    (state.associationGroups?: 5) as int
@@ -1337,23 +1337,23 @@ def processAssociations(){
             def refreshGroup = false
             ((state."desiredAssociation${i}"? state."desiredAssociation${i}" : [] + state."defaultG${i}") - state."actualAssociation${i}").each {
                 if (it){
-                    if (infoEnable) log.info "Adding node $it to group $i"
+                    if (infoEnable) log.info "${device.label?device.label:device.name}: Adding node $it to group $i"
                     cmds << zwave.associationV2.associationSet(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
                     refreshGroup = true
                 }
             }
             ((state."actualAssociation${i}" - state."defaultG${i}") - state."desiredAssociation${i}").each {
                 if (it){
-                    if (infoEnable) log.info "Removing node $it from group $i"
+                    if (infoEnable) log.info "${device.label?device.label:device.name}: Removing node $it from group $i"
                     cmds << zwave.associationV2.associationRemove(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
                     refreshGroup = true
                 }
             }
             if (refreshGroup == true) cmds << zwave.associationV2.associationGet(groupingIdentifier:i)
-            else if (infoEnable) log.info "There are no association actions to complete for group $i"
+            else if (infoEnable) log.info "${device.label?device.label:device.name}: There are no association actions to complete for group $i"
          }
       } else {
-         if (infoEnable) log.info "Association info not known for group $i. Requesting info from device."
+         if (infoEnable) log.info "${device.label?device.label:device.name}: Association info not known for group $i. Requesting info from device."
          cmds << zwave.associationV2.associationGet(groupingIdentifier:i)
       }
    }
@@ -1412,3 +1412,4 @@ def zwaveEvent(hubitat.zwave.commands.protectionv2.ProtectionReport cmd) {
         childDevice.sendEvent(name: "switch", value: cmd.rfProtectionState > 0 ? "on" : "off")        
     }
 }
+
