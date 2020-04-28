@@ -264,6 +264,7 @@ def zwaveEvent(hubitat.zwave.commands.configurationv1.ConfigurationReport cmd) {
     switch (cmd.parameterNumber) {
         case 12:
         case 13:
+            device.updateSetting("parameter${cmd.parameterNumber}",[value:cmd2Integer(cmd.configurationValue),type:"number"])
             def childDevice = childDevices.find{it.deviceNetworkId == "$device.deviceNetworkId-ep1${cmd.parameterNumber}"}
             if(childDevice) { 
                 childDevice.sendEvent(name:"switch", value:cmd2Integer(cmd.configurationValue)? "on":"off")
@@ -333,7 +334,7 @@ private toggleTiles(number, value) {
    }
    }
    if ((number.toInteger() >= 251 && number.toInteger() <= 255) || number.toInteger() == 25){
-   for (int i = 251; i >= 255; i++){
+   for (int i = 251; i <= 255; i++){
        if ("${i}" != number){
            def childDevice = childDevices.find{it.deviceNetworkId == "$device.deviceNetworkId-ep$i"}
            if (childDevice) {         
@@ -423,6 +424,22 @@ def childOn(String dni) {
     state.lastRan = now()
     def cmds = []
     switch (channelNumber(dni).toInteger()) {
+        case 112:
+            cmds << zwave.configurationV1.configurationSet(scaledConfigurationValue: 99, parameterNumber: 12, size: 1) 
+            cmds << zwave.configurationV1.configurationGet(parameterNumber: 12 )
+        break
+        case 113:
+            cmds << zwave.configurationV1.configurationSet(scaledConfigurationValue: 99, parameterNumber: 13, size: 1) 
+            cmds << zwave.configurationV1.configurationGet(parameterNumber: 13 )
+        break
+        case 151:
+            cmds << zwave.protectionV2.protectionSet(localProtectionState : 1, rfProtectionState: state.rfProtectionState? state.rfProtectionState:0) 
+            cmds << zwave.protectionV2.protectionGet() 
+        break
+        case 152:
+            cmds << zwave.protectionV2.protectionSet(localProtectionState : state.localProtectionState? state.localProtectionState:0, rfProtectionState : 1) 
+            cmds << zwave.protectionV2.protectionGet() 
+        break
         case 201:
         case 202:
         case 203:
@@ -439,12 +456,6 @@ def childOn(String dni) {
             toggleTiles("${channelNumber(dni)}", "on")
             cmds << setParameter(25, calculateParameter("25-${channelNumber(dni)}"), 4)
         break
-        case 112:
-        case 113:
-        case 151:
-        case 152:
-            childSetLevel(dni, 99)
-        break
         case 1:
         case 2:
             cmds << encap(zwave.switchMultilevelV1.switchMultilevelSet(value: 0xFF), channelNumber(dni).toInteger())
@@ -458,6 +469,22 @@ def childOff(String dni) {
     state.lastRan = now()
     def cmds = []
     switch (channelNumber(dni).toInteger()) {
+        case 112:
+            cmds << zwave.configurationV1.configurationSet(scaledConfigurationValue: 0, parameterNumber: 12, size: 1) 
+            cmds << zwave.configurationV1.configurationGet(parameterNumber: 12 )
+        break
+        case 113:
+            cmds << zwave.configurationV1.configurationSet(scaledConfigurationValue: 0, parameterNumber: 13, size: 1) 
+            cmds << zwave.configurationV1.configurationGet(parameterNumber: 13 )
+        break
+        case 151:
+            cmds << zwave.protectionV2.protectionSet(localProtectionState : 0, rfProtectionState: state.rfProtectionState? state.rfProtectionState:0) 
+            cmds << zwave.protectionV2.protectionGet() 
+        break
+        case 152:
+            cmds << zwave.protectionV2.protectionSet(localProtectionState : state.localProtectionState? state.localProtectionState:0, rfProtectionState : 0) 
+            cmds << zwave.protectionV2.protectionGet() 
+        break
         case 201:
         case 202:
         case 203:
@@ -474,18 +501,12 @@ def childOff(String dni) {
             toggleTiles("${channelNumber(dni)}", "off")
             cmds << setParameter(25, 0, 4)
         break
-        case 112:
-        case 113:
-        case 151:
-        case 152:
-            childSetLevel(dni, 0)
-        break
         case 1:
         case 2:
             cmds << encap(zwave.switchMultilevelV1.switchMultilevelSet(value: 0x00), channelNumber(dni).toInteger())
         break
     }
-    if(cmds) commands(cmds)
+    if(cmds) return commands(cmds)
 }
 
 void childRefresh(String dni) {
@@ -758,13 +779,13 @@ def initialize() {
     
     cmds << zwave.versionV1.versionGet()
     
-    if (state.localProtectionState?.toInteger() != settings.disableLocal?.toInteger() || state.rfProtectionState?.toInteger() != settings.disableRemote?.toInteger()) {
-        if (infoEnable) log.info "${device.label?device.label:device.name}: Protection command class settings need to be updated"
-        cmds << zwave.protectionV2.protectionSet(localProtectionState : disableLocal!=null? disableLocal.toInteger() : 0, rfProtectionState: disableRemote!=null? disableRemote.toInteger() : 0)
-        cmds << zwave.protectionV2.protectionGet()
-    } else {
-        if (infoEnable) log.info "${device.label?device.label:device.name}: No Protection command class settings to update"
-    }
+    //if (state.localProtectionState?.toInteger() != settings.disableLocal?.toInteger() || state.rfProtectionState?.toInteger() != settings.disableRemote?.toInteger()) {
+    //    if (infoEnable) log.info "${device.label?device.label:device.name}: Protection command class settings need to be updated"
+    //    cmds << zwave.protectionV2.protectionSet(localProtectionState : disableLocal!=null? disableLocal.toInteger() : 0, rfProtectionState: disableRemote!=null? disableRemote.toInteger() : 0)
+    //    cmds << zwave.protectionV2.protectionGet()
+    //} else {
+    //    if (infoEnable) log.info "${device.label?device.label:device.name}: No Protection command class settings to update"
+    //}
 
     if (cmds != []) return cmds else return []
 }
@@ -1780,7 +1801,7 @@ def setAssociationGroup(group, nodes, action, endpoint = null){
 }
 
 def maxAssociationGroup(){
-   if (state.associationGroups) {
+   if (!state.associationGroups) {
        if (infoEnable) log.info "Getting supported association groups from device"
        sendHubCommand(new hubitat.device.HubAction(command(zwave.associationV2.associationGroupingsGet()), hubitat.device.Protocol.ZWAVE )) // execute the update immediately
    }
@@ -1796,14 +1817,18 @@ def processAssociations(){
          if(state."desiredAssociation${i}" != null || state."defaultG${i}") {
             def refreshGroup = false
             ((state."desiredAssociation${i}"? state."desiredAssociation${i}" : [] + state."defaultG${i}") - state."actualAssociation${i}").each {
-                if (infoEnable) log.info "Adding node $it to group $i"
-                cmds << zwave.associationV2.associationSet(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
-                refreshGroup = true
+                if (it){
+                    if (infoEnable) log.info "Adding node $it to group $i"
+                    cmds << zwave.associationV2.associationSet(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
+                    refreshGroup = true
+                }
             }
             ((state."actualAssociation${i}" - state."defaultG${i}") - state."desiredAssociation${i}").each {
-                if (infoEnable) log.info "Removing node $it from group $i"
-                cmds << zwave.associationV2.associationRemove(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
-                refreshGroup = true
+                if (it){
+                    if (infoEnable) log.info "Removing node $it from group $i"
+                    cmds << zwave.associationV2.associationRemove(groupingIdentifier:i, nodeId:hubitat.helper.HexUtils.hexStringToInt(it))
+                    refreshGroup = true
+                }
             }
             if (refreshGroup == true) cmds << zwave.associationV2.associationGet(groupingIdentifier:i)
             else if (infoEnable) log.info "There are no association actions to complete for group $i"
