@@ -1,0 +1,27 @@
+{
+   "packageName": "Inovelli Drivers (Gen 2)",
+   "minimumHEVersion": "2.1.9",
+   "author": "Eric Maycock",
+   "version": "1.0.0",
+   "dateReleased": "2020-04-30",
+   "drivers" : [
+   	{
+   		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
+   		"name": "Inovelli Dimmer LZW31-SN Red Series",
+         "namespace": "InovelliUSA",
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-lzw31-sn.src/inovelli-dimmer-red-series-lzw31-sn.groovy",
+   		"required": false,
+   		"oauth": false,
+         "version": "4.28.20"
+   	},
+	{
+   		"id" : "159b97d3-7a94-4440-970a-4fb4fadc8288",
+   		"name": "Inovelli Dimmer LZW31",
+         "namespace": "InovelliUSA",
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-lzw31.src/inovelli-dimmer-lzw31.groovy",
+   		"required": false,
+   		"oauth": false,
+         "version": "4.28.20"
+   	}
+   ]
+}
