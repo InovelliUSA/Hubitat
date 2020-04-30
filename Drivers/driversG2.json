@@ -2,7 +2,7 @@
    "packageName": "Inovelli Drivers (Gen 2)",
    "minimumHEVersion": "2.1.9",
    "author": "Eric Maycock",
-   "version": "1.0.0",
+   "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "drivers" : [
    	{
@@ -12,7 +12,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-lzw31-sn.src/inovelli-dimmer-red-series-lzw31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "4.28.20"
+                "version": "20.4.28"
    	},
 	{
    		"id" : "159b97d3-7a94-4440-970a-4fb4fadc8288",
@@ -21,7 +21,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-lzw31.src/inovelli-dimmer-lzw31.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "4.28.20"
+                "version": "20.4.28"
    	},
 	{
    		"id" : "ea7baa65-2cdf-4193-afc5-2441fa1e5ed1",
@@ -30,7 +30,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-red-series-lzw30-sn.src/inovelli-switch-red-series-lzw30-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "4.28.20"
+                "version": "20.4.28"
    	},
 	{
    		"id" : "0b24afff-aa98-43ed-9f07-ba50b85a22f8",
@@ -39,7 +39,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-lzw30.src/inovelli-switch-lzw30.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "4.28.20"
+                "version": "20.4.28"
    	},
 	{
    		"id" : "aa942639-c675-4bcc-a482-4dedc04d6eff",
@@ -48,7 +48,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-4-in-1-sensor.src/inovelli-4-in-1-sensor.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "1.28.20"
+                "version": "20.1.28"
    	}
    ]
 }
