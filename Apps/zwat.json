@@ -1,0 +1,27 @@
+{
+   "packageName": "Z-Wave Association Tool",
+   "minimumHEVersion": "2.1.9",
+   "author": "Eric Maycock",
+   "version": "20.4.30",
+   "dateReleased": "2020-04-30",
+   "apps" : [
+   	{
+   		"id" : "cabc6faf-fd62-4a2d-aff9-78dcb39dd5e3",
+   		"name": "Z-Wave Association Tool",
+      "namespace": "erocm123",
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Apps/z-waveat/zwave-association-tool.src/zwave-association-tool.groovy",
+   		"required": true,
+   		"oauth": false,
+         "version": "20.4.16"
+   	},
+    {
+   		"id" : "eaaef249-3202-4c22-a220-7bcc48407a9f",
+   		"name": "Z-Wave Association",
+      "namespace": "erocm123",
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Apps/z-waveat/zwave-association.src/zwave-association.groovy",
+   		"required": true,
+   		"oauth": false,
+         "version": "20.4.16"
+   	}
+   ]
+}
