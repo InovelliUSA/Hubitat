@@ -7,7 +7,7 @@
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
-   		"name": "Inovelli Dimmer LZW31-SN Red Series",
+   		"name": "Inovelli Dimmer Red Series LZW31-SN",
                 "namespace": "InovelliUSA",
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-lzw31-sn.src/inovelli-dimmer-red-series-lzw31-sn.groovy",
    		"required": false,
