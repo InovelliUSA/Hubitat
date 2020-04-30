@@ -7,7 +7,13 @@
    		"name": "Inovelli Drivers (Gen 2)",
    		"category": "Control",
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/driversG2.json",
-   		"description": "Drivers & Apps provided by Inovelli"
+   		"description": "Drivers provided by Inovelli"
+   	},
+      {
+   		"name": "Inovelli Apps",
+   		"category": "Control",
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Apps/apps.json",
+   		"description": "Apps provided by Inovelli"
    	}
    ]
 }
