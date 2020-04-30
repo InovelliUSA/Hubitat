@@ -4,15 +4,9 @@
    "payPalUrl": "",
    "packages": [
    	{
-   		"name": "Inovelli Dimmer LZW31-SN Red Series",
-   		"category": "Convenience",
-   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-lzw31-sn.src/lzw31-sn.json",
-   		"description": "Drivers & Apps provided by Inovelli"
-   	},
-      {
-   		"name": "Inovelli Dimmer LZW31",
-   		"category": "Convenience",
-   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-lzw31.src/lzw31.json",
+   		"name": "Inovelli Drivers (Gen 2)",
+   		"category": "Control",
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/packageG2.json",
    		"description": "Drivers & Apps provided by Inovelli"
    	}
    ]
