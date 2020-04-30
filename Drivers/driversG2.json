@@ -49,6 +49,24 @@
    		"required": false,
    		"oauth": false,
                 "version": "20.1.28"
+   	},
+	{
+   		"id" : "49d6f741-9c58-4310-ab61-0a68874dc2bf",
+   		"name": "Inovelli Bulb Multi-Color LZW42",
+                "namespace": "InovelliUSA",
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-bulb-multi-color-lzw42.src/inovelli-bulb-multi-color-lzw42.groovy",
+   		"required": false,
+   		"oauth": false,
+                "version": "20.4.16"
+   	},
+	{
+   		"id" : "4184e20b-43f2-4e4e-8b39-3881e5427e8c",
+   		"name": "Inovelli Bulb Multi-White LZW41",
+                "namespace": "InovelliUSA",
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-bulb-multi-white-lzw41.src/inovelli-bulb-multi-white-lzw41.groovy",
+   		"required": false,
+   		"oauth": false,
+                "version": "20.4.16"
    	}
    ]
 }
