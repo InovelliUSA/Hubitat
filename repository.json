@@ -10,10 +10,10 @@
    		"description": "Drivers provided by Inovelli"
    	},
       {
-   		"name": "Inovelli Apps",
+   		"name": "Z-Wave Association Tool",
    		"category": "Control",
-   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Apps/apps.json",
-   		"description": "Apps provided by Inovelli"
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Apps/z-waveat.json",
+   		"description": "Inovelli Tool to create direct associations between Z-Wave devices."
    	}
    ]
 }
