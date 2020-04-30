@@ -10,7 +10,7 @@
    		"name": "Z-Wave Association Tool",
       "namespace": "erocm123",
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Apps/z-waveat/zwave-association-tool.src/zwave-association-tool.groovy",
-   		"required": true,
+   		"required": false,
    		"oauth": false,
          "version": "20.4.16"
    	},
@@ -19,7 +19,7 @@
    		"name": "Z-Wave Association",
       "namespace": "erocm123",
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Apps/z-waveat/zwave-association.src/zwave-association.groovy",
-   		"required": true,
+   		"required": false,
    		"oauth": false,
          "version": "20.4.16"
    	}
