@@ -7,7 +7,7 @@
    		"name": "Inovelli Dimmer LZW31-SN Red Series",
    		"category": "Convenience",
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-lzw31-sn.src/lzw31-sn.json",
-   		"description": ""
+   		"description": "Drivers & Apps provided by Inovelli"
    	}     
    ]
 }
