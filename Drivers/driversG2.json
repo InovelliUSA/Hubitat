@@ -39,7 +39,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-lzw30.src/inovelli-switch-lzw30.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.4.28"
+                "version": "20.5.1"
    	},
 	{
    		"id" : "aa942639-c675-4bcc-a482-4dedc04d6eff",
