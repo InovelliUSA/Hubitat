@@ -12,7 +12,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-lzw31-sn.src/inovelli-dimmer-red-series-lzw31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.4.28"
+                "version": "20.5.1"
    	},
 	{
    		"id" : "159b97d3-7a94-4440-970a-4fb4fadc8288",
