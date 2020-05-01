@@ -30,7 +30,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-red-series-lzw30-sn.src/inovelli-switch-red-series-lzw30-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.4.28"
+                "version": "20.5.1"
    	},
 	{
    		"id" : "0b24afff-aa98-43ed-9f07-ba50b85a22f8",
