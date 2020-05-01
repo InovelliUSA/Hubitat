@@ -1,7 +1,7 @@
 /**
  *  Inovelli Switch LZW30
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-04-28
+ *  Date: 2020-05-01
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-05-01: Correctly distinguish between digital and physical on / off.
  *
  *  2020-02-25: Switch over to using Hubitat child device drivers. Should still be backwards compatible with
  *              Inovelli child drivers.
@@ -542,7 +544,7 @@ def parse(description) {
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd) {
     if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
     if (infoEnable) log.info "${device.label?device.label:device.name}: Basic report received with value of ${cmd.value ? "on" : "off"}"
-	createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "physical")
+	createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "digital")
 }
 
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicSet cmd) {
@@ -554,7 +556,7 @@ def zwaveEvent(hubitat.zwave.commands.basicv1.BasicSet cmd) {
 def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd) {
     if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
     if (infoEnable) log.info "${device.label?device.label:device.name}: Switch Binary report received with value of ${cmd.value ? "on" : "off"}"
-	createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "digital")
+	createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "physical")
 }
 
 def zwaveEvent(hubitat.zwave.Command cmd) {
