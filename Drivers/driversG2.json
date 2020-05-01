@@ -21,7 +21,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-lzw31.src/inovelli-dimmer-lzw31.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.4.28"
+                "version": "20.5.1"
    	},
 	{
    		"id" : "ea7baa65-2cdf-4193-afc5-2441fa1e5ed1",
