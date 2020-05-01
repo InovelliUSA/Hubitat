@@ -2,7 +2,7 @@
    "packageName": "Inovelli Drivers (Gen 2)",
    "minimumHEVersion": "2.1.9",
    "author": "Eric Maycock",
-   "version": "20.4.30",
+   "version": "20.5.1",
    "dateReleased": "2020-04-30",
    "drivers" : [
    	{
