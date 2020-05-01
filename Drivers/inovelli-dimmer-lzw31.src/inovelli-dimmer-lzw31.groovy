@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer LZW31
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-04-28
+ *  Date: 2020-05-01
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -13,6 +13,9 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-05-01: Correctly distinguish between digital and physical on / off. Will not work when you set the level
+ *              with a duration. 
  *
  *  2020-02-25: Switch over to using Hubitat child device drivers. Should still be backwards compatible with
  *              Inovelli child drivers.
@@ -711,7 +714,7 @@ def parse(description) {
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd) {
     if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
     if (infoEnable) log.info "${device.label?device.label:device.name}: Basic report received with value of ${cmd.value ? "on" : "off"} ($cmd.value)"
-    dimmerEvents(cmd)
+    dimmerEvents(cmd, "digital")
 }
 
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicSet cmd) {
@@ -732,14 +735,15 @@ def zwaveEvent(hubitat.zwave.commands.switchmultilevelv3.SwitchMultilevelReport 
     dimmerEvents(cmd)
 }
 
-private dimmerEvents(hubitat.zwave.Command cmd) {
+private dimmerEvents(hubitat.zwave.Command cmd, type="physical") {
     def value = (cmd.value ? "on" : "off")
-    def result = [createEvent(name: "switch", value: value)]
+    def result = [createEvent(name: "switch", value: value, type: type)]
     if (cmd.value) {
-        result << createEvent(name: "level", value: cmd.value, unit: "%")
+        result << createEvent(name: "level", value: cmd.value, unit: "%", type: type)
     }
     return result
 }
+
 
 def zwaveEvent(hubitat.zwave.Command cmd) {
     if (debugEnable) log.debug "${device.label?device.label:device.name}: Unhandled: $cmd"
