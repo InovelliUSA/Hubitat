@@ -12,7 +12,8 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-lzw31-sn.src/inovelli-dimmer-red-series-lzw31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.5.1"
+                "version": "20.5.5",
+		"releaseNotes": "Added ColorControl capability to allow easy setting of LED color.\nAdded preferences to automatically disable logs after x minutes. Previously the informational logging would disable after 30 minutes without an option for the user.\nCode Cleanup." 
    	},
 	{
    		"id" : "159b97d3-7a94-4440-970a-4fb4fadc8288",
