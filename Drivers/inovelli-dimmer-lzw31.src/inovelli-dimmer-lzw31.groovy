@@ -771,16 +771,14 @@ def zwaveEvent(hubitat.zwave.Command cmd) {
 def on() {
     if (infoEnable) log.info "${device.label?device.label:device.name}: on()"
     commands([
-        zwave.switchMultilevelV1.switchMultilevelSet(value: 0xFF)//,
-        //zwave.switchMultilevelV1.switchMultilevelGet()
+        zwave.basicV1.basicSet(value: 0xFF)
     ])
 }
 
 def off() {
     if (infoEnable) log.info "${device.label?device.label:device.name}: off()"
     commands([
-        zwave.switchMultilevelV1.switchMultilevelSet(value: 0x00)//,
-        //zwave.switchMultilevelV1.switchMultilevelGet()
+        zwave.basicV1.basicSet(value: 0x00)
     ])
 }
 
