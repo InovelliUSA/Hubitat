@@ -4,6 +4,7 @@
    "author": "Eric Maycock",
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
+   "releaseNotes": "Removed ColorControl capability as it was conflicting with some in-built Hubitat apps. Added LED Color child device that can be used in its place. Also fixed incorrect default level range.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
