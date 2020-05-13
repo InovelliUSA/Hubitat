@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer LZW31
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-05-12
+ *  Date: 2020-05-13
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -13,6 +13,9 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-05-13: Removed ColorControl capability as it was conflicting with some in-built Hubitat apps.
+ *              Added LED Color child device that can be used in its place. Also fixed incorrect default level range. 
  *
  *  2020-05-05: Adding ColorControl capability to allow changing the LED bar color easily with setColor.
  *              Adding preferences to automatically disable logs after x minutes. Previously the informational
@@ -57,7 +60,6 @@ metadata {
         capability "Switch Level"
         capability "Configuration"
         capability "ChangeLevel"
-        //capability "ColorControl"
         
         attribute "lastActivity", "String"
         attribute "lastEvent", "String"
@@ -77,6 +79,7 @@ metadata {
         command "componentOff"
         command "componentSetLevel"
         command "componentRefresh"
+        command "componentSetColor"
 
         fingerprint mfr: "031E", prod: "0003", model: "0001", deviceJoinName: "Inovelli Dimmer"
         fingerprint deviceId: "0x1101", inClusters: "0x5E,0x55,0x98,0x9F,0x6C,0x22,0x26,0x70,0x85,0x59,0x86,0x72,0x5A,0x73,0x75,0x7A" 
@@ -125,6 +128,7 @@ def generate_preferences()
     input "disableLocal", "enum", title: "Disable Local Control", description: "\nDisable ability to control switch from the wall", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
     input "disableRemote", "enum", title: "Disable Remote Control", description: "\nDisable ability to control switch from inside Hubitat", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
     input description: "Use the below options to enable child devices for the specified settings. This will allow you to adjust these settings using Apps such as Rule Machine.", title: "Child Devices", displayDuringSetup: false, type: "paragraph", element: "paragraph"
+    input "enableLEDChild", "bool", title: "Create \"LED Color\" Child Device", description: "", required: false, defaultValue: true
     input "enableDisableLocalChild", "bool", title: "Create \"Disable Local Control\" Child Device", description: "", required: false, defaultValue: false
     input "enableDisableRemoteChild", "bool", title: "Create \"Disable Remote Control\" Child Device", description: "", required: false, defaultValue: false
     input "enableDefaultLocalChild", "bool", title: "Create \"Default Level (Local)\" Child Device", description: "", required: false, defaultValue: false
@@ -149,8 +153,8 @@ private sendAlert(data) {
     )
 }
 
-def setColor(value) {
-    if (infoEnable) log.info "${device.label?device.label:device.name}: setColor($value)"
+def componentSetColor(cd,value) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: componentSetColor($cd,$value)"
 	if (value.hue == null || value.saturation == null) return
 	if (value.level == null) value.level=50
 	def ledColor = Math.round(huePercentToZwaveValue(value.hue))
@@ -369,6 +373,8 @@ def initialize() {
     else deleteChild("ep101")
     if (enableDisableRemoteChild) addChild("ep102", "Disable Remote Control", "hubitat", "Generic Component Switch", false)
     else deleteChild("ep102")
+    if (enableLEDChild) addChild("ep103", "LED Color", "hubitat", "Generic Component RGB", false)
+    else deleteChild("ep103")
     
     if (device.label != state.oldLabel) {
         def children = childDevices
@@ -542,8 +548,8 @@ def getParameterInfo(number, value){
     parameter.parameter6options="55..99"
     parameter.parameter7options=["1":"Yes", "0":"No"]
     parameter.parameter8options="0..32767"
-    parameter.parameter9options="0..100"
-    parameter.parameter10options="0..100"
+    parameter.parameter9options="0..99"
+    parameter.parameter10options="0..99"
     parameter.parameter11options="0..100"
     parameter.parameter12options="0..15"
     parameter.parameter13options=["0":"Red","21":"Orange","42":"Yellow","85":"Green","127":"Cyan","170":"Blue","212":"Violet","234":"Pink"]
@@ -614,8 +620,7 @@ def zwaveEvent(hubitat.zwave.commands.configurationv1.ConfigurationReport cmd) {
     switch (cmd.parameterNumber) {
         case 9:
             device.updateSetting("parameter${cmd.parameterNumber}",[value:integerValue,type:"number"])
-            def children = childDevices
-            def childDevice = children.find{it.deviceNetworkId.endsWith("ep9")}
+            def childDevice = childDevices.find{it.deviceNetworkId.endsWith("ep9")}
             if (childDevice) {
             childDevice.sendEvent(name: "switch", value: integerValue > 0 ? "on" : "off")
             childDevice.sendEvent(name: "level", value: integerValue)            
@@ -623,8 +628,7 @@ def zwaveEvent(hubitat.zwave.commands.configurationv1.ConfigurationReport cmd) {
         break
         case 10:
             device.updateSetting("parameter${cmd.parameterNumber}",[value:integerValue,type:"number"])
-            def children = childDevices
-            def childDevice = children.find{it.deviceNetworkId.endsWith("ep10")}
+            def childDevice = childDevices.find{it.deviceNetworkId.endsWith("ep10")}
             if (childDevice) {
             childDevice.sendEvent(name: "switch", value: integerValue > 0 ? "on" : "off")
             childDevice.sendEvent(name: "level", value: integerValue)
@@ -638,11 +642,19 @@ def zwaveEvent(hubitat.zwave.commands.configurationv1.ConfigurationReport cmd) {
                 device.removeSetting("parameter${cmd.parameterNumber}")
                 device.updateSetting("parameter${cmd.parameterNumber}custom",[value:Math.round(zwaveValueToHueValue(integerValue)),type:"number"])
             }
-        sendEvent(name:"hue", value:"${Math.round(zwaveValueToHuePercent(integerValue))}")
-        sendEvent(name:"saturation", value:"100")
+            def childDevice = childDevices.find{it.deviceNetworkId.endsWith("ep103")}
+            if (childDevice) {
+                childDevice.sendEvent(name:"hue", value:"${Math.round(zwaveValueToHuePercent(integerValue))}")
+                childDevice.sendEvent(name:"saturation", value:"100")
+            }
         break
         case 14:
             device.updateSetting("parameter${cmd.parameterNumber}",[value:"${integerValue}",type:"enum"])
+            def childDevice = childDevices.find{it.deviceNetworkId.endsWith("ep103")}
+            if (childDevice) {
+                childDevice.sendEvent(name:"level", value:"${integerValue*10}")
+                childDevice.sendEvent(name:"switch", value:"${integerValue==0?"off":"on"}")
+            }
         break
     }
 }
