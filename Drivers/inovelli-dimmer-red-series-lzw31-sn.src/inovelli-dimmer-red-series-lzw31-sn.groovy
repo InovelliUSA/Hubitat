@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer Red Series LZW31-SN
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-05-05
+ *  Date: 2020-05-12
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -67,7 +67,7 @@ metadata {
         capability "Energy Meter"
         capability "Power Meter"
         capability "ChangeLevel"
-        capability "ColorControl"
+        //capability "ColorControl"
         
         attribute "lastActivity", "String"
         attribute "lastEvent", "String"
