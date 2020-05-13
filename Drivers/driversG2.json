@@ -12,8 +12,8 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-lzw31-sn.src/inovelli-dimmer-red-series-lzw31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.5.12",
-		"releaseNotes": "Removing ColorControl capability because of conflict with some apps." 
+                "version": "20.5.13",
+		"releaseNotes": "Removed ColorControl capability as it was conflicting with some in-built Hubitat apps. Added LED Color child device that can be used in its place. Also fixed incorrect default level range." 
    	},
 	{
    		"id" : "159b97d3-7a94-4440-970a-4fb4fadc8288",
@@ -22,8 +22,8 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-lzw31.src/inovelli-dimmer-lzw31.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.5.12",
-		"releaseNotes": "Removing ColorControl capability because of conflict with some apps." 
+                "version": "20.5.13",
+		"releaseNotes": "Removed ColorControl capability as it was conflicting with some in-built Hubitat apps. Added LED Color child device that can be used in its place. Also fixed incorrect default level range." 
    	},
 	{
    		"id" : "ea7baa65-2cdf-4193-afc5-2441fa1e5ed1",
@@ -32,8 +32,8 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-red-series-lzw30-sn.src/inovelli-switch-red-series-lzw30-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.5.12",
-		"releaseNotes": "Removing ColorControl capability because of conflict with some apps." 
+                "version": "20.5.13",
+		"releaseNotes": "Removed ColorControl capability as it was conflicting with some in-built Hubitat apps. Added LED Color child device that can be used in its place.  " 
    	},
 	{
    		"id" : "0b24afff-aa98-43ed-9f07-ba50b85a22f8",
@@ -42,8 +42,8 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-lzw30.src/inovelli-switch-lzw30.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.5.12",
-		"releaseNotes": "Removing ColorControl capability because of conflict with some apps." 
+                "version": "20.5.13",
+		"releaseNotes": "Removed ColorControl capability as it was conflicting with some in-built Hubitat apps. Added LED Color child device that can be used in its place.  " 
    	},
 	{
    		"id" : "aa942639-c675-4bcc-a482-4dedc04d6eff",
