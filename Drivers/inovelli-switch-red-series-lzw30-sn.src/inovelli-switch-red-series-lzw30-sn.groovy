@@ -1,7 +1,7 @@
 /**
  *  Inovelli Switch Red Series
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-05-05
+ *  Date: 2020-05-12
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -63,7 +63,7 @@ metadata {
         capability "Configuration"
         capability "Energy Meter"
         capability "Power Meter"
-        capability "ColorControl"
+        //capability "ColorControl"
         
         attribute "lastActivity", "String"
         attribute "lastEvent", "String"
