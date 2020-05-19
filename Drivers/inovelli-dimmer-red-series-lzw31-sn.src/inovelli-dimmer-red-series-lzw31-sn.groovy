@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer Red Series LZW31-SN
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-05-13
+ *  Date: 2020-05-19
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-05-19: Adding setIndicator command to match Hubitat built in driver. 
  *
  *  2020-05-13: Removed ColorControl capability as it was conflicting with some in-built Hubitat apps.
  *              Added LED Color child device that can be used in its place. Also fixed incorrect default level range. 
@@ -99,11 +101,13 @@ metadata {
         command "componentSetLevel"
         command "componentRefresh"
         command "componentSetColor"
+        command "setIndicator", [[name: "Set Indicator*",type:"NUMBER", description: "For configuration values see: https://nathanfiscus.github.io/inovelli-notification-calc/"]]
 
         command "reset"
-        
-        command "startNotification", ["number", "number"]
-        command "stopNotification", ["number"]
+       
+        command "startNotification",   [[name: "Start Notification*",type:"NUMBER", description: "For configuration values see: https://nathanfiscus.github.io/inovelli-notification-calc/"],
+                                        [name: "Endpoint",type:"NUMBER", description: "Optional. Only used on devices with multiple indicator bars."]]
+        command "stopNotification",    [[name: "Endpoint",type:"NUMBER", description: "Optional. Only used on devices with multiple indicator bars."]]
         command "setAssociationGroup", [[name: "Group Number*",type:"NUMBER", description: "Provide the association group number to edit"], 
                                         [name: "Z-Wave Node*", type:"STRING", description: "Enter the node number (in hex) associated with the node"], 
                                         [name: "Action*", type:"ENUM", constraints: ["Add", "Remove"]],
@@ -493,6 +497,11 @@ private toggleTiles(number, value) {
            }
        }
    }
+}
+
+def setIndicator(value){
+    if (infoEnable) log.info "${device.label?device.label:device.name}: setIndicator($value)"
+    return startNotification(value)
 }
 
 def startNotification(value, ep = null){
