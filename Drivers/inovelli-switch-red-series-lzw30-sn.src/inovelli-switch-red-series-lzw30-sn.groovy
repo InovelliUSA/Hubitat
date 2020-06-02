@@ -1,7 +1,7 @@
 /**
  *  Inovelli Switch Red Series
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-05-19
+ *  Date: 2020-06-02
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -13,6 +13,9 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-06-02: Change setColor to leave indicator level alone if level is not specified with command. 
+ *              LED Indicator child device now works with setLevel as well as setColor.
  *
  *  2020-05-19: Adding setIndicator command to match Hubitat built in driver. 
  *
@@ -93,6 +96,7 @@ metadata {
         command "childRefresh", ["string"]
         command "componentOn"
         command "componentOff"
+        command "componentSetLevel"
         command "componentRefresh"
         command "componentSetColor"
         command "setIndicator", [[name: "Set Indicator*",type:"NUMBER", description: "For configuration values see: https://nathanfiscus.github.io/inovelli-notification-calc/"]]
@@ -512,17 +516,18 @@ def stopNotification(ep = null){
 }
 
 def componentSetColor(cd,value) {
-    if (infoEnable) log.info "${device.label?device.label:device.name}: componentSetColor($cd,$value)"
+    if (infoEnable) log.info "${device.label?device.label:device.name}: componentSetColor($value)"
 	if (value.hue == null || value.saturation == null) return
-	if (value.level == null) value.level=50
 	def ledColor = Math.round(huePercentToZwaveValue(value.hue))
-    def ledLevel = Math.round(value.level/10)
 	if (infoEnable) log.info "${device.label?device.label:device.name}: Setting LED color value to $ledColor & LED intensity to $ledLevel"
     def cmds = []
+    if (value.level != null) {
+        def ledLevel = Math.round(value.level/10)
+        cmds << setParameter(6, ledLevel, 1)
+        cmds << getParameter(6)
+    }
     cmds << setParameter(5, ledColor, 2)
-    cmds << setParameter(6, ledLevel, 1)
     cmds << getParameter(5)
-    cmds << getParameter(6)
     return commands(cmds)
 }
 
@@ -560,6 +565,10 @@ def childSetLevel(String dni, value) {
             cmds << zwave.protectionV2.protectionSet(localProtectionState : state.localProtectionState? state.localProtectionState:0, rfProtectionState : level > 0 ? 1 : 0)
             cmds << zwave.protectionV2.protectionGet()
         break
+        case 103:
+            cmds << setParameter(6, Math.round(level/10), 1)
+            cmds << getParameter(6)
+        break
     }
 	return commands(cmds)
 }
@@ -596,6 +605,11 @@ def componentOn(cd) {
 def componentOff(cd) {
     if (infoEnable) log.info "${device.label?device.label:device.name}: componentOff($cd)"
     return childOff(cd.deviceNetworkId)
+}
+
+def componentSetLevel(cd,level,transitionTime = null) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: componentSetLevel($cd, $value)"
+	return childSetLevel(cd.deviceNetworkId,level)
 }
 
 void componentRefresh(cd) {
