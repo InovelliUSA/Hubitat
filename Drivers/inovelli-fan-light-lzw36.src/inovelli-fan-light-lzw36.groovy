@@ -43,6 +43,7 @@ metadata {
         
         command "childOn", ["string"]
         command "childOff", ["string"]
+        command "childSetLevel", ["string"]
         command "childRefresh", ["string"]
         command "componentOn"
         command "componentOff"
@@ -74,7 +75,22 @@ metadata {
 }
 
 private getCommandClassVersions() {
-	[0x20: 1, 0x25: 1, 0x70: 1, 0x98: 1]
+	[
+     0x20: 1, // Basic
+     0x25: 1, // Switch Binary
+     0x70: 1, // Configuration
+     0x98: 1, // Security
+     0x60: 3, // Multi Channel
+     0x8E: 2, // Multi Channel Association
+     0x26: 3, // Switch Multilevel
+     0x87: 1, // Indicator
+     0x72: 2, // Manufacturer Specific
+     0x5B: 1, // Central Scene
+     0x32: 3, // Meter
+     0x85: 2, // Association
+     0x86: 1, // Version
+     0x75: 2  // Protection
+    ]
 }
 
 def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cmd) {
@@ -149,11 +165,12 @@ def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd, ep = null) {
 def zwaveEvent(hubitat.zwave.commands.multichannelassociationv2.MultiChannelAssociationReport cmd) {
 	if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
     if (cmd.groupingIdentifier == 1) {
-        if ([0,zwaveHubNodeId,1] == cmd.nodeId) state."associationMC${cmd.groupingIdentifier}" = true
-        else state."associationMC${cmd.groupingIdentifier}" = false
+        cmd.multiChannelNodeIds.each {
+            if (infoEnable) log.info "${device.label?device.label:device.name}: MultiChannel Association Group ${cmd.groupingIdentifier}: ${it}"
+            if (it.nodeId == 1 && it.bitAddress == 0 && it.endPointId == 0) state."associationMC${cmd.groupingIdentifier}" = true
+        }
     }
 }
-
 
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicSet cmd) {
     if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
@@ -758,11 +775,11 @@ def initialize() {
     */
     
     def cmds = processAssociations()
-    
+
     if(!state.associationMC1) {
        log.debug "Adding MultiChannel association group 1"
        cmds << zwave.associationV2.associationRemove(groupingIdentifier: 1, nodeId: [])
-       cmds << zwave.multiChannelAssociationV2.multiChannelAssociationSet(groupingIdentifier: 1, nodeId: [0,zwaveHubNodeId,1])
+       cmds << zwave.multiChannelAssociationV2.multiChannelAssociationSet(groupingIdentifier: 1, nodeId: [0,zwaveHubNodeId,0])
        cmds << zwave.multiChannelAssociationV2.multiChannelAssociationGet(groupingIdentifier: 1)
     }
     
@@ -852,7 +869,7 @@ def buttonEvent(button, value, type = "digital") {
 }
 
 def getParameterNumbers(){
-    return [1,2,3,4,5,6,7,8,10,11,12,13,14,15,16,17,18,19,20,21,22,23,26,27,28,29,30]
+    return [1,2,3,4,5,6,7,8,10,11,12,13,14,15,16,17,18,19,20,21,22,23,26,27,28,29,30,31]
 }
 
 def generate_preferences()
@@ -1453,11 +1470,11 @@ def generate_preferences()
     }
     input "disableLocal", "enum", title: "Disable Local Control", description: "\nDisable ability to control switch from the wall", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
     input "disableRemote", "enum", title: "Disable Remote Control", description: "\nDisable ability to control switch from inside SmartThings", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
-    input description: "Use the below options to enable child devices for the specified settings. This will allow you to adjust these settings using SmartApps such as Smart Lighting. If any of the options are enabled, make sure you have the appropriate child device handlers installed.\n(Firmware 1.02+)", title: "Child Devices", displayDuringSetup: false, type: "paragraph", element: "paragraph"
-    input "enableDisableLocalChild", "bool", title: "Disable Local Control", description: "", required: false, defaultValue: false
-    input "enableDisableRemoteChild", "bool", title: "Disable Remote Control", description: "", required: false, defaultValue: false
-    input "enableDefaultLocalChild", "bool", title: "Default Level (Local)", description: "", required: false, defaultValue: false
-    input "enableDefaultZWaveChild", "bool", title: "Default Level (Z-Wave)", description: "", required: false, defaultValue: false
+    input description: "Use the below options to enable child devices for the specified settings. This will allow you to adjust these settings using Apps such as Rule Machine.", title: "Child Devices", displayDuringSetup: false, type: "paragraph", element: "paragraph"
+    input "enableDisableLocalChild", "bool", title: "Create \"Disable Local Control\" Child Device", description: "", required: false, defaultValue: false
+    input "enableDisableRemoteChild", "bool", title: "Create \"Disable Remote Control\" Child Device", description: "", required: false, defaultValue: false
+    input "enableDefaultLocalChild", "bool", title: "Create \"Default Level (Local)\" Child Device", description: "", required: false, defaultValue: false
+    input "enableDefaultZWaveChild", "bool", title: "Create \"Default Level (Z-Wave)\" Child Device", description: "", required: false, defaultValue: false
     input name: "debugEnable", type: "bool", title: "Enable debug logging", defaultValue: true
     input name: "infoEnable", type: "bool", title: "Enable informational logging", defaultValue: true
 }
@@ -1493,6 +1510,7 @@ def getParameterInfo(number, value){
     parameter.parameter28type="number"
     parameter.parameter29type="number"
     parameter.parameter30type="number"
+    parameter.parameter31type="enum"
 
     parameter.parameter1default=4
     parameter.parameter2default=99
@@ -1522,8 +1540,9 @@ def getParameterInfo(number, value){
     parameter.parameter28default=10
     parameter.parameter29default=3600
     parameter.parameter30default=10
+    parameter.parameter31default=3
 
-    parameter.parameter1options="0..98"
+    parameter.parameter1options="0..100"
     parameter.parameter2options="0..99"
     parameter.parameter3options="0..99"
     parameter.parameter4options="0..99"
@@ -1534,10 +1553,10 @@ def getParameterInfo(number, value){
     parameter.parameter9options=["1":"Yes", "0":"No"]
     parameter.parameter10options="0..32767"
     parameter.parameter11options="0..32767"
-    parameter.parameter12options="1..99"
-    parameter.parameter13options="1..99"
-    parameter.parameter14options="1..99"
-    parameter.parameter15options="1..99"
+    parameter.parameter12options="0..99"
+    parameter.parameter13options="0..99"
+    parameter.parameter14options="0..99"
+    parameter.parameter15options="0..99"
     parameter.parameter16options="0..100"
     parameter.parameter17options="0..100"
     parameter.parameter18options=["0":"Red","21":"Orange","42":"Yellow","85":"Green","127":"Cyan","170":"Blue","212":"Violet","234":"Pink", "255":"White"]
@@ -1551,6 +1570,7 @@ def getParameterInfo(number, value){
     parameter.parameter28options="0..100"
     parameter.parameter29options="0..32767"
     parameter.parameter30options="0..100"
+    parameter.parameter31options=["0":"None", "1":"Light", "2":"Fan", "3":"Both"]
 
     parameter.parameter1size=1
     parameter.parameter2size=1
@@ -1580,6 +1600,7 @@ def getParameterInfo(number, value){
     parameter.parameter28size=1
     parameter.parameter29size=2
     parameter.parameter30size=1
+    parameter.parameter31size=1
 
     parameter.parameter1description="This changes the speed in which the attached light dims up or down. A setting of 0 should turn the light immediately on or off (almost like an on/off switch). Increasing the value should slow down the transition speed."
 	parameter.parameter2description="This changes the speed in which the attached light dims up or down when controlled from the physical switch. A setting of 0 should turn the light immediately on or off (almost like an on/off switch). Increasing the value should slow down the transition speed. A setting of 99 should keep this in sync with parameter 1."
@@ -1608,6 +1629,7 @@ def getParameterInfo(number, value){
     parameter.parameter28description="The power level change that will result in a new power report being sent. The value is a percentage of the previous report. 0 = disabled."
     parameter.parameter29description="Time period between consecutive power & energy reports being sent (in seconds). The timer is reset after each report is sent."
     parameter.parameter30description="The energy level change that will result in a new energy report being sent. The value is a percentage of the previous report."
+    parameter.parameter31description="Which buttons are disabled in local protection mode."
 
     parameter.parameter1name="Dimming Speed"
     parameter.parameter2name="Dimming Speed (From Switch)"
@@ -1637,6 +1659,7 @@ def getParameterInfo(number, value){
     parameter.parameter28name="Active Power Reports"
     parameter.parameter29name="Periodic Power & Energy Reports"
     parameter.parameter30name="Energy Reports"
+    parameter.parameter31name="Local Protection Settings"
 
     return parameter."parameter${number}${value}"
 }
@@ -1761,7 +1784,7 @@ def integer2Cmd(value, size) {
 
 def setDefaultAssociations() {
     def smartThingsHubID = String.format('%02x', zwaveHubNodeId).toUpperCase()
-    state.defaultG1 = [smartThingsHubID]
+    state.defaultG1 = []
     state.defaultG2 = []
     state.defaultG3 = []
 }
