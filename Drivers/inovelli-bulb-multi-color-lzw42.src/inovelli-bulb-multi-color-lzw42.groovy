@@ -83,6 +83,7 @@ metadata {
 		capability "ColorMode"
 
 		attribute "colorName", "string"
+		attribute "firmware", "String"
 
 		fingerprint  mfr:"031E", prod:"0005", deviceId:"0001", inClusters:"0x5E,0x85,0x59,0x86,0x72,0x5A,0x33,0x26,0x70,0x27,0x98,0x73,0x7A", deviceJoinName: "Inovelli Bulb Multi-Color"
 
@@ -147,6 +148,7 @@ void runConfigs() {
 			cmds.addAll(configCmd(param, data.parameterSize, settings[data.input.name]))
 		}
 	}
+	cmds.add(zwave.versionV2.versionGet())
 	sendToDevice(cmds)
 }
 
@@ -453,10 +455,11 @@ void zwaveEvent(hubitat.zwave.commands.manufacturerspecificv2.DeviceSpecificRepo
 }
 
 void zwaveEvent(hubitat.zwave.commands.versionv2.VersionReport cmd) {
-	if (logEnable) log.debug "version3 report: ${cmd}"
+	if (logEnable) log.debug "version report: ${cmd}"
 	device.updateDataValue("firmwareVersion", "${cmd.firmware0Version}.${cmd.firmware0SubVersion}")
 	device.updateDataValue("protocolVersion", "${cmd.zWaveProtocolVersion}.${cmd.zWaveProtocolSubVersion}")
 	device.updateDataValue("hardwareVersion", "${cmd.hardwareVersion}")
+	sendEvent(name: "firmware", value: "${cmd.firmware0Version}.${cmd.firmware0SubVersion.toString().padLeft(2,'0')}")
 }
 
 void sendToDevice(List<hubitat.zwave.Command> cmds) {
