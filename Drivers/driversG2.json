@@ -4,7 +4,7 @@
    "author": "Eric Maycock",
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
-   "releaseNotes": "LZW30/LZW30-SN/LZW31/LZW31-SN: Change setColor to leave indicator level alone if level is not specified with command. LED Indicator child device now works with setLevel as well as setColor.",
+   "releaseNotes": "LZW60: Requesting battery report on every wake up. Removing unnecessary code. Additional logging options.\nLZW31/LZW31-SN: Adding white LED option for firmware 1.45+.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -13,7 +13,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-lzw31-sn.src/inovelli-dimmer-red-series-lzw31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.6.2",
+                "version": "20.6.22",
 		"releaseNotes": "Removed ColorControl capability as it was conflicting with some in-built Hubitat apps. Added LED Color child device that can be used in its place. Also fixed incorrect default level range." 
    	},
 	{
@@ -23,7 +23,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-lzw31.src/inovelli-dimmer-lzw31.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.6.2",
+                "version": "20.6.22",
 		"releaseNotes": "Removed ColorControl capability as it was conflicting with some in-built Hubitat apps. Added LED Color child device that can be used in its place. Also fixed incorrect default level range." 
    	},
 	{
@@ -53,7 +53,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-4-in-1-sensor.src/inovelli-4-in-1-sensor.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.1.28"
+                "version": "20.6.24"
    	},
 	{
    		"id" : "49d6f741-9c58-4310-ab61-0a68874dc2bf",
