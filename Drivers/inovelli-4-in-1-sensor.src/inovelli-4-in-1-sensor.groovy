@@ -3,7 +3,7 @@
  *  Inovelli 4-in-1 Sensor 
  *   
  *    github: InovelliUSA
- *    Date: 2020-06-18
+ *    Date: 2020-06-24
  *    Copyright Inovelli / Eric Maycock
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -14,6 +14,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-06-24: Requesting battery report on every wake up.
  *
  *  2020-06-18: Removing unnecessary code. Additional logging options.
  *
@@ -409,11 +411,8 @@ def zwaveEvent(hubitat.zwave.commands.wakeupv1.WakeUpNotification cmd)
 
     def cmds = initialize()
     
-    if (!state.lastBatteryReport || (now() - state.lastBatteryReport) / 60000 >= 60 * 24)
-    {
-        if (infoEnable != false) log.info "${device.label?device.label:device.name}: Over 24hr since last battery report. Requesting report"
-        cmds << zwave.batteryV1.batteryGet()
-    }
+    if (infoEnable != false) log.info "${device.label?device.label:device.name}: Requesting battery report"
+    cmds << zwave.batteryV1.batteryGet()
     
     cmds << zwave.wakeUpV1.wakeUpNoMoreInformation()
     
