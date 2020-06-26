@@ -16,7 +16,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  2020-06-26: Specify which command class versions to use. Remove extra commands.
+ *  2020-06-26: Specify which command class versions to use. Remove extra commands. Switch to using Hubitat built in child drivers.
  *
  *  2019-11-20: Fixed Association Group management.
  *
@@ -52,6 +52,9 @@ metadata {
         command "childOn"
         command "childOff"
         command "childRefresh"
+        command "componentOn"
+        command "componentOff"
+        command "componentRefresh"
 
         fingerprint mfr: "015D", prod: "0221", model: "251C"
         fingerprint mfr: "0312", prod: "B221", model: "251C"
@@ -261,6 +264,21 @@ def childRefresh(String dni) {
     def cmds = []
     cmds << new hubitat.device.HubAction(command(encap(zwave.basicV1.basicGet(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
     cmds
+}
+
+def componentOn(cd) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: componentOn($cd)"
+    return childOn(cd.deviceNetworkId)
+}
+
+def componentOff(cd) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: componentOff($cd)"
+    return childOff(cd.deviceNetworkId)
+}
+
+def componentRefresh(cd) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: componentRefresh($cd)"
+    return childRefresh(cd.deviceNetworkId)
 }
 
 def poll() {
