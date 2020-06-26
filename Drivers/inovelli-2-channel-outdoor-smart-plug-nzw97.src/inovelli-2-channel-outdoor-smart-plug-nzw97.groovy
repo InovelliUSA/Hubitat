@@ -1,7 +1,7 @@
 /**
  *  Inovelli 2-Channel Outdoor Smart Plug NZW97
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-04-03
+ *  Date: 2020-06-26
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-06-26: Specify which command class versions to use. Remove extra commands. Switch to using Hubitat built in child drivers.
  *
  *  2019-11-20: Fixed Association Group management.
  *
@@ -47,6 +49,9 @@ metadata {
         command "childOn"
         command "childOff"
         command "childRefresh"
+        command "componentOn"
+        command "componentOff"
+        command "componentRefresh"
 
         fingerprint manufacturer: "015D", prod: "6100", model: "6100", deviceJoinName: "Inovelli 2-Channel Outdoor Smart Plug"
         fingerprint manufacturer: "0312", prod: "6100", model: "6100", deviceJoinName: "Inovelli 2-Channel Outdoor Smart Plug"
@@ -88,9 +93,23 @@ metadata {
         }
     }
 }
+
+private getCommandClassVersions() {
+	[
+     0x20: 1, // Basic
+     0x25: 1, // Switch Binary
+     0x70: 2, // Configuration
+     0x60: 3, // Multi Channel
+     0x8E: 2, // Multi Channel Association
+     0x72: 2, // Manufacturer Specific
+     0x85: 2, // Association
+     0x86: 1, // Version
+    ]
+}
+
 def parse(String description) {
     def result = []
-    def cmd = zwave.parse(description)
+    def cmd = zwave.parse(description, commandClassVersions)
     if (cmd) {
         result += zwaveEvent(cmd)
         log.debug "Parsed ${cmd} to ${result.inspect()}"
@@ -170,7 +189,7 @@ def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd, ep 
 
 def zwaveEvent(hubitat.zwave.commands.multichannelv3.MultiChannelCmdEncap cmd) {
     log.debug "MultiChannelCmdEncap ${cmd}"
-    def encapsulatedCommand = cmd.encapsulatedCommand([0x32: 3, 0x25: 1, 0x20: 1])
+    def encapsulatedCommand = cmd.encapsulatedCommand(commandClassVersions)
     if (encapsulatedCommand) {
         zwaveEvent(encapsulatedCommand, cmd.sourceEndPoint as Integer)
     }
@@ -228,6 +247,21 @@ def childRefresh(String dni) {
     def cmds = []
     cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
     cmds
+}
+
+def componentOn(cd) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: componentOn($cd)"
+    return childOn(cd.deviceNetworkId)
+}
+
+def componentOff(cd) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: componentOff($cd)"
+    return childOff(cd.deviceNetworkId)
+}
+
+def componentRefresh(cd) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: componentRefresh($cd)"
+    return childRefresh(cd.deviceNetworkId)
 }
 
 def poll() {
@@ -347,7 +381,7 @@ private command(hubitat.zwave.Command cmd) {
     }
 }
 
-private commands(commands, delay = 1000) {
+private commands(commands, delay = 500) {
     delayBetween(commands.collect {
         command(it)
     }, delay)
@@ -359,7 +393,7 @@ private channelNumber(String dni) {
 private void createChildDevices() {
     state.oldLabel = device.label
     for (i in 1..2) {
-        addChildDevice("Switch Child Device", "${device.deviceNetworkId}-ep${i}", [completedSetup: true, label: "${device.displayName} (CH${i})",
+        addChildDevice("hubitat", "Generic Component Switch", "${device.deviceNetworkId}-ep${i}", [completedSetup: true, label: "${device.displayName} (CH${i})",
             isComponent: false, componentName: "ep$i", componentLabel: "Channel $i"
         ])
     }
