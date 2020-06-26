@@ -410,7 +410,7 @@ private channelNumber(String dni) {
 private void createChildDevices() {
     state.oldLabel = device.label
     for (i in 1..2) {
-        addChildDevice("Switch Child Device", "${device.deviceNetworkId}-ep${i}", [completedSetup: true, label: "${device.displayName} (CH${i})",
+        addChildDevice("hubitat", "Generic Component Switch", "${device.deviceNetworkId}-ep${i}", [completedSetup: true, label: "${device.displayName} (CH${i})",
             isComponent: false, componentName: "ep$i", componentLabel: "Channel $i"
         ])
     }
