@@ -2,7 +2,7 @@
  *  Inovelli 2-Channel Smart Plug NZW37
  *   
  *  github: Eric Maycock (erocm123)
- *  Date: 2018-06-05
+ *  Date: 2020-06-26
  *  Copyright Eric Maycock
  *
  *  Includes all configuration parameters and ease of advanced configuration. 
@@ -16,6 +16,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ *  2020-06-26: Specify which command class versions to use. Remove extra commands.
  *
  *  2019-11-20: Fixed Association Group management.
  *
@@ -92,9 +93,23 @@ metadata {
         }
     }
 }
+
+private getCommandClassVersions() {
+	[
+     0x20: 1, // Basic
+     0x25: 1, // Switch Binary
+     0x70: 2, // Configuration
+     0x60: 3, // Multi Channel
+     0x72: 2, // Manufacturer Specific
+     0x5B: 1, // Central Scene
+     0x85: 2, // Association
+     0x86: 1, // Version
+    ]
+}
+
 def parse(String description) {
     def result = []
-    def cmd = zwave.parse(description)
+    def cmd = zwave.parse(description, commandClassVersions)
     if (cmd) {
         result += zwaveEvent(cmd)
         log.debug "Parsed ${cmd} to ${result.inspect()}"
@@ -174,18 +189,12 @@ def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd, ep 
             }
         }
         return event
-    } else {
-        def result = createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "digital")
-        def cmds = []
-        cmds << encap(zwave.switchBinaryV1.switchBinaryGet(), 1)
-        cmds << encap(zwave.switchBinaryV1.switchBinaryGet(), 2)
-        return [result, response(commands(cmds))] // returns the result of reponse()
-    }
+    } 
 }
 
 def zwaveEvent(hubitat.zwave.commands.multichannelv3.MultiChannelCmdEncap cmd) {
     log.debug "MultiChannelCmdEncap ${cmd}"
-    def encapsulatedCommand = cmd.encapsulatedCommand([0x32: 3, 0x25: 1, 0x20: 1])
+    def encapsulatedCommand = cmd.encapsulatedCommand(commandClassVersions)
     if (encapsulatedCommand) {
         zwaveEvent(encapsulatedCommand, cmd.sourceEndPoint as Integer)
     }
@@ -216,18 +225,16 @@ def zwaveEvent(hubitat.zwave.Command cmd) {
 def on() {
     log.debug "on()"
     commands([
-            zwave.switchAllV1.switchAllOn(),
-            encap(zwave.basicV1.basicGet(), 1),
-            encap(zwave.basicV1.basicGet(), 2)
+            encap(zwave.basicV1.basicSet(value: 0xFF), 1),
+            encap(zwave.basicV1.basicSet(value: 0xFF), 2)
     ])
 }
 
 def off() {
     log.debug "off()"
     commands([
-            zwave.switchAllV1.switchAllOff(),
-            encap(zwave.basicV1.basicGet(), 1),
-            encap(zwave.basicV1.basicGet(), 2)
+            encap(zwave.basicV1.basicSet(value: 0x00), 1),
+            encap(zwave.basicV1.basicSet(value: 0x00), 2)
     ])
 }
 
@@ -235,8 +242,8 @@ def childOn(String dni) {
     log.debug "childOn($dni)"
     def cmds = []
     commands([
-		encap(zwave.basicV1.basicSet(value: 0xFF), channelNumber(dni)),
-        encap(zwave.basicV1.basicGet(), channelNumber(dni))
+		encap(zwave.basicV1.basicSet(value: 0xFF), channelNumber(dni))//,
+        //encap(zwave.basicV1.basicGet(), channelNumber(dni))
     ])
 }
 
@@ -244,8 +251,8 @@ def childOff(String dni) {
     log.debug "childOff($dni)"
     def cmds = []
     commands([
-		encap(zwave.basicV1.basicSet(value: 0x00), channelNumber(dni)),
-        encap(zwave.basicV1.basicGet(), channelNumber(dni))
+		encap(zwave.basicV1.basicSet(value: 0x00), channelNumber(dni))//,
+        //encap(zwave.basicV1.basicGet(), channelNumber(dni))
     ])
 }
 
@@ -373,7 +380,7 @@ private command(hubitat.zwave.Command cmd) {
     }
 }
 
-private commands(commands, delay = 1000) {
+private commands(commands, delay = 500) {
     delayBetween(commands.collect {
         command(it)
     }, delay)
