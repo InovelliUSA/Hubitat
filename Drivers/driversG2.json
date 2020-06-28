@@ -72,6 +72,15 @@
    		"required": false,
    		"oauth": false,
                 "version": "20.4.16"
+   	},
+	{
+   		"id" : "66b164ca-b968-11ea-b3de-0242ac130004",
+   		"name": "Inovelli Fan + Light LZW36",
+                "namespace": "InovelliUSA",
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-lzw36.src/inovelli-fan-light-lzw36.groovy",
+   		"required": false,
+   		"oauth": false,
+                "version": "20.6.28"
    	}
    ]
 }
