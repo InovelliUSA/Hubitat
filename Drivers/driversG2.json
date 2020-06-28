@@ -4,7 +4,7 @@
    "author": "Eric Maycock",
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
-   "releaseNotes": "Adding LZW36 Fan + Light.",
+   "releaseNotes": "LZW36: Adding LZW36 Fan + Light.\nFix for Hubitat not parsing power & energy reports correctly.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -80,7 +80,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-lzw36.src/inovelli-fan-light-lzw36.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.6.28"
+                "version": "20.6-1.28"
    	}
    ]
 }
