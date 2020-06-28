@@ -14,6 +14,8 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ *  2020-06-28: Fix for Hubitat not parsing power & energy reports correctly. 
+ *
  *  2020-06-28: Fix for incorrect local protection settings getting sent to device. Typo fix. 
  *
  */
@@ -550,10 +552,8 @@ def refresh() {
     def cmds = []
     cmds << encap(zwave.switchMultilevelV1.switchMultilevelGet(), 1)
     cmds << encap(zwave.switchMultilevelV1.switchMultilevelGet(), 2)
-    cmds << zwave.meterV3.meterGet(scale: 0)
-    cmds << zwave.meterV3.meterGet(scale: 2)
-	cmds << encap(zwave.meterV3.meterGet(scale: 2),1)
-    cmds << encap(zwave.meterV3.meterGet(scale: 2),2)
+    cmds << zwave.meterV2.meterGet(scale: 0)
+    cmds << zwave.meterV2.meterGet(scale: 2)
     return commands(cmds)
 }
 
@@ -817,7 +817,7 @@ def childExists(ep) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.centralscenev1.CentralSceneNotification cmd, ep=null) {
-    if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
+    if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd} ${ep?ep:0}"
     switch (cmd.keyAttributes) {
        case 0:
        if (cmd.sceneNumber == 3) createEvent(buttonEvent(7, "pushed", "physical"))
@@ -841,23 +841,28 @@ def zwaveEvent(hubitat.zwave.commands.centralscenev1.CentralSceneNotification cm
 def zwaveEvent(hubitat.zwave.commands.meterv3.MeterReport cmd, ep=null) {
     if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
     def event
-	if (cmd.scale == 0) {
-    	if (cmd.meterType == 161) {
-		    event = createEvent(name: "voltage", value: cmd.scaledMeterValue, unit: "V")
-            if (infoEnable) log.info "${device.label?device.label:device.name}: Voltage report received with value of ${cmd.scaledMeterValue} V"
-        } else if (cmd.meterType == 1) {
-        	event = createEvent(name: "energy", value: cmd.scaledMeterValue, unit: "kWh")
-            if (infoEnable) log.info "${device.label?device.label:device.name}: Energy report received with value of ${cmd.scaledMeterValue} kWh"
-        }
-	} else if (cmd.scale == 1) {
-		event = createEvent(name: "amperage", value: cmd.scaledMeterValue, unit: "A")
-        if (infoEnable) log.info "${device.label?device.label:device.name}: Amperage report received with value of ${cmd.scaledMeterValue} A"
-	} else if (cmd.scale == 2) {
-		event = createEvent(name: "power", value: Math.round(cmd.scaledMeterValue), unit: "W")
-        if (infoEnable) log.info "${device.label?device.label:device.name}: Power report received with value of ${cmd.scaledMeterValue} W"
-	}
-
-    return event
+    def cmds = []
+    if (cmd.meterValue != []){
+	    if (cmd.scale == 0) {
+    	    if (cmd.meterType == 161) {
+		        event = createEvent(name: "voltage", value: cmd.scaledMeterValue, unit: "V")
+                if (infoEnable) log.info "${device.label?device.label:device.name}: Voltage report received with value of ${cmd.scaledMeterValue} V"
+            } else if (cmd.meterType == 1) {
+        	    event = createEvent(name: "energy", value: cmd.scaledMeterValue, unit: "kWh")
+                if (infoEnable) log.info "${device.label?device.label:device.name}: Energy report received with value of ${cmd.scaledMeterValue} kWh"
+            }
+	    } else if (cmd.scale == 1) {
+		    event = createEvent(name: "amperage", value: cmd.scaledMeterValue, unit: "A")
+            if (infoEnable) log.info "${device.label?device.label:device.name}: Amperage report received with value of ${cmd.scaledMeterValue} A"
+	    } else if (cmd.scale == 2) {
+		    event = createEvent(name: "power", value: Math.round(cmd.scaledMeterValue), unit: "W")
+            if (infoEnable) log.info "${device.label?device.label:device.name}: Power report received with value of ${cmd.scaledMeterValue} W"
+	    }
+    } else {
+        cmds << zwave.meterV2.meterGet(scale: 0)
+        cmds << zwave.meterV2.meterGet(scale: 2)
+    }
+    if (cmds) return response(commands(cmds)) else return event
 }
 
 def buttonEvent(button, value, type = "digital") {
