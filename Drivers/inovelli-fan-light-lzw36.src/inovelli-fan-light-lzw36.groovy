@@ -1,7 +1,7 @@
 /**
  *  Inovelli Fan + Light LZW36
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-06-28
+ *  Date: 2020-06-29
  *
  *  Copyright 2020 Inovelli / Eric Maycock
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-06-29: Fix for child device not changing name when you change the name of the parent. 
  *
  *  2020-06-28: Fix for Hubitat not parsing power & energy reports correctly. 
  *
@@ -728,37 +730,22 @@ def initialize() {
         }
     }}
     
-    if (device.label != state.oldLabel) {
+    if (device.displayName != state.oldLabel) {
         def children = childDevices
-        def childDevice = children.find{it.deviceNetworkId.endsWith("ep1")}
-        if (childDevice)
-        childDevice.setLabel("${device.displayName} (Notification 1)")
-        childDevice = children.find{it.deviceNetworkId.endsWith("ep2")}
-        if (childDevice)
-        childDevice.setLabel("${device.displayName} (Notification 2)")
-        childDevice = children.find{it.deviceNetworkId.endsWith("ep3")}
-        if (childDevice)
-        childDevice.setLabel("${device.displayName} (Notification 3)")
-        childDevice = children.find{it.deviceNetworkId.endsWith("ep4")}
-        if (childDevice)
-        childDevice.setLabel("${device.displayName} (Notification 4)")
-        childDevice = children.find{it.deviceNetworkId.endsWith("ep5")}
-        if (childDevice)
-        childDevice.setLabel("${device.displayName} (Notification 5)")
-        childDevice = children.find{it.deviceNetworkId.endsWith("ep9")}
-        if (childDevice)
-        childDevice.setLabel("${device.displayName} (Default Local Level)")
-        childDevice = children.find{it.deviceNetworkId.endsWith("ep10")}
-        if (childDevice)
-        childDevice.setLabel("${device.displayName} (Default Z-Wave Level)")
-        childDevice = children.find{it.deviceNetworkId.endsWith("ep101")}
+        def childDevice = children.find{it.deviceNetworkId.endsWith("ep101")}
         if (childDevice)
         childDevice.setLabel("${device.displayName} (Disable Local Control)")
         childDevice = children.find{it.deviceNetworkId.endsWith("ep102")}
         if (childDevice)
         childDevice.setLabel("${device.displayName} (Disable Remote Control)")
+        childDevice = children.find{it.deviceNetworkId.endsWith("ep001")}
+        if (childDevice && childDevice.displayName == "${state.oldLabel} (Light)")
+        childDevice.setLabel("${device.displayName} (Light)")
+        childDevice = children.find{it.deviceNetworkId.endsWith("ep002")}
+        if (childDevice && childDevice.displayName == "${state.oldLabel} (Fan)")
+        childDevice.setLabel("${device.displayName} (Fan)")
     }
-    state.oldLabel = device.label
+    state.oldLabel = device.displayName
     
     /*
     sendEvent([name:"pressUpX1", value:pressUpX1Label? "${pressUpX1Label} ▲" : "Tap ▲", displayed: false])
