@@ -14,11 +14,12 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  2020-06-29: Fix for child device not changing name when you change the name of the parent. 
+ *  2020-06-29: Switch over to using "Hampton Bay Fan Component" child device. Now you can use the "Fan" template
+ *              in the dashboard. Auto = put the fan into breeze mode
+ *              Fix for child device not changing name when you change the name of the parent. 
  *
  *  2020-06-28: Fix for Hubitat not parsing power & energy reports correctly. 
- *
- *  2020-06-28: Fix for incorrect local protection settings getting sent to device. Typo fix. 
+ *              Fix for incorrect local protection settings getting sent to device. Typo fix.
  *
  */
  
@@ -54,6 +55,7 @@ metadata {
         command "componentOff"
         command "componentRefresh"
         command "componentSetLevel"
+        command "setSpeed"
         
         command "reset"
         
@@ -422,6 +424,35 @@ def childSetLevel(String dni, value) {
 	if(cmds) return commands(cmds)
 }
 
+def setSpeed(value){
+    if (infoEnable) log.info "${device.label?device.label:device.name}: setSpeed($value)"
+    def childDevice = childDevices.find{it.deviceNetworkId.endsWith("ep002")}
+    if(childDevice) childDevice.sendEvent(name: "speed", value: value)
+    switch (value) {
+        case "low":
+            return childSetLevel("${device.deviceNetworkId}-ep002",33)
+        break
+        case "medium-low":
+        case "medium":
+        case "medium-high":
+            return childSetLevel("${device.deviceNetworkId}-ep002",66)
+        break
+        case "high":
+            return childSetLevel("${device.deviceNetworkId}-ep002",99)
+        break
+        case "auto":
+            return childSetLevel("${device.deviceNetworkId}-ep002",1)
+        break
+        case "on":
+            return childOn("${device.deviceNetworkId}-ep002")
+        break
+        case "off":
+            return childOff("${device.deviceNetworkId}-ep002")
+        break
+        
+    }
+}
+
 def componentSetLevel(cd,level,transitionTime = null) {
     if (infoEnable) log.info "${device.label?device.label:device.name}: componentSetLevel($cd, $value)"
 	return childSetLevel(cd.deviceNetworkId,level)
@@ -601,7 +632,7 @@ def initialize() {
         newChild.sendEvent(name:"switch", value:"off")
     }
     if(!childExists("ep002")){
-        def newChild = addChildDevice("hubitat", "Generic Component Dimmer", "${device.deviceNetworkId}-ep002", [completedSetup: true, label: "${device.displayName} (Fan)",
+        def newChild = addChildDevice("hubitat", "Hampton Bay Fan Component", "${device.deviceNetworkId}-ep002", [completedSetup: true, label: "${device.displayName} (Fan)",
             isComponent: false, componentName: "ep002", componentLabel: "Fan"
         ])
         newChild.sendEvent(name:"switch", value:"off")
