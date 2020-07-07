@@ -1,7 +1,7 @@
 /**
  *  Inovelli Switch Red Series
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-06-02
+ *  Date: 2020-07-06
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -13,6 +13,9 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-07-06: Added a configuration parameter (51) that allows you to disable the 700ms delay when turing switch on/off from the wall.
+ *              Also adding white LED option to LED colors. Both of these require firmware 1.19+
  *
  *  2020-06-02: Change setColor to leave indicator level alone if level is not specified with command. 
  *              LED Indicator child device now works with setLevel as well as setColor.
@@ -163,7 +166,8 @@ def generate_preferences()
                     127:"Cyan",
                     170:"Blue",
                     212:"Violet",
-                    234:"Pink"]
+                    234:"Pink",
+                    255:"White (Firmware 1.19+)"]
                 input "parameter8-${i}b", "enum", title: "LED Effect Level - Notification $i", description: "Tap to set", displayDuringSetup: false, required: false, options: [
                     0:"0%",
                     1:"10%",
@@ -790,7 +794,7 @@ def getParameter(number) {
 }
 
 def getParameterNumbers(){
-    return [1,2,3,4,5,6,7,10,11,12,13]
+    return [1,2,3,4,5,6,7,10,11,12,13,51]
 }
 
 def getParameterInfo(number, type){
@@ -809,6 +813,7 @@ def getParameterInfo(number, type){
     parameter.parameter11default=3600
     parameter.parameter12default=10
     parameter.parameter13default=0
+    parameter.parameter51default=1
     
     parameter.parameter1type="enum"
     parameter.parameter2type="enum"
@@ -823,6 +828,7 @@ def getParameterInfo(number, type){
     parameter.parameter11type="number"
     parameter.parameter12type="number"
     parameter.parameter13type="enum"
+    parameter.parameter51type="enum"
     
     parameter.parameter1size=1
     parameter.parameter2size=1
@@ -837,12 +843,13 @@ def getParameterInfo(number, type){
     parameter.parameter11size=2
     parameter.parameter12size=1
     parameter.parameter13size=1
+    parameter.parameter51size=1
     
     parameter.parameter1options=["0":"Previous", "1":"On", "2":"Off"]
     parameter.parameter2options=["1":"Yes", "0":"No"]
     parameter.parameter3options="1..32767"
     parameter.parameter4options="0..15"
-    parameter.parameter5options=["0":"Red","21":"Orange","42":"Yellow","85":"Green","127":"Cyan","170":"Blue","212":"Violet","234":"Pink"]
+    parameter.parameter5options=["0":"Red","21":"Orange","42":"Yellow","85":"Green","127":"Cyan","170":"Blue","212":"Violet","234":"Pink", "255":"White (Firmware 1.19+)"]
     parameter.parameter6options=["0":"0%","1":"10%","2":"20%","3":"30%","4":"40%","5":"50%","6":"60%","7":"70%","8":"80%","9":"90%","10":"100%"]
     parameter.parameter7options=["0":"0%","1":"10%","2":"20%","3":"30%","4":"40%","5":"50%","6":"60%","7":"70%","8":"80%","9":"90%","10":"100%"]
     parameter.parameter8options=["1":"Yes", "2":"No"]
@@ -851,6 +858,7 @@ def getParameterInfo(number, type){
     parameter.parameter11options="0..32767"
     parameter.parameter12options="0..100"
     parameter.parameter13options=["0":"Default", "1":"Special Load (T8)"]
+    parameter.parameter51options=["0":"Yes", "1":"No (Default)"]
     
     parameter.parameter1name="State After Power Restored"
     parameter.parameter2name="Invert Switch"
@@ -865,6 +873,7 @@ def getParameterInfo(number, type){
     parameter.parameter11name="Periodic Power & Energy Reports"
     parameter.parameter12name="Energy Reports"
     parameter.parameter13name="Load Type"
+    parameter.parameter51name="Disable Physical On/Off Delay"
     
     
     parameter.parameter1description="The state the switch should return to once power is restored after power failure."
@@ -880,6 +889,7 @@ def getParameterInfo(number, type){
     parameter.parameter11description="Time period between consecutive power & energy reports being sent (in seconds). The timer is reset after each report is sent."
     parameter.parameter12description="The energy level change that will result in a new energy report being sent. The value is a percentage of the previous report."
     parameter.parameter13description="The default of the switch is to auto detect the load. In some situations you may want to try the option for a special load type. (firmware 1.17+)"
+    parameter.parameter51description="The 700ms delay that occurs after pressing the physical button to turn the switch on/off is removed. Consequently this also removes the following scenes: held, released, 2x, 3x, 4x, 5x tap. 1x tap and config button scenes still work. (firmware 1.19+)"
     
     return parameter."parameter${number}${type}"
 }
