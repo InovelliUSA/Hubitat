@@ -4,7 +4,7 @@
    "author": "Eric Maycock",
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
-   "releaseNotes": "LZW36: Fix for child device not changing name when you change the name of the parent. Switch over to using \"Hampton Bay Fan Component\" child device. Now you can use the \"Fan\" template in the dashboard. Auto = put the fan into breeze mode",
+   "releaseNotes": "LZW30/LZW30-SN: Add option to disable 700ms delay when turning the switch on / off from physical switch. Adding option for white LED color. Both options are for firmware 1.19+",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -33,7 +33,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-red-series-lzw30-sn.src/inovelli-switch-red-series-lzw30-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.6.2",
+                "version": "20.7.7",
 		"releaseNotes": "Removed ColorControl capability as it was conflicting with some in-built Hubitat apps. Added LED Color child device that can be used in its place.  " 
    	},
 	{
@@ -43,7 +43,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-lzw30.src/inovelli-switch-lzw30.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.6.2",
+                "version": "20.7.7",
 		"releaseNotes": "Removed ColorControl capability as it was conflicting with some in-built Hubitat apps. Added LED Color child device that can be used in its place.  " 
    	},
 	{
