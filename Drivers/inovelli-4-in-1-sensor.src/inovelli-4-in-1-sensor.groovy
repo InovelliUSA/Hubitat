@@ -3,7 +3,7 @@
  *  Inovelli 4-in-1 Sensor 
  *   
  *    github: InovelliUSA
- *    Date: 2020-06-24
+ *    Date: 2020-07-07
  *    Copyright Inovelli / Eric Maycock
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -14,6 +14,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-07-07: Fix bug for enum parameters not showing correctly. 
  *
  *  2020-06-24: Requesting battery report on every wake up.
  *
@@ -63,43 +65,60 @@ import groovy.transform.Field
             "sensor wakes up (once every 24-Hours). To manually wake up the sensor, press the button on the back 3 times quickly.", 
             title: "Settings", displayDuringSetup: false, type: "paragraph", element: "paragraph"
         input "parameter10", "number",
-            title: "Low Battery Alert Level\nAt what battery level should the sensor send a low battery alert\nRange: 10..50\nDefault: 10",
+            title: "Low Battery Alert Level",
+            description: "At what battery level should the sensor send a low battery alert\nRange: 10..50\nDefault: 10",
             range: "10..50"
         input "parameter12", "number",
-            title: "Motion Sensor Sensitivity\nSensitivity level of the motion sensor. 0=Disabled 1=Low 10=High\nRange: 0..10\nDefault: 8",
+            title: "Motion Sensor Sensitivity",
+            description: "Sensitivity level of the motion sensor. 0=Disabled 1=Low 10=High\nRange: 0..10\nDefault: 8",
             range: "0..10"
         input "parameter13", "number",
-            title: "Motion Sensor Reset Time\nHow long after motion stops should the sensor wait before sending a no-motion report\nRange: 5..15300\nDefault: 30",
+            title: "Motion Sensor Reset Time",
+            description: "How long after motion stops should the sensor wait before sending a no-motion report\nRange: 5..15300\nDefault: 30",
             range: "5..15300"
         input "parameter14", "enum",
-            title: "Send Basic Set on Motion\nSend a Basic Set report to devices in association group 2\nDefault: No"
+            title: "Send Basic Set on Motion",
+            description: "Send a Basic Set report to devices in association group 2\nDefault: No",
+            options: ["1":"Yes", "0":"No"]
         input "parameter15", "enum",
-            title: "Reverse Basic Set ON / OFF\nSend OFF to devices in association group 2 when motion is triggered and ON when motion stops\nDefault: No"
+            title: "Reverse Basic Set ON / OFF",
+            description: "Send OFF to devices in association group 2 when motion is triggered and ON when motion stops\nDefault: No",
+            options: ["1":"Yes", "0":"No"]
         input "parameter101", "number",
-            title: "Temperature Reporting Interval\nInterval, in seconds, in which temperature reports should be sent. 0=Disabled\nRange: 0..2678400\nDefault: 7200",
+            title: "Temperature Reporting Interval",
+            description: "Interval, in seconds, in which temperature reports should be sent. 0=Disabled\nRange: 0..2678400\nDefault: 7200",
             range: "0..2678400"
         input "parameter102", "number",
-            title: "Humidity Reporting Interval\nInterval, in seconds, in which humidity reports should be sent. 0=Disabled\nRange: 0..2678400\nDefault: 7200",
+            title: "Humidity Reporting Interval",
+            description: "Interval, in seconds, in which humidity reports should be sent. 0=Disabled\nRange: 0..2678400\nDefault: 7200",
             range: "0..2678400"
         input "parameter103", "number",
-            title: "Luminance Reporting Interval\nInterval, in seconds, in which luminance reports should be sent. 0=Disabled\nRange: 0..2678400\nDefault: 7200",
+            title: "Luminance Reporting Interval",
+            description: "Interval, in seconds, in which luminance reports should be sent. 0=Disabled\nRange: 0..2678400\nDefault: 7200",
             range: "0..2678400"
         input "parameter104", "number",
-            title: "Battery Level Reporting Interval\nInterval, in seconds, in which battery reports should be sent. 0=Disabled\nRange: 0..2678400\nDefault: 7200",
+            title: "Battery Level Reporting Interval",
+            description: "Interval, in seconds, in which battery reports should be sent. 0=Disabled\nRange: 0..2678400\nDefault: 7200",
             range: "0..2678400"
         input "parameter110", "enum",
-            title: "Send Reports According to Threshold\nOnly send sensor reports if the below thresholds are met\nDefault: No"
+            title: "Send Reports According to Threshold",
+            description: "Only send sensor reports if the below thresholds are met\nDefault: No",
+            options: ["1":"Yes", "0":"No"]
         input "parameter111", "number",
-            title: "Temperature Threshold\nThreshold for temperature reports to be sent\nRange: 1..500\nDefault: 10",
+            title: "Temperature Threshold",
+            description: "Threshold for temperature reports to be sent\nRange: 1..500\nDefault: 10",
             range: "1..500"
         input "parameter112", "number",
-            title: "Humidity Threshold\nThreshold for humidity reports to be sent\nRange: 1..32\nDefault: 5",
+            title: "Humidity Threshold",
+            description: "Threshold for humidity reports to be sent\nRange: 1..32\nDefault: 5",
             range: "1..32"
         input "parameter113", "number",
-            title: "Luminance Threshold\nThreshold for luminance reports to be sent\nRange: 1..65528\nDefault: 150",
+            title: "Luminance Threshold",
+            description: "Threshold for luminance reports to be sent\nRange: 1..65528\nDefault: 150",
             range: "1..65528"
         input "parameter114", "number",
-            title: "Battery Threshold\nThreshold for battery reports to be sent\nRange: 1..100\nDefault: 10",
+            title: "Battery Threshold",
+            description: "Threshold for battery reports to be sent\nRange: 1..100\nDefault: 10",
             range: "1..100"
         input name: "temperatureOffset", type: "decimal", 
             title: "Temperature Offset\nAdjust the reported temperature by this positive or negative value\nRange: -10.0..10.0\nDefault: 0.0", 
@@ -122,7 +141,9 @@ import groovy.transform.Field
 }
 
 @Field static Map configParams = [
-    parameter010 : [name:"Low Battery Alert Level",
+    parameter010 : [
+        number: 10,
+        name:"Low Battery Alert Level",
         desciption: "At what battery level should the sensor send a low battery alert",
         range: "10..50",
         default: 10,
@@ -130,7 +151,9 @@ import groovy.transform.Field
         type: "number",
         value: null
         ],
-    parameter012 : [name:"Motion Sensor Sensitivity",
+    parameter012 : [
+        number: 12,
+        name:"Motion Sensor Sensitivity",
         desciption: "Sensitivity level of the motion sensor. 0=Disabled 1=Low 10=High",
         range: "0..10",
         default: 8,
@@ -138,7 +161,9 @@ import groovy.transform.Field
         type: "number",
         value: null
         ],
-    parameter013 : [name:"Motion Sensor Reset Time",
+    parameter013 : [
+        number: 13,
+        name:"Motion Sensor Reset Time",
         desciption: "How long after motion stops should the sensor wait before sending a no-motion report",
         range: "5..15300",
         default: 30,
@@ -146,23 +171,29 @@ import groovy.transform.Field
         type: "number",
         value: null
         ],
-    parameter014 : [name:"Send Basic Set on Motion",
+    parameter014 : [
+        number: 14,
+        name:"Send Basic Set on Motion",
         desciption: "Send a Basic Set report to devices in association group 2",
-        range: ["1":"Yes", "0":"No"],
+        range: "[1:Yes, 0:No]",
         default: 0,
         size: 1,
         type: "enum",
         value: null
         ],
-    parameter015 : [name:"Reverse Basic Set ON / OFF",
+    parameter015 : [
+        number: 15,
+        name:"Reverse Basic Set ON / OFF",
         desciption: "Send OFF to devices in association group 2 when motion is triggered and ON when motion stops",
-        range: ["1":"Yes", "0":"No"],
+        range: "[1:Yes, 0:No]",
         default: 0,
         size: 1,
         type: "enum",
         value: null
         ],
-    parameter101 : [name:"Temperature Reporting Interval",
+    parameter101 : [
+        number: 101,
+        name:"Temperature Reporting Interval",
         desciption: "Interval, in seconds, in which temperature reports should be sent. 0=Disabled",
         range: "0..2678400",
         default: 7200,
@@ -170,7 +201,9 @@ import groovy.transform.Field
         type: "number",
         value: null
         ],
-    parameter102 : [name:"Humidity Reporting Interval",
+    parameter102 : [
+        number: 102,
+        name:"Humidity Reporting Interval",
         desciption: "Interval, in seconds, in which humidity reports should be sent. 0=Disabled",
         range: "0..2678400",
         default: 7200,
@@ -178,7 +211,9 @@ import groovy.transform.Field
         type: "number",
         value: null
         ],
-    parameter103 : [name:"Luminance Reporting Interval",
+    parameter103 : [
+        number: 103,
+        name:"Luminance Reporting Interval",
         desciption: "Interval, in seconds, in which luminance reports should be sent. 0=Disabled",
         range: "0..2678400",
         default: 7200,
@@ -186,7 +221,9 @@ import groovy.transform.Field
         type: "number",
         value: null
         ],
-    parameter104 : [name:"Battery Level Reporting Interval",
+    parameter104 : [
+        number: 104,
+        name:"Battery Level Reporting Interval",
         desciption: "Interval, in seconds, in which battery reports should be sent. 0=Disabled",
         range: "0..2678400",
         default: 7200,
@@ -194,15 +231,19 @@ import groovy.transform.Field
         type: "number",
         value: null
         ],
-    parameter110 : [name:"Send Reports According to Threshold",
+    parameter110 : [
+        number: 110,
+        name:"Send Reports According to Threshold",
         desciption: "Only send sensor reports if the below thresholds are met",
-        range: ["1":"Yes", "0":"No"],
+        range: "[1:Yes, 0:No]",
         default: 0,
         size: 1,
         type: "enum",
         value: null
         ],
-    parameter111 : [name:"Temperature Threshold",
+    parameter111 : [
+        number: 111,
+        name:"Temperature Threshold",
         desciption: "Threshold for temperature reports to be sent",
         range: "1..500",
         default: 10,
@@ -210,7 +251,9 @@ import groovy.transform.Field
         type: "number",
         value: null
         ],
-    parameter112 : [name:"Humidity Threshold",
+    parameter112 : [
+        number: 112,
+        name:"Humidity Threshold",
         desciption: "Threshold for humidity reports to be sent",
         range: "1..32",
         default: 5,
@@ -218,7 +261,9 @@ import groovy.transform.Field
         type: "number",
         value: null
         ],
-    parameter113 : [name:"Luminance Threshold",
+    parameter113 : [
+        number: 113,
+        name:"Luminance Threshold",
         desciption: "Threshold for luminance reports to be sent",
         range: "1..65528",
         default: 150,
@@ -226,7 +271,9 @@ import groovy.transform.Field
         type: "number",
         value: null
         ],
-    parameter114 : [name:"Battery Threshold",
+    parameter114 : [
+        number: 114,
+        name:"Battery Threshold",
         desciption: "Threshold for battery reports to be sent",
         range: "1..100",
         default: 10,
