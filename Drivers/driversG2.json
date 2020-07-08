@@ -4,7 +4,7 @@
    "author": "Eric Maycock",
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
-   "releaseNotes": "LZW30/LZW30-SN: Add option to disable 700ms delay when turning the switch on / off from physical switch. Adding option for white LED color. Both options are for firmware 1.19+",
+   "releaseNotes": "LZW30/LZW30-SN: Add option to disable 700ms delay when turning the switch on / off from physical switch. Adding option for white LED color. Both options are for firmware 1.19+\nLZW60: Fix bug for enum parameters not showing correctly.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -53,7 +53,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-4-in-1-sensor.src/inovelli-4-in-1-sensor.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.6.24"
+                "version": "20.7.7"
    	},
 	{
    		"id" : "49d6f741-9c58-4310-ab61-0a68874dc2bf",
