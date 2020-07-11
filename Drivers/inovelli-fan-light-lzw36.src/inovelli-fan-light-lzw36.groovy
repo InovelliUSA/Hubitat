@@ -1,7 +1,7 @@
 /**
  *  Inovelli Fan + Light LZW36
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-06-29
+ *  Date: 2020-07-10
  *
  *  Copyright 2020 Inovelli / Eric Maycock
  *
@@ -13,6 +13,9 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-07-10: Fan child device will now show "speed" correctly when controlled from the switch.
+ *              Added startLevelChange and stopLevelChange for parent and component devices.  
  *
  *  2020-06-29: Switch over to using "Hampton Bay Fan Component" child device. Now you can use the "Fan" template
  *              in the dashboard. Auto = put the fan into breeze mode
@@ -55,6 +58,8 @@ metadata {
         command "componentOff"
         command "componentRefresh"
         command "componentSetLevel"
+        command "componentStartLevelChange"
+        command "componentStopLevelChange"
         command "setSpeed"
         
         command "reset"
@@ -231,6 +236,19 @@ def zwaveEvent(hubitat.zwave.commands.switchmultilevelv3.SwitchMultilevelReport 
         }
         if (childDevice) {
             childDevice.sendEvent(name: "switch", value: cmd.value ? "on" : "off")
+            if (ep == 2) {
+                if (cmd.value == 1) {
+                    childDevice.sendEvent(name: "speed", value: "auto")
+                } else if (cmd.value > 1 && cmd.value <= 33) {
+                    childDevice.sendEvent(name: "speed", value: "low")
+                } else if (cmd.value > 33 && cmd.value <= 66) {
+                    childDevice.sendEvent(name: "speed", value: "medium")
+                } else if (cmd.value > 66) {
+                    childDevice.sendEvent(name: "speed", value: "high")
+                } else {
+                     childDevice.sendEvent(name: "speed", value: "high")
+                }
+            }
             if (cmd.value && cmd.value <= 100) {
             	childDevice.sendEvent(name: "level", value: cmd.value == 99 ? 100 : cmd.value)
             }
@@ -454,7 +472,7 @@ def setSpeed(value){
 }
 
 def componentSetLevel(cd,level,transitionTime = null) {
-    if (infoEnable) log.info "${device.label?device.label:device.name}: componentSetLevel($cd, $value)"
+    if (infoEnable) log.info "${device.label?device.label:device.name}: componentSetLevel($cd, $level)"
 	return childSetLevel(cd.deviceNetworkId,level)
 }
 
@@ -468,8 +486,33 @@ def componentOff(cd) {
     return childOff(cd.deviceNetworkId)
 }
 
-void componentRefresh(cd) {
+def componentRefresh(cd) {
     if (infoEnable) log.info "${device.label?device.label:device.name}: componentRefresh($cd)"
+}
+
+def componentStartLevelChange(cd, direction) {
+    def upDownVal = direction == "down" ? true : false
+    def startLevel = null
+	if (infoEnable) log.debug "${device.label?device.label:device.name}: startLevelChange(${direction})"
+    def childDevice = childDevices.find{cd.deviceNetworkId}
+    if (childDevice) startLevel = childDevice.currentValue("level")
+    command(encap(zwave.switchMultilevelV2.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: startLevel, upDown: upDownVal, dimmingDuration:4), channelNumber(cd.deviceNetworkId).toInteger()))
+}
+
+def componentStopLevelChange(cd) {
+    if (infoEnable) log.debug "${device.label?device.label:device.name}: stopLevelChange()"
+    command(encap(zwave.switchMultilevelV2.switchMultilevelStopLevelChange(), channelNumber(cd.deviceNetworkId).toInteger()))
+}
+
+def startLevelChange(direction) {
+    def upDownVal = direction == "down" ? true : false
+	if (infoEnable) log.debug "${device.label?device.label:device.name}: startLevelChange(${direction})"
+    commands([zwave.switchMultilevelV2.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal)])
+}
+
+def stopLevelChange() {
+    if (infoEnable) log.debug "${device.label?device.label:device.name}: stopLevelChange()"
+    commands([zwave.switchMultilevelV2.switchMultilevelStopLevelChange()])
 }
 
 def childOn(String dni) {
@@ -877,8 +920,8 @@ def zwaveEvent(hubitat.zwave.commands.meterv3.MeterReport cmd, ep=null) {
             if (infoEnable) log.info "${device.label?device.label:device.name}: Power report received with value of ${cmd.scaledMeterValue} W"
 	    }
     } else {
-        cmds << zwave.meterV2.meterGet(scale: 0)
-        cmds << zwave.meterV2.meterGet(scale: 2)
+        if (cmd.scale == 0) cmds << zwave.meterV2.meterGet(scale: 0)
+        if (cmd.scale == 2) cmds << zwave.meterV2.meterGet(scale: 2)
     }
     if (cmds) return response(commands(cmds)) else return event
 }
@@ -1536,7 +1579,7 @@ def getParameterInfo(number, value){
     parameter.parameter30type="number"
     parameter.parameter31type="enum"
 
-    parameter.parameter1default=4
+    parameter.parameter1default=3
     parameter.parameter2default=99
     parameter.parameter3default=99
     parameter.parameter4default=99
