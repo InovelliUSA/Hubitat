@@ -1,7 +1,7 @@
 /**
  *  Inovelli Fan + Light LZW36
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-07-10
+ *  Date: 2020-07-12
  *
  *  Copyright 2020 Inovelli / Eric Maycock
  *
@@ -246,7 +246,7 @@ def zwaveEvent(hubitat.zwave.commands.switchmultilevelv3.SwitchMultilevelReport 
                 } else if (cmd.value > 66) {
                     childDevice.sendEvent(name: "speed", value: "high")
                 } else {
-                     childDevice.sendEvent(name: "speed", value: "high")
+                     childDevice.sendEvent(name: "speed", value: "off")
                 }
             }
             if (cmd.value && cmd.value <= 100) {
