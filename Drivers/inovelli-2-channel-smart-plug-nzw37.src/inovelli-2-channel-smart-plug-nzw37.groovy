@@ -49,9 +49,9 @@ metadata {
                                         [name: "Action*", type:"ENUM", constraints: ["Add", "Remove"]],
                                         [name:"Multi-channel Endpoint", type:"NUMBER", description: "Currently not implemented"]] 
 
-        command "childOn"
-        command "childOff"
-        command "childRefresh"
+        command "childOn", [[name:"Channel Number",type:"STRING",description:"Provide the channel number to turn on."]]
+        command "childOff", [[name:"Channel Number",type:"STRING",description:"Provide the channel number to turn off."]]
+        command "childRefresh", [[name:"Channel Number",type:"STRING",description:"Provide the channel number to refresh."]]
         command "componentOn"
         command "componentOff"
         command "componentRefresh"
