@@ -2,7 +2,7 @@
  *  Inovelli 2-Channel Smart Plug NZW37
  *   
  *  github: Eric Maycock (erocm123)
- *  Date: 2020-06-26
+ *  Date: 2020-07-14
  *  Copyright Eric Maycock
  *
  *  Includes all configuration parameters and ease of advanced configuration. 
@@ -15,6 +15,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-07-14: Retrieving firmware version to determine whether we need to request device status.
  *
  *  2020-06-26: Specify which command class versions to use. Remove extra commands. Switch to using Hubitat built in child drivers.
  *
@@ -43,6 +45,7 @@ metadata {
         
         attribute "lastActivity", "String"
         attribute "lastEvent", "String"
+        attribute "firmware", "String"
         
         command "setAssociationGroup", [[name: "Group Number*",type:"NUMBER", description: "Provide the association group number to edit"], 
                                         [name: "Z-Wave Node*", type:"STRING", description: "Enter the node number (in hex) associated with the node"], 
@@ -375,6 +378,7 @@ def initialize() {
     cmds << zwave.configurationV1.configurationGet(parameterNumber: 2)
     cmds << zwave.configurationV1.configurationSet(configurationValue: autoOff2!=null? integer2Cmd(autoOff2.toInteger(), 2) : integer2Cmd(0,2), parameterNumber: 3, size: 2)
     cmds << zwave.configurationV1.configurationGet(parameterNumber: 3)
+    cmds << zwave.versionV1.versionGet()
     return cmds
 }
 
@@ -516,8 +520,7 @@ void zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
     log.debug cmd
     if(cmd.applicationVersion && cmd.applicationSubVersion) {
 	    def firmware = "${cmd.applicationVersion}.${cmd.applicationSubVersion.toString().padLeft(2,'0')}"
-        state.needfwUpdate = "false"
-        sendEvent(name: "status", value: "fw: ${firmware}")
+        sendEvent(name: "firmware", value: firmware)
         updateDataValue("firmware", firmware)
     }
 }
