@@ -230,36 +230,50 @@ def zwaveEvent(hubitat.zwave.Command cmd) {
 
 def on() {
     log.debug "on()"
-    commands([
-            encap(zwave.basicV1.basicSet(value: 0xFF), 1),
-            encap(zwave.basicV1.basicSet(value: 0xFF), 2)
-    ])
+    def cmds = []
+    cmds << encap(zwave.basicV1.basicSet(value: 0xFF), 1)
+    cmds << encap(zwave.basicV1.basicSet(value: 0xFF), 2)
+    if (!(getDataValue('deviceId') == "24860" && getDataValue('deviceType') == "545")){
+        log.debug "Certain models do not report their status unless requested. Sending request."
+        cmds << encap(zwave.basicV1.basicGet(), 1)
+        cmds << encap(zwave.basicV1.basicGet(), 2)
+    }
+    return commands(cmds)
 }
 
 def off() {
     log.debug "off()"
-    commands([
-            encap(zwave.basicV1.basicSet(value: 0x00), 1),
-            encap(zwave.basicV1.basicSet(value: 0x00), 2)
-    ])
+    def cmds = []
+    cmds << encap(zwave.basicV1.basicSet(value: 0x00), 1)
+    cmds << encap(zwave.basicV1.basicSet(value: 0x00), 2)
+    if (!(getDataValue('deviceId') == "24860" && getDataValue('deviceType') == "545")){
+        log.debug "Certain models do not report their status unless requested. Sending request."
+        cmds << encap(zwave.basicV1.basicGet(), 1)
+        cmds << encap(zwave.basicV1.basicGet(), 2)
+    }
+    return commands(cmds)
 }
 
 def childOn(String dni) {
     log.debug "childOn($dni)"
     def cmds = []
-    commands([
-		encap(zwave.basicV1.basicSet(value: 0xFF), channelNumber(dni))//,
-        //encap(zwave.basicV1.basicGet(), channelNumber(dni))
-    ])
+    cmds << encap(zwave.basicV1.basicSet(value: 0xFF), channelNumber(dni))
+    if (!(getDataValue('deviceId') == "24860" && getDataValue('deviceType') == "545")){
+        log.debug "Certain models do not report their status unless requested. Sending request."
+        cmds << encap(zwave.basicV1.basicGet(), channelNumber(dni))
+    }
+    return commands(cmds)
 }
 
 def childOff(String dni) {
     log.debug "childOff($dni)"
     def cmds = []
-    commands([
-		encap(zwave.basicV1.basicSet(value: 0x00), channelNumber(dni))//,
-        //encap(zwave.basicV1.basicGet(), channelNumber(dni))
-    ])
+    cmds << encap(zwave.basicV1.basicSet(value: 0x00), channelNumber(dni))
+    if (!(getDataValue('deviceId') == "24860" && getDataValue('deviceType') == "545")){
+        log.debug "Certain models do not report their status unless requested. Sending request."
+        cmds << encap(zwave.basicV1.basicGet(), channelNumber(dni))
+    }
+    return commands(cmds)
 }
 
 def childRefresh(String dni) {
