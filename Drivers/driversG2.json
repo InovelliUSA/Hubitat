@@ -4,7 +4,7 @@
    "author": "Eric Maycock",
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
-   "releaseNotes": "LZW36: Fan child device will now show \"speed\" correctly when controlled from the switch.  Added startLevelChange and stopLevelChange for parent and component devices.",
+   "releaseNotes": "LZW31/LZW31-SN: Added configuration parameter (51 & 51) for firmware 1.47+.\n51 allows you to disable the 700ms delay when turing switch on/off from the wall.\n52 is to put the switch into a \"smart bulb\" mode to optimize the output for smart bulbs.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -13,8 +13,8 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-lzw31-sn.src/inovelli-dimmer-red-series-lzw31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.6.22",
-		"releaseNotes": "Removed ColorControl capability as it was conflicting with some in-built Hubitat apps. Added LED Color child device that can be used in its place. Also fixed incorrect default level range." 
+                "version": "20.7.17",
+		"releaseNotes": "" 
    	},
 	{
    		"id" : "159b97d3-7a94-4440-970a-4fb4fadc8288",
@@ -23,8 +23,8 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-lzw31.src/inovelli-dimmer-lzw31.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.6.22",
-		"releaseNotes": "Removed ColorControl capability as it was conflicting with some in-built Hubitat apps. Added LED Color child device that can be used in its place. Also fixed incorrect default level range." 
+                "version": "20.7.17",
+		"releaseNotes": "" 
    	},
 	{
    		"id" : "ea7baa65-2cdf-4193-afc5-2441fa1e5ed1",
@@ -34,7 +34,7 @@
    		"required": false,
    		"oauth": false,
                 "version": "20.7.7",
-		"releaseNotes": "Removed ColorControl capability as it was conflicting with some in-built Hubitat apps. Added LED Color child device that can be used in its place.  " 
+		"releaseNotes": "" 
    	},
 	{
    		"id" : "0b24afff-aa98-43ed-9f07-ba50b85a22f8",
@@ -44,7 +44,7 @@
    		"required": false,
    		"oauth": false,
                 "version": "20.7.7",
-		"releaseNotes": "Removed ColorControl capability as it was conflicting with some in-built Hubitat apps. Added LED Color child device that can be used in its place.  " 
+		"releaseNotes": "" 
    	},
 	{
    		"id" : "aa942639-c675-4bcc-a482-4dedc04d6eff",
