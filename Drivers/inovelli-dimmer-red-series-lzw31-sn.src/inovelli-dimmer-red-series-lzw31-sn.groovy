@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer Red Series LZW31-SN
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-06-02
+ *  Date: 2020-07-17
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -13,6 +13,10 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-07-17: Added configuration parameter (51 & 51) for firmware 1.47+ 
+ *              51 allows you to disable the 700ms delay when turing switch on/off from the wall.
+ *              52 is to put the switch into a "smart bulb" mode to optimize the output for smart bulbs.
  *
  *  2020-06-02: Change setColor to leave indicator level alone if level is not specified with command. 
  *              LED Indicator child device now works with setLevel as well as setColor.
@@ -855,6 +859,8 @@ def getParameterInfo(number, value){
     parameter.parameter20default=10
     parameter.parameter21default=1
     parameter.parameter22default=0
+    parameter.parameter51default=1
+    parameter.parameter52default=0
     
     parameter.parameter1type="number"
     parameter.parameter2type="number"
@@ -878,6 +884,8 @@ def getParameterInfo(number, value){
     parameter.parameter20type="number"
     parameter.parameter21type="enum"
     parameter.parameter22type="enum"
+    parameter.parameter51type="enum"
+    parameter.parameter52type="enum"
     
     parameter.parameter1size=1
     parameter.parameter2size=1
@@ -901,6 +909,8 @@ def getParameterInfo(number, value){
     parameter.parameter20size=1
     parameter.parameter21size=1
     parameter.parameter22size=1
+    parameter.parameter51size=1
+    parameter.parameter52size=1
     
     parameter.parameter1options="0..100"
     parameter.parameter2options="0..101"
@@ -924,6 +934,8 @@ def getParameterInfo(number, value){
     parameter.parameter20options="0..100"
     parameter.parameter21options=["0":"Non Neutral", "1":"Neutral"]
     parameter.parameter22options=["0":"Load Only", "1":"3-way Toggle", "2":"3-way Momentary"]
+    parameter.parameter51options=["1":"No (Default)", "0":"Yes"]
+    parameter.parameter52options=["0":"No (Default)", "1":"Yes"]
     
     parameter.parameter1name="Dimming Speed"
     parameter.parameter2name="Dimming Speed (From Switch)"
@@ -947,6 +959,8 @@ def getParameterInfo(number, value){
     parameter.parameter20name="Energy Reports"
     parameter.parameter21name="AC Power Type"
     parameter.parameter22name="Switch Type"
+    parameter.parameter51name="Disable Physical On/Off Delay"
+    parameter.parameter52name="Smart Bulb Mode"
     
     parameter.parameter1description="This changes the speed in which the attached light dims up or down. A setting of 0 should turn the light immediately on or off (almost like an on/off switch). Increasing the value should slow down the transition speed."
     parameter.parameter2description="This changes the speed in which the attached light dims up or down when controlled from the physical switch. A setting of 0 should turn the light immediately on or off (almost like an on/off switch). Increasing the value should slow down the transition speed. A setting of 101 should keep this in sync with parameter 1."
@@ -970,6 +984,8 @@ def getParameterInfo(number, value){
     parameter.parameter20description="The energy level change that will result in a new energy report being sent. The value is a percentage of the previous report."
     parameter.parameter21description="Configure the switch to use a neutral wire."
     parameter.parameter22description="Configure the type of 3-way switch connected to the dimmer."
+    parameter.parameter51description="The 700ms delay that occurs after pressing the physical button to turn the switch on/off is removed. Consequently this also removes the following scenes: 2x, 3x, 4x, 5x tap. 1x tap and config button scenes still work. (firmware 1.47+)"
+    parameter.parameter52description="Optimize power output to be more compatible with smart bulbs. This prevents the dimmer from being able to dim & makes it act like an ON / OFF switch. (firmware 1.47+)"
     
     return parameter."parameter${number}${value}"
 }
