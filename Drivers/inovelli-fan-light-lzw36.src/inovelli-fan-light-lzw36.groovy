@@ -1,7 +1,7 @@
 /**
  *  Inovelli Fan + Light LZW36
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-07-12
+ *  Date: 2020-08-03
  *
  *  Copyright 2020 Inovelli / Eric Maycock
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-08-03: Adding "reset()" to reset the energy accumulation numbers.
  *
  *  2020-07-10: Fan child device will now show "speed" correctly when controlled from the switch.
  *              Added startLevelChange and stopLevelChange for parent and component devices.  
@@ -631,6 +633,15 @@ def refresh() {
     cmds << zwave.meterV2.meterGet(scale: 0)
     cmds << zwave.meterV2.meterGet(scale: 2)
     return commands(cmds)
+}
+
+def reset() {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: Resetting energy statistics"
+    def cmds = []
+    cmds << zwave.meterV2.meterReset()
+    cmds << zwave.meterV2.meterGet(scale: 0)
+    cmds << zwave.meterV2.meterGet(scale: 2)
+    commands(cmds, 1000)
 }
 
 def ping() {
