@@ -4,7 +4,7 @@
    "author": "Eric Maycock",
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
-   "releaseNotes": "LZW31/LZW31-SN: Added configuration parameter (51 & 51) for firmware 1.47+.\n51 allows you to disable the 700ms delay when turing switch on/off from the wall.\n52 is to put the switch into a \"smart bulb\" mode to optimize the output for smart bulbs.",
+   "releaseNotes": "LZW36: Adding \"reset()\" to reset the energy accumulation numbers.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -80,7 +80,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-lzw36.src/inovelli-fan-light-lzw36.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.7.10"
+                "version": "20.8.3"
    	}
    ]
 }
