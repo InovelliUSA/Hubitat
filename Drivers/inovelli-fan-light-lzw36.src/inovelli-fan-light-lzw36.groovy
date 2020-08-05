@@ -1,7 +1,7 @@
 /**
  *  Inovelli Fan + Light LZW36
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-08-04
+ *  Date: 2020-08-05
  *
  *  Copyright 2020 Inovelli / Eric Maycock
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-08-05: Adding S2 support for C-7 Hub. 
  *
  *  2020-08-04: Adding cycleSpeed() command for use with fan child device.
  *
@@ -1775,14 +1777,38 @@ private encap(cmd, endpoint) {
 }
 
 private command(hubitat.zwave.Command cmd) {
-    if (getDataValue("zwaveSecurePairingComplete") == "true") {
-        zwave.securityV1.securityMessageEncapsulation().encapsulate(cmd).format()
-    } else {
-        cmd.format()
+    if (getDataValue("zwaveSecurePairingComplete") != "true") {
+        return cmd.format()
     }
+    Short S2 = getDataValue("S2")?.toInteger()
+    String encap = ""
+    String keyUsed = "S0"
+    if (S2 == null) { //S0 existing device
+        encap = "988100"
+    } else if ((S2 & 0x04) == 0x04) { //S2_ACCESS_CONTROL
+        keyUsed = "S2_ACCESS_CONTROL"
+        encap = "9F0304"
+    } else if ((S2 & 0x02) == 0x02) { //S2_AUTHENTICATED
+        keyUsed = "S2_AUTHENTICATED"
+        encap = "9F0302"
+    } else if ((S2 & 0x01) == 0x01) { //S2_UNAUTHENTICATED
+        keyUsed = "S2_UNAUTHENTICATED"
+        encap = "9F0301"
+    } else if ((S2 & 0x80) == 0x80) { //S0 on C7
+        encap = "988100"
+    }
+    return "${encap}${cmd.format()}"
 }
 
-private commands(commands, delay = 1000) {
+void zwaveEvent(hubitat.zwave.commands.supervisionv1.SupervisionGet cmd){
+    hubitat.zwave.Command encapCmd = cmd.encapsulatedCommand(commandClassVersions)
+    if (encapCmd) {
+        zwaveEvent(encapCmd)
+    }
+    sendHubCommand(new hubitat.device.HubAction(command(zwave.supervisionV1.supervisionReport(sessionID: cmd.sessionID, reserved: 0, moreStatusUpdates: false, status: 0xFF, duration: 0)), hubitat.device.Protocol.ZWAVE))
+}
+
+private commands(commands, delay = 500) {
     delayBetween(commands.collect {
         command(it)
     }, delay)
