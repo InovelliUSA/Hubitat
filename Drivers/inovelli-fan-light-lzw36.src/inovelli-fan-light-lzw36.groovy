@@ -1,7 +1,7 @@
 /**
  *  Inovelli Fan + Light LZW36
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-08-03
+ *  Date: 2020-08-04
  *
  *  Copyright 2020 Inovelli / Eric Maycock
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-08-04: Adding cycleSpeed() command for use with fan child device.
  *
  *  2020-08-03: Adding "reset()" to reset the energy accumulation numbers.
  *
@@ -63,6 +65,7 @@ metadata {
         command "componentStartLevelChange"
         command "componentStopLevelChange"
         command "setSpeed"
+        command "cycleSpeed"
         
         command "reset"
         
@@ -469,7 +472,28 @@ def setSpeed(value){
         case "off":
             return childOff("${device.deviceNetworkId}-ep002")
         break
-        
+    }
+}
+
+def cycleSpeed() {
+    def currentSpeed = "off"
+    def childDevice = childDevices.find{it.deviceNetworkId.endsWith("ep002")}
+    if (childDevice) currentSpeed = childDevice.currentValue("speed")? childDevice.currentValue("speed") : "off"
+    switch (currentSpeed) {
+        case "off":
+            return childSetLevel("${device.deviceNetworkId}-ep002",33)
+        break
+        case "low":
+            return childSetLevel("${device.deviceNetworkId}-ep002",66)
+        break
+        case "medium-low":
+        case "medium":
+        case "medium-high":
+            return childSetLevel("${device.deviceNetworkId}-ep002",99)
+        break
+        case "high":
+            return childOff("${device.deviceNetworkId}-ep002")
+        break
     }
 }
 
