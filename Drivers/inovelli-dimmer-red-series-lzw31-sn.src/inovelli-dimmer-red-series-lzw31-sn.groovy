@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer Red Series LZW31-SN
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-08-05
+ *  Date: 2020-08-07
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -13,6 +13,9 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-08-07: Fix for when setting the LED color via drop down to white the custom color field 
+ *              gets populated without user realizing it. 
  *
  *  2020-08-05: Adding S2 support for C-7 Hub. 
  *
@@ -1038,7 +1041,7 @@ def zwaveEvent(hubitat.zwave.commands.configurationv1.ConfigurationReport cmd) {
             }
         break
         case 13:
-            if(integerValue==0||integerValue==21||integerValue==42||integerValue==85||integerValue==127||integerValue==170||integerValue==212||integerValue==234){
+            if(integerValue==0||integerValue==21||integerValue==42||integerValue==85||integerValue==127||integerValue==170||integerValue==212||integerValue==234||integerValue==255){
                 device.updateSetting("parameter${cmd.parameterNumber}",[value:"${integerValue}",type:"number"])
                 device.removeSetting("parameter${cmd.parameterNumber}custom")
             } else {
