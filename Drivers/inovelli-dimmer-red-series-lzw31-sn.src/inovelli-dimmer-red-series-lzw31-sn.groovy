@@ -116,6 +116,7 @@ metadata {
         command "componentSetLevel"
         command "componentRefresh"
         command "componentSetColor"
+        command "componentSetHue"
         command "setIndicator", [[name: "Set Indicator*",type:"NUMBER", description: "For configuration values see: https://nathanfiscus.github.io/inovelli-notification-calc/"]]
 
         command "reset"
@@ -551,6 +552,10 @@ def componentSetColor(cd,value) {
     cmds << setParameter(13, ledColor, 2)
     cmds << getParameter(13)
     return commands(cmds)
+}
+
+def componentSetHue(cd, hueValue) {
+     componentSetColor(cd, [ hue: hueValue, saturation: 100])
 }
 
 private huePercentToValue(value){
