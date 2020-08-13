@@ -1,7 +1,7 @@
 /**
  *  Inovelli Fan + Light LZW36
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-08-05
+ *  Date: 2020-08-13
  *
  *  Copyright 2020 Inovelli / Eric Maycock
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-08-13: Fix for SupervisionGet error. 
  *
  *  2020-08-05: Adding S2 support for C-7 Hub. 
  *
@@ -1800,7 +1802,7 @@ private command(hubitat.zwave.Command cmd) {
     return "${encap}${cmd.format()}"
 }
 
-void zwaveEvent(hubitat.zwave.commands.supervisionv1.SupervisionGet cmd){
+void zwaveEvent(hubitat.zwave.commands.supervisionv1.SupervisionGet cmd, ep=null){
     hubitat.zwave.Command encapCmd = cmd.encapsulatedCommand(commandClassVersions)
     if (encapCmd) {
         zwaveEvent(encapCmd)
