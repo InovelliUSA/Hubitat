@@ -4,7 +4,7 @@
    "author": "Eric Maycock",
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
-   "releaseNotes": "LZW31/LZW31-SN: Fixing on(), off(), & setLevel() commands to match device preference descriptions. Use a different method to determine physical vs digital dimmer events.",
+   "releaseNotes": "LZW36: Fix for SupervisionGet error. \nLZW31/LZW31-SN: Fixing on(), off(), & setLevel() commands to match device preference descriptions. Use a different method to determine physical vs digital dimmer events.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -80,7 +80,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-lzw36.src/inovelli-fan-light-lzw36.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.8.5"
+                "version": "20.8.13"
    	}
    ]
 }
