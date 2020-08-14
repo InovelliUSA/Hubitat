@@ -1,7 +1,7 @@
 /**
  *  Inovelli Fan + Light LZW36
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-08-13
+ *  Date: 2020-08-14
  *
  *  Copyright 2020 Inovelli / Eric Maycock
  *
@@ -13,6 +13,10 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-08-14: Added configuration parameter 51 for firmware 1.36+ 
+ *              It allows you to disable the 700ms delay when turing switch on/off from the wall.
+ *              More bug fixes for C-7 Hub.
  *
  *  2020-08-13: Fix for SupervisionGet error. 
  *
@@ -165,7 +169,9 @@ def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd, ep = null) {
             def allOff = true
             childDevices.each {
                 n->
-                    if (n.deviceNetworkId != "$device.deviceNetworkId-ep00$ep" && n.currentState("switch").value != "off") allOff = false
+                    if (n.deviceNetworkId == "$device.deviceNetworkId-ep001" || n.deviceNetworkId == "$device.deviceNetworkId-ep002") { 
+                        if (n.deviceNetworkId != "$device.deviceNetworkId-ep00$ep" && n.currentState("switch").value != "off") allOff = false
+                    }
             }
             if (allOff) {
                 event = [createEvent([name: "switch", value: "off"])]
@@ -173,7 +179,7 @@ def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd, ep = null) {
                 event = [createEvent([name: "switch", value: "on"])]
             }
         }
-        return event
+        sendEvent(event)
     } else {
         //def result = createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "digital")
         //def cmds = []
@@ -217,7 +223,9 @@ def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd, ep 
             def allOff = true
             childDevices.each {
                 n->
-                    if (n.deviceNetworkId != "$device.deviceNetworkId-ep00$ep" && n.currentState("switch").value != "off") allOff = false
+                    if (n.deviceNetworkId == "$device.deviceNetworkId-ep001" || n.deviceNetworkId == "$device.deviceNetworkId-ep002") { 
+                        if (n.deviceNetworkId != "$device.deviceNetworkId-ep00$ep" && n.currentState("switch").value != "off") allOff = false
+                    }
             }
             if (allOff) {
                 event = [createEvent([name: "switch", value: "off"])]
@@ -225,7 +233,7 @@ def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd, ep 
                 event = [createEvent([name: "switch", value: "on"])]
             }
         }
-        return event
+        sendEvent(event)
     } else {
         //def result = createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "digital")
         //def cmds = []
@@ -268,7 +276,9 @@ def zwaveEvent(hubitat.zwave.commands.switchmultilevelv3.SwitchMultilevelReport 
             def allOff = true
             childDevices.each {
                 n->
-                    if (n.deviceNetworkId != "$device.deviceNetworkId-ep00$ep" && n.currentState("switch").value != "off") allOff = false
+                    if (n.deviceNetworkId == "$device.deviceNetworkId-ep001" || n.deviceNetworkId == "$device.deviceNetworkId-ep002") { 
+                        if (n.deviceNetworkId != "$device.deviceNetworkId-ep00$ep" && n.currentState("switch").value != "off") allOff = false
+                    }
             }
 
             if (allOff) {
@@ -277,7 +287,7 @@ def zwaveEvent(hubitat.zwave.commands.switchmultilevelv3.SwitchMultilevelReport 
                 event = [createEvent([name: "switch", value: "on"])]
             }
         }
-        return event
+        sendEvent(event)
     } else {
         //def result = createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "digital")
         //def cmds = []
@@ -945,24 +955,24 @@ def zwaveEvent(hubitat.zwave.commands.meterv3.MeterReport cmd, ep=null) {
     if (cmd.meterValue != []){
 	    if (cmd.scale == 0) {
     	    if (cmd.meterType == 161) {
-		        event = createEvent(name: "voltage", value: cmd.scaledMeterValue, unit: "V")
+		        sendEvent(name: "voltage", value: cmd.scaledMeterValue, unit: "V")
                 if (infoEnable) log.info "${device.label?device.label:device.name}: Voltage report received with value of ${cmd.scaledMeterValue} V"
             } else if (cmd.meterType == 1) {
-        	    event = createEvent(name: "energy", value: cmd.scaledMeterValue, unit: "kWh")
+        	    sendEvent(name: "energy", value: cmd.scaledMeterValue, unit: "kWh")
                 if (infoEnable) log.info "${device.label?device.label:device.name}: Energy report received with value of ${cmd.scaledMeterValue} kWh"
             }
 	    } else if (cmd.scale == 1) {
-		    event = createEvent(name: "amperage", value: cmd.scaledMeterValue, unit: "A")
+		    sendEvent(name: "amperage", value: cmd.scaledMeterValue, unit: "A")
             if (infoEnable) log.info "${device.label?device.label:device.name}: Amperage report received with value of ${cmd.scaledMeterValue} A"
 	    } else if (cmd.scale == 2) {
-		    event = createEvent(name: "power", value: Math.round(cmd.scaledMeterValue), unit: "W")
+		    sendEvent(name: "power", value: Math.round(cmd.scaledMeterValue), unit: "W")
             if (infoEnable) log.info "${device.label?device.label:device.name}: Power report received with value of ${cmd.scaledMeterValue} W"
 	    }
     } else {
         if (cmd.scale == 0) cmds << zwave.meterV2.meterGet(scale: 0)
         if (cmd.scale == 2) cmds << zwave.meterV2.meterGet(scale: 2)
     }
-    if (cmds) return response(commands(cmds)) else return event
+    if (cmds) return response(commands(cmds)) else return null
 }
 
 def buttonEvent(button, value, type = "digital") {
@@ -975,7 +985,7 @@ def buttonEvent(button, value, type = "digital") {
 }
 
 def getParameterNumbers(){
-    return [1,2,3,4,5,6,7,8,10,11,12,13,14,15,16,17,18,19,20,21,22,23,26,27,28,29,30,31]
+    return [1,2,3,4,5,6,7,8,10,11,12,13,14,15,16,17,18,19,20,21,22,23,26,27,28,29,30,31,51]
 }
 
 def generate_preferences()
@@ -1617,6 +1627,7 @@ def getParameterInfo(number, value){
     parameter.parameter29type="number"
     parameter.parameter30type="number"
     parameter.parameter31type="enum"
+    parameter.parameter51type="enum"
 
     parameter.parameter1default=3
     parameter.parameter2default=99
@@ -1647,6 +1658,7 @@ def getParameterInfo(number, value){
     parameter.parameter29default=3600
     parameter.parameter30default=10
     parameter.parameter31default=0
+    parameter.parameter51default=1
 
     parameter.parameter1options="0..100"
     parameter.parameter2options="0..99"
@@ -1677,6 +1689,7 @@ def getParameterInfo(number, value){
     parameter.parameter29options="0..32767"
     parameter.parameter30options="0..100"
     parameter.parameter31options=["0":"None", "1":"Light", "2":"Fan", "3":"Both"]
+    parameter.parameter51options=["1":"No (Default)", "0":"Yes"]
 
     parameter.parameter1size=1
     parameter.parameter2size=1
@@ -1707,6 +1720,7 @@ def getParameterInfo(number, value){
     parameter.parameter29size=2
     parameter.parameter30size=1
     parameter.parameter31size=1
+    parameter.parameter51size=1
 
     parameter.parameter1description="This changes the speed in which the attached light dims up or down. A setting of 0 should turn the light immediately on or off (almost like an on/off switch). Increasing the value should slow down the transition speed."
 	parameter.parameter2description="This changes the speed in which the attached light dims up or down when controlled from the physical switch. A setting of 0 should turn the light immediately on or off (almost like an on/off switch). Increasing the value should slow down the transition speed. A setting of 99 should keep this in sync with parameter 1."
@@ -1736,6 +1750,7 @@ def getParameterInfo(number, value){
     parameter.parameter29description="Time period between consecutive power & energy reports being sent (in seconds). The timer is reset after each report is sent."
     parameter.parameter30description="The energy level change that will result in a new energy report being sent. The value is a percentage of the previous report."
     parameter.parameter31description="Enable local protection on these buttons."
+    parameter.parameter51description="The 700ms delay that occurs after pressing the physical button to turn the switch on/off is removed. Consequently this also removes the following scenes: 2x, 3x, 4x, 5x tap. Still working are the 1x tap, held, released, and the level up/down scenes. (firmware 1.36+)"
 
     parameter.parameter1name="Dimming Speed"
     parameter.parameter2name="Dimming Speed (From Switch)"
@@ -1766,6 +1781,7 @@ def getParameterInfo(number, value){
     parameter.parameter29name="Periodic Power & Energy Reports"
     parameter.parameter30name="Energy Reports"
     parameter.parameter31name="Local Protection Settings"
+    parameter.parameter51name="Disable Physical On/Off Delay"
 
     return parameter."parameter${number}${value}"
 }
@@ -1805,9 +1821,9 @@ private command(hubitat.zwave.Command cmd) {
 void zwaveEvent(hubitat.zwave.commands.supervisionv1.SupervisionGet cmd, ep=null){
     hubitat.zwave.Command encapCmd = cmd.encapsulatedCommand(commandClassVersions)
     if (encapCmd) {
-        zwaveEvent(encapCmd)
+        zwaveEvent(encapCmd, ep)
     }
-    sendHubCommand(new hubitat.device.HubAction(command(zwave.supervisionV1.supervisionReport(sessionID: cmd.sessionID, reserved: 0, moreStatusUpdates: false, status: 0xFF, duration: 0)), hubitat.device.Protocol.ZWAVE))
+    //sendHubCommand(new hubitat.device.HubAction(command(zwave.supervisionV1.supervisionReport(sessionID: cmd.sessionID, reserved: 0, moreStatusUpdates: false, status: 0xFF, duration: 0)), hubitat.device.Protocol.ZWAVE))
 }
 
 private commands(commands, delay = 500) {
