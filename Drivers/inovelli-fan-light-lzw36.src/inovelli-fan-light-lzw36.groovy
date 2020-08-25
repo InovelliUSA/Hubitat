@@ -14,7 +14,8 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  2020-08-25: Fix for button events not getting sent correctly on C7. 
+ *  2020-08-25: Fix for button events not getting sent correctly on C7.
+ *              Driver will delete Hubitat created child devices if you switch over to it.
  *
  *  2020-08-14: Added configuration parameter 51 for firmware 1.36+ 
  *              It allows you to disable the 700ms delay when turing switch on/off from the wall.
@@ -715,9 +716,41 @@ def logsOff(){
     device.updateSetting("infoEnable",[value:"false",type:"bool"])
 }
 
+private addChild(id, label, namespace, driver, isComponent){
+    if(!childExists(id)){
+        try {
+            def newChild = addChildDevice(namespace, driver, "${device.deviceNetworkId}-${id}", 
+                    [completedSetup: true, label: "${device.displayName} (${label})",
+                    isComponent: isComponent, componentName: id, componentLabel: label])
+            newChild.sendEvent(name:"switch", value:"off")
+        } catch (e) {
+            runIn(3, "sendAlert", [data: [message: "Child device creation failed. Make sure the driver for \"${driver}\" with a namespace of ${namespace} is installed"]])
+        }
+    }
+}
+
+private deleteChild(id){
+    if(childExists(id)){
+        def childDevice = childDevices.find{it.deviceNetworkId.endsWith(id)}
+        try {
+            if(childDevice) deleteChildDevice(childDevice.deviceNetworkId)
+        } catch (e) {
+            if (infoEnable) log.info "Hubitat may have issues trying to delete the child device when it is in use. Need to manually delete them."
+            runIn(3, "sendAlert", [data: [message: "Failed to delete child device. Make sure the device is not in use by any App."]])
+        }
+    }
+}
+
 def initialize() {
     sendEvent(name: "checkInterval", value: 3 * 60 * 60 + 2 * 60, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID, offlinePingable: "1"])
     sendEvent(name: "numberOfButtons", value: 9, displayed: true)
+    
+    if(childExists("212-1")){
+        deleteChild("212-1")
+    }
+    if(childExists("212-2")){
+        deleteChild("212-2")
+    }
     
     if(!childExists("ep001")){
         def newChild = addChildDevice("hubitat", "Generic Component Dimmer", "${device.deviceNetworkId}-ep001", [completedSetup: true, label: "${device.displayName} (Light)",
