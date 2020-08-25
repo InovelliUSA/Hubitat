@@ -4,7 +4,7 @@
    "author": "Eric Maycock",
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
-   "releaseNotes": "LZW36/LZW31-SN/LZW30-SN: Fix for button events not getting sent correctly on C7.",
+   "releaseNotes": "LZW30/LZW30-SN/LZW31/LZW31-SN: Adding componentSetColorTemperature to allow LED child device to change LED color to white. If you set the color of child device it changes it to the specified RGB color. If you set the color temperature it will change the LED to white. If you update the driver for an already included device you will need to change the child device driver to Generic Component RGBW.\nLZW36/LZW31-SN/LZW30-SN: Fix for button events not getting sent correctly on C7.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -13,7 +13,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-lzw31-sn.src/inovelli-dimmer-red-series-lzw31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.8.25",
+                "version": "20.8.251",
 		"releaseNotes": "" 
    	},
 	{
@@ -23,7 +23,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-lzw31.src/inovelli-dimmer-lzw31.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.8.12",
+                "version": "20.8.25",
 		"releaseNotes": "" 
    	},
 	{
@@ -33,7 +33,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-red-series-lzw30-sn.src/inovelli-switch-red-series-lzw30-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.8.25",
+                "version": "20.8.251",
 		"releaseNotes": "" 
    	},
 	{
@@ -43,7 +43,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-lzw30.src/inovelli-switch-lzw30.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.8.7",
+                "version": "20.8.25",
 		"releaseNotes": "" 
    	},
 	{
