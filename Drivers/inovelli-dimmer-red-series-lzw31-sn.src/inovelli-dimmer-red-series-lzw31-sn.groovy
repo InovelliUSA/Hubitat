@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer Red Series LZW31-SN
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-08-12
+ *  Date: 2020-08-25
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-08-25: Fix for button events not getting sent correctly on C7. 
  *
  *  2020-08-12: Fixing on(), off(), & setLevel() commands to match device preference descriptions. Use a different method
  *              to determine physical vs digital dimmer events.
@@ -1183,32 +1185,33 @@ private dimmerEvents(hubitat.zwave.Command cmd, type="physical") {
     return result
 }
 
-def zwaveEvent(hubitat.zwave.commands.centralscenev1.CentralSceneNotification cmd) {
+void zwaveEvent(hubitat.zwave.commands.centralscenev1.CentralSceneNotification cmd) {
     if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
     switch (cmd.keyAttributes) {
        case 0:
-       if (cmd.sceneNumber == 3) createEvent(buttonEvent(7, "pushed", "physical"))
-       else createEvent(buttonEvent(cmd.keyAttributes + 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical"))
+       if (cmd.sceneNumber == 3) buttonEvent(7, "pushed", "physical")
+       else buttonEvent(cmd.keyAttributes + 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
        break
        case 1:
-       createEvent(buttonEvent(6, (cmd.sceneNumber == 2? "pushed" : "held"), "physical"))
+       buttonEvent(6, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
        break
        case 2:
-       createEvent(buttonEvent(8, (cmd.sceneNumber == 2? "pushed" : "held"), "physical"))
+       buttonEvent(8, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
        break
        default:
-       createEvent(buttonEvent(cmd.keyAttributes - 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical"))
+       buttonEvent(cmd.keyAttributes - 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
        break
     }
 }
 
-def buttonEvent(button, value, type = "digital") {
+void buttonEvent(button, value, type = "digital") {
     if(button != 6)
         sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Tap '.padRight(button+5, '▼'):' Tap '.padRight(button+5, '▲')}", displayed:false)
     else
         sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Hold ▼':' Hold ▲'}", displayed:false)
     if (infoEnable) log.info "${device.label?device.label:device.name}: Button ${button} was ${value}"
-    [name: value, value: button, isStateChange:true]
+    
+    sendEvent(name: value, value: button, isStateChange:true)
 }
 
 def zwaveEvent(hubitat.zwave.Command cmd) {
