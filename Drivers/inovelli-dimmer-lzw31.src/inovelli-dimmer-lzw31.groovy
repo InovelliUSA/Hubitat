@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer LZW31
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-08-12
+ *  Date: 2020-08-25
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -13,6 +13,12 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-08-25: Adding componentSetColorTemperature to allow LED child device to change LED color to white.
+ *              If you set the color of child device it changes it to the specified RGB color. If you
+ *              set the color temperature it will change the LED to white.
+ *              If you update the driver for an already included device you will need to change the
+ *              child device driver to Generic Component RGBW.
  *
  *  2020-08-12: Fixing on(), off(), & setLevel() commands to match device preference descriptions. Use a different method
  *              to determine physical vs digital dimmer events.
@@ -95,6 +101,7 @@ metadata {
         command "componentSetLevel"
         command "componentRefresh"
         command "componentSetColor"
+        command "componentSetColorTemperature"
 
         fingerprint mfr: "031E", prod: "0003", model: "0001", deviceJoinName: "Inovelli Dimmer"
         fingerprint deviceId: "0x1101", inClusters: "0x5E,0x55,0x98,0x9F,0x6C,0x22,0x26,0x70,0x85,0x59,0x86,0x72,0x5A,0x73,0x75,0x7A" 
@@ -184,6 +191,16 @@ def componentSetColor(cd,value) {
     return commands(cmds)
 }
 
+def componentSetColorTemperature(cd, value) {
+    if (infoEnable != "false") log.info "${device.label?device.label:device.name}: cd, componentSetColorTemperature($value)"
+    if (infoEnable) log.info "${device.label?device.label:device.name}: Setting LED color value to 255"
+    state.colorTemperature = value
+    def cmds = []
+    cmds << setParameter(13, 255, 2)
+    cmds << getParameter(13)
+    if(cmds) commands(cmds)
+}
+
 private huePercentToValue(value){
     return value<=2?0:(value>=98?360:value/100*360)
 }
@@ -193,7 +210,7 @@ private hueValueToZwaveValue(value){
 }
 
 private huePercentToZwaveValue(value){
-    return value<=2?0:(value>=98?255:value/100*255)
+    return value<=2?0:(value>=98?254:value/100*255)
 }
 
 private zwaveValueToHueValue(value){
@@ -391,7 +408,7 @@ def initialize() {
     else deleteChild("ep101")
     if (enableDisableRemoteChild) addChild("ep102", "Disable Remote Control", "hubitat", "Generic Component Switch", false)
     else deleteChild("ep102")
-    if (enableLEDChild) addChild("ep103", "LED Color", "hubitat", "Generic Component RGB", false)
+    if (enableLEDChild) addChild("ep103", "LED Color", "hubitat", "Generic Component RGBW", false)
     else deleteChild("ep103")
     
     if (device.label != state.oldLabel) {
