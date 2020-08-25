@@ -1,7 +1,7 @@
 /**
  *  Inovelli Fan + Light LZW36
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-08-14
+ *  Date: 2020-08-25
  *
  *  Copyright 2020 Inovelli / Eric Maycock
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-08-25: Fix for button events not getting sent correctly on C7. 
  *
  *  2020-08-14: Added configuration parameter 51 for firmware 1.36+ 
  *              It allows you to disable the 700ms delay when turing switch on/off from the wall.
@@ -926,26 +928,36 @@ def childExists(ep) {
         return false
 }
 
-def zwaveEvent(hubitat.zwave.commands.centralscenev1.CentralSceneNotification cmd, ep=null) {
+void zwaveEvent(hubitat.zwave.commands.centralscenev1.CentralSceneNotification cmd, ep=null) {
     if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd} ${ep?ep:0}"
     switch (cmd.keyAttributes) {
        case 0:
-       if (cmd.sceneNumber == 3) createEvent(buttonEvent(7, "pushed", "physical"))
-       else if (cmd.sceneNumber == 4) createEvent(buttonEvent(7, "held", "physical"))
-       else if (cmd.sceneNumber == 5) createEvent(buttonEvent(9, "pushed", "physical"))
-       else if (cmd.sceneNumber == 6) createEvent(buttonEvent(9, "held", "physical"))
-       else createEvent(buttonEvent(cmd.keyAttributes + 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical"))
+       if (cmd.sceneNumber == 3) buttonEvent(7, "pushed", "physical")
+       else if (cmd.sceneNumber == 4) buttonEvent(7, "held", "physical")
+       else if (cmd.sceneNumber == 5) buttonEvent(9, "pushed", "physical")
+       else if (cmd.sceneNumber == 6) buttonEvent(9, "held", "physical")
+       else buttonEvent(cmd.keyAttributes + 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
        break
        case 1:
-       createEvent(buttonEvent(6, (cmd.sceneNumber == 2? "pushed" : "held"), "physical"))
+       buttonEvent(6, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
        break
        case 2:
-       createEvent(buttonEvent(8, (cmd.sceneNumber == 2? "pushed" : "held"), "physical"))
+       buttonEvent(8, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
        break
        default:
-       createEvent(buttonEvent(cmd.keyAttributes - 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical"))
+       buttonEvent(cmd.keyAttributes - 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
        break
     }
+}
+
+void buttonEvent(button, value, type = "digital") {
+    if(button != 6)
+        sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Tap '.padRight(button+5, '▼'):' Tap '.padRight(button+5, '▲')}", displayed:false)
+    else
+        sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Hold ▼':' Hold ▲'}", displayed:false)
+    if (infoEnable) log.info "${device.label?device.label:device.name}: Button ${button} was ${value}"
+    
+    sendEvent(name: value, value: button, isStateChange:true)
 }
 
 def zwaveEvent(hubitat.zwave.commands.meterv3.MeterReport cmd, ep=null) {
@@ -973,15 +985,6 @@ def zwaveEvent(hubitat.zwave.commands.meterv3.MeterReport cmd, ep=null) {
         if (cmd.scale == 2) cmds << zwave.meterV2.meterGet(scale: 2)
     }
     if (cmds) return response(commands(cmds)) else return null
-}
-
-def buttonEvent(button, value, type = "digital") {
-    if(button != 6)
-        sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Tap '.padRight(button+5, '▼'):' Tap '.padRight(button+5, '▲')}", displayed:false)
-    else
-        sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Hold ▼':' Hold ▲'}", displayed:false)
-    if (infoEnable) log.info "${device.label?device.label:device.name}: Button ${button} was ${value}"
-    [name: value, value: button, isStateChange:true]
 }
 
 def getParameterNumbers(){
