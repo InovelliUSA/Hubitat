@@ -1,7 +1,7 @@
 /**
  *  Inovelli 2-Channel Outdoor Smart Plug NZW97
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-06-26
+ *  Date: 2020-08-25
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-08-25: Cleanup SwitchBinaryReport for root endpoint.
  *
  *  2020-06-26: Specify which command class versions to use. Remove extra commands. Switch to using Hubitat built in child drivers.
  *
@@ -163,26 +165,8 @@ def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd, ep 
             it.deviceNetworkId == "$device.deviceNetworkId-ep$ep"
         }
         if (childDevice) childDevice.sendEvent(name: "switch", value: cmd.value ? "on" : "off")
-        if (cmd.value) {
-            event = [createEvent([name: "switch", value: "on"])]
-        } else {
-            def allOff = true
-            childDevices.each {
-                n->
-                    if (n.deviceNetworkId != "$device.deviceNetworkId-ep$ep" && n.currentState("switch")?.value != "off") allOff = false
-            }
-            if (allOff) {
-                event = [createEvent([name: "switch", value: "off"])]
-            } else {
-                event = [createEvent([name: "switch", value: "on"])]
-            }
-        }
-        return event
     } else {
         def result = createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "digital")
-        //def cmds = []
-        //cmds << encap(zwave.switchBinaryV1.switchBinaryGet(), 1)
-        //cmds << encap(zwave.switchBinaryV1.switchBinaryGet(), 2)
         return [result] // returns the result of reponse()
     }
 }
