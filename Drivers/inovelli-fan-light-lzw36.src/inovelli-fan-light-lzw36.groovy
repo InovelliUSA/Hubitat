@@ -14,6 +14,8 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ *  2020-08-26: Fix deletion of Hubitat child devices.
+ *
  *  2020-08-25: Fix for button events not getting sent correctly on C7.
  *              Driver will delete Hubitat created child devices if you switch over to it.
  *
@@ -745,11 +747,11 @@ def initialize() {
     sendEvent(name: "checkInterval", value: 3 * 60 * 60 + 2 * 60, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID, offlinePingable: "1"])
     sendEvent(name: "numberOfButtons", value: 9, displayed: true)
     
-    if(childExists("212-1")){
-        deleteChild("212-1")
+    if(childExists("-1")){
+        deleteChild("-1")
     }
-    if(childExists("212-2")){
-        deleteChild("212-2")
+    if(childExists("-2")){
+        deleteChild("-2")
     }
     
     if(!childExists("ep001")){
