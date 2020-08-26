@@ -80,7 +80,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-lzw36.src/inovelli-fan-light-lzw36.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.8.251"
+                "version": "20.8.26"
    	}
    ]
 }
