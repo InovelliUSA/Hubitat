@@ -1,7 +1,7 @@
 /**
  *  Inovelli Fan + Light LZW36
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-08-25
+ *  Date: 2020-08-27
  *
  *  Copyright 2020 Inovelli / Eric Maycock
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-08-27: Cleaning up device fingerprint info. 
  *
  *  2020-08-26: Fix deletion of Hubitat child devices.
  *
@@ -89,12 +91,7 @@ metadata {
                                         [name: "Action*", type:"ENUM", constraints: ["Add", "Remove"]],
                                         [name:"Multi-channel Endpoint", type:"NUMBER", description: "Currently not implemented"]] 
 
-        fingerprint manufacturer: "031E", prod: "000D", model: "0001", deviceJoinName: "Inovelli Fan + Light"
-        fingerprint manufacturer: "031E", prod: "000E", model: "0001", deviceJoinName: "Inovelli Fan + Light"
-        
-        fingerprint deviceId: "0x1100", inClusters: "0x5E,0x55,0x98,0x9F,0x6C,0x26,0x70,0x85,0x59,0x8E,0x86,0x72,0x5A,0x73,0x75,0x22,0x7A,0x5B,0x87,0x60"
-        fingerprint deviceId: "0x1100", inClusters: "0x5E,0x55,0x98,0x6C,0x26,0x70,0x85,0x59,0x8E,0x86,0x72,0x5A,0x73,0x75,0x22,0x7A,0x5B,0x87,0x60,0x32"
-        fingerprint deviceId: "0x1001", inClusters: "0x5E,0x55,0x98,0x9F,0x6C,0x26,0x70,0x85,0x59,0x8E,0x86,0x72,0x5A,0x73,0x75,0x22,0x7A,0x5B,0x87,0x60,0x32"
+        fingerprint mfr: "031E", prod: "000E", deviceId: "0001", inClusters:"0x5E,0x55,0x98,0x9F,0x22,0x6C" 
     }
     
     simulator {}
