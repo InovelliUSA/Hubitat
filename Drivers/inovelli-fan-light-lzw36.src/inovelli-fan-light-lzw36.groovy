@@ -1,7 +1,7 @@
 /**
  *  Inovelli Fan + Light LZW36
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-08-27
+ *  Date: 2020-09-01
  *
  *  Copyright 2020 Inovelli / Eric Maycock
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-09-01: Adding child devices for LED color and intensity. 
  *
  *  2020-08-27: Cleaning up device fingerprint info. 
  *
@@ -44,6 +46,14 @@
  *              Fix for incorrect local protection settings getting sent to device. Typo fix.
  *
  */
+
+import groovy.json.JsonOutput
+import groovy.transform.Field
+
+@Field static List ledNotificationEndpoints = [24, 25]
+@Field static Map ledColorEndpoints = [103:18, 105:20]
+@Field static Map ledIntensityEndpoints = [103:19, 105:21]
+@Field static Map ledIntensityOffEndpoints = [104:22, 106:23]
  
 metadata {
     definition(name: "Inovelli Fan + Light LZW36", 
@@ -79,6 +89,8 @@ metadata {
         command "componentSetLevel"
         command "componentStartLevelChange"
         command "componentStopLevelChange"
+        command "componentSetColor"
+        command "componentSetColorTemperature"
         command "setSpeed"
         command "cycleSpeed"
         
@@ -92,6 +104,7 @@ metadata {
                                         [name:"Multi-channel Endpoint", type:"NUMBER", description: "Currently not implemented"]] 
 
         fingerprint mfr: "031E", prod: "000E", deviceId: "0001", inClusters:"0x5E,0x55,0x98,0x9F,0x22,0x6C" 
+        fingerprint mfr: "031E", prod: "000E", deviceId: "0001", inClusters:"0x5E,0x55,0x98,0x9F,0x6C,0x26,0x70,0x85,0x59,0x8E,0x86,0x72,0x5A,0x73,0x75,0x22,0x7A,0x5B,0x87,0x60,0x32"
     }
     
     simulator {}
@@ -334,6 +347,36 @@ def zwaveEvent(hubitat.zwave.commands.configurationv1.ConfigurationReport cmd) {
                 childDevice.sendEvent(name:"level", value:cmd2Integer(cmd.configurationValue))
             }
         break
+        case 18:
+        case 20:
+            def childDevice = childDevices.find{it.deviceNetworkId.endsWith("ep${ledColorEndpoints.find { it.value == cmd.parameterNumber }?.key}")}
+            if (childDevice) {
+                if (integerValue == 255) {
+                    childDevice.sendEvent(name: "colorTemperature", value: state.colorTemperature?state.colorTemperature:0)
+                    childDevice.sendEvent(name: "colorMode", value: "CT", descriptionText: "${device.getDisplayName()} color mode is CT")
+                } else {
+                    childDevice.sendEvent(name:"hue", value:"${Math.round(zwaveValueToHuePercent(integerValue))}")
+                    childDevice.sendEvent(name:"saturation", value:"100")
+                    childDevice.sendEvent(name: "colorMode", value: "RGB", descriptionText: "${device.getDisplayName()} color mode is RGB")
+                }
+            }
+        break
+        case 19:
+        case 21:
+            def childDevice = childDevices.find{it.deviceNetworkId.endsWith("ep${ledIntensityEndpoints.find { it.value == cmd.parameterNumber }?.key}")}
+            if (childDevice) {
+                childDevice.sendEvent(name:"level", value:"${integerValue*10}")
+                childDevice.sendEvent(name:"switch", value:"${integerValue==0?"off":"on"}")
+            }
+        break
+        case 22:
+        case 23:
+            def childDevice = childDevices.find{it.deviceNetworkId.endsWith("ep${ledIntensityOffEndpoints.find { it.value == cmd.parameterNumber }?.key}")}
+            if (childDevice) {
+                childDevice.sendEvent(name:"level", value:"${integerValue*10}")
+                childDevice.sendEvent(name:"switch", value:"${integerValue==0?"off":"on"}")
+            }
+        break
         case 24:
             if (cmd2Integer(cmd.configurationValue) == 0) {
                 toggleTiles(24, "off")
@@ -438,6 +481,16 @@ def childSetLevel(String dni, value) {
     def level = Math.max(Math.min(valueaux, 99), 0)    
     def cmds = []
     switch (channelNumber(dni).toInteger()) {
+        case 103:
+        case 105:
+            cmds << setParameter(ledIntensityEndpoints[channelNumber(dni)], Math.round(level/10), 1)
+            cmds << getParameter(ledIntensityEndpoints[channelNumber(dni)])
+        break
+        case 104:
+        case 106:
+            cmds << setParameter(ledIntensityOffEndpoints[channelNumber(dni)], Math.round(level/10), 1)
+            cmds << getParameter(ledIntensityOffEndpoints[channelNumber(dni)])
+        break
         case 112:
             cmds << zwave.configurationV1.configurationSet(scaledConfigurationValue: value, parameterNumber: 12, size: 1) 
             cmds << zwave.configurationV1.configurationGet(parameterNumber: 12 )
@@ -557,6 +610,34 @@ def stopLevelChange() {
     commands([zwave.switchMultilevelV2.switchMultilevelStopLevelChange()])
 }
 
+def componentSetColor(cd, value) {
+    if (infoEnable != "false") log.info "${device.label?device.label:device.name}: $cd.deviceNetworkId, componentSetColor($value)"
+	if (value.hue == null || value.saturation == null) return
+	def ledColor = Math.round(huePercentToZwaveValue(value.hue))
+    state.lastRan = now()
+	if (infoEnable) log.info "${device.label?device.label:device.name}: Setting LED color value to $ledColor & LED intensity to $ledLevel"
+    def cmds = []
+    if (value.level != null) {
+        def ledLevel = Math.round(value.level/10)
+        cmds << setParameter(ledIntensityEndpoints[channelNumber(cd.deviceNetworkId)], ledLevel, 1)
+        cmds << getParameter(ledIntensityEndpoints[channelNumber(cd.deviceNetworkId)])
+    }
+    cmds << setParameter(ledColorEndpoints[channelNumber(cd.deviceNetworkId)], ledColor, 2)
+    cmds << getParameter(ledColorEndpoints[channelNumber(cd.deviceNetworkId)])
+    if(cmds) commands(cmds)
+}
+
+def componentSetColorTemperature(cd, value) {
+    if (infoEnable != "false") log.info "${device.label?device.label:device.name}: $cd.deviceNetworkId, componentSetColorTemperature($value)"
+    if (infoEnable) log.info "${device.label?device.label:device.name}: Setting LED color value to 255"
+    state.lastRan = now()
+    state.colorTemperature = value
+    def cmds = []
+    cmds << setParameter(ledColorEndpoints[channelNumber(cd.deviceNetworkId)], 255, 2)
+    cmds << getParameter(ledColorEndpoints[channelNumber(cd.deviceNetworkId)])
+    if(cmds) commands(cmds)
+}
+
 def childOn(String dni) {
     if (infoEnable) log.info "${device.label?device.label:device.name}: childOn($dni)"
     state.lastRan = now()
@@ -649,6 +730,26 @@ def childOff(String dni) {
 
 void childRefresh(String dni) {
     if (infoEnable) log.info "${device.label?device.label:device.name}: childRefresh($dni)"
+}
+
+private huePercentToValue(value){
+    return value<=2?0:(value>=98?360:value/100*360)
+}
+
+private hueValueToZwaveValue(value){
+    return value<=2?0:(value>=356?255:value/360*255)
+}
+
+private huePercentToZwaveValue(value){
+    return value<=2?0:(value>=98?254:value/100*255)
+}
+
+private zwaveValueToHueValue(value){
+    return value<=2?0:(value>=254?360:value/255*360)
+}
+
+private zwaveValueToHuePercent(value){
+    return value<=2?0:(value>=254?100:value/255*100)
 }
 
 def configure() {
@@ -750,6 +851,15 @@ def initialize() {
     if(childExists("-2")){
         deleteChild("-2")
     }
+    
+    if (enableLED1Child == true) addChild("ep103", "Light LED", "hubitat", "Generic Component RGBW", false)
+    else deleteChild("ep103")
+    if (enableLED1OffChild == true) addChild("ep104", "Light LED - When Off", "hubitat", "Generic Component Dimmer", false)
+    else deleteChild("ep104")
+    if (enableLED2Child == true) addChild("ep105", "Fan LED", "hubitat", "Generic Component RGBW", false)
+    else deleteChild("ep105")
+    if (enableLED2OffChild == true) addChild("ep106", "Fan LED - When Off", "hubitat", "Generic Component Dimmer", false)
+    else deleteChild("ep106")
     
     if(!childExists("ep001")){
         def newChild = addChildDevice("hubitat", "Generic Component Dimmer", "${device.deviceNetworkId}-ep001", [completedSetup: true, label: "${device.displayName} (Light)",
@@ -895,6 +1005,21 @@ def initialize() {
         childDevice = children.find{it.deviceNetworkId.endsWith("ep102")}
         if (childDevice)
         childDevice.setLabel("${device.displayName} (Disable Remote Control)")
+        
+        childDevice = children.find{it.deviceNetworkId.endsWith("ep103")}
+        if (childDevice && childDevice.displayName == "${state.oldLabel} (Light LED)")
+        childDevice.setLabel("${device.displayName} (Light LED)")
+        childDevice = children.find{it.deviceNetworkId.endsWith("ep104")}
+        if (childDevice && childDevice.displayName == "${state.oldLabel} (Light LED - When Off)")
+        childDevice.setLabel("${device.displayName} (Light LED - When Off)")
+        
+        childDevice = children.find{it.deviceNetworkId.endsWith("ep105")}
+        if (childDevice && childDevice.displayName == "${state.oldLabel} (Fan LED)")
+        childDevice.setLabel("${device.displayName} (Fan LED)")
+        childDevice = children.find{it.deviceNetworkId.endsWith("ep106")}
+        if (childDevice && childDevice.displayName == "${state.oldLabel} (Fan LED - When Off)")
+        childDevice.setLabel("${device.displayName} (Fan LED - When Off)")
+        
         childDevice = children.find{it.deviceNetworkId.endsWith("ep001")}
         if (childDevice && childDevice.displayName == "${state.oldLabel} (Light)")
         childDevice.setLabel("${device.displayName} (Light)")
@@ -1626,6 +1751,10 @@ def generate_preferences()
     input "enableDisableRemoteChild", "bool", title: "Create \"Disable Remote Control\" Child Device", description: "", required: false, defaultValue: false
     input "enableDefaultLocalChild", "bool", title: "Create \"Default Level (Local)\" Child Device", description: "", required: false, defaultValue: false
     input "enableDefaultZWaveChild", "bool", title: "Create \"Default Level (Z-Wave)\" Child Device", description: "", required: false, defaultValue: false
+    input "enableLED1Child", "bool", title: "Create \"Light LED\" Child Device", description: "", required: false, defaultValue: "false"
+    input "enableLED1OffChild", "bool", title: "Create \"Light LED When Off\" Child Device", description: "", required: false, defaultValue: "false"
+    input "enableLED2Child", "bool", title: "Create \"Fan LED\" Child Device", description: "", required: false, defaultValue: "false"
+    input "enableLED2OffChild", "bool", title: "Create \"Fan LED When Off\" Child Device", description: "", required: false, defaultValue: "false"
     input name: "debugEnable", type: "bool", title: "Enable debug logging", defaultValue: true
     input name: "infoEnable", type: "bool", title: "Enable informational logging", defaultValue: true
 }
