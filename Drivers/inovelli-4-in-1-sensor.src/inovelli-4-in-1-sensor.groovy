@@ -3,7 +3,7 @@
  *  Inovelli 4-in-1 Sensor 
  *   
  *    github: InovelliUSA
- *    Date: 2020-08-05
+ *    Date: 2020-09-01
  *    Copyright Inovelli / Eric Maycock
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -14,6 +14,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-09-01: Cleaning up fingerprint info. 
  *
  *  2020-08-05: Adding S2 support for C-7 Hub. 
  *
@@ -55,11 +57,7 @@ import groovy.transform.Field
         attribute "firmware", "String"
         attribute "groups", "Number"
 
-        fingerprint mfr: "0072", prod: "0503", model: "0002", deviceJoinName: "Inovelli 4-in-1 Sensor"
-        fingerprint mfr: "0072", prod: "0503", model: "1E00", deviceJoinName: "Inovelli 4-in-1 Sensor"
-        fingerprint mfr: "031E", prod: "000D", model: "0001", deviceJoinName: "Inovelli 4-in-1 Sensor"
-        fingerprint deviceId: "0x0701", inClusters: "0x5E,0x55,0x9F,0x98,0x6C,0x85,0x59,0x72,0x80,0x84,0x73,0x70,0x7A,0x5A,0x71,0x31,0x86"
-        fingerprint deviceId: "0x0701", inClusters: "0x5E,0x85,0x59,0x72,0x80,0x84,0x73,0x70,0x7A,0x5A,0x71,0x31,0x86,0x55,0x9F,0x98,0x6C"
+        fingerprint mfr: "031E", prod: "000D", deviceId: "0001", inClusters: "0x5E,0x55,0x9F,0x98,0x6C" 
     }
      
     preferences {
