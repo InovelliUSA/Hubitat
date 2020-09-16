@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer LZW31
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-08-27
+ *  Date: 2020-09-16
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-09-16: Adding parameter 12 (Association Behavior).  
  *
  *  2020-08-27: Cleaning up device fingerprint info. 
  *
@@ -500,7 +502,7 @@ def getParameter(number) {
 }
 
 def getParameterNumbers(){
-    return [1,2,3,4,5,6,7,8,9,10,11,13,14,15,17,21,22,51,52]
+    return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,21,22,51,52]
 }
 
 def getParameterInfo(number, value){
