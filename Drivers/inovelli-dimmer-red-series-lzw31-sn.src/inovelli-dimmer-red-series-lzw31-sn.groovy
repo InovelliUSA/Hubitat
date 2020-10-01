@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer Red Series LZW31-SN
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-09-16
+ *  Date: 2020-10-01
  *
  *  Copyright 2020 Eric Maycock / Inovelli
  *
@@ -13,6 +13,9 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2020-10-01: Adding custom command setConfigParameter(number, value, size) to be able to easily
+ *              set parameters from Rule Machine.  
  *
  *  2020-09-16: Adding parameter 12 (Association Behavior).  
  *
@@ -139,6 +142,10 @@ metadata {
                                         [name: "Z-Wave Node*", type:"STRING", description: "Enter the node number (in hex) associated with the node"], 
                                         [name: "Action*", type:"ENUM", constraints: ["Add", "Remove"]],
                                         [name:"Multi-channel Endpoint", type:"NUMBER", description: "Currently not implemented"]] 
+        
+        command "setConfigParameter",  [[name: "Number*",type:"NUMBER", description: "Provide the parameter number to edit"], 
+                                        [name: "Value*", type:"NUMBER", description: "Enter the value you would like to set the parameter to"], 
+                                        [name: "Size*", type:"ENUM", constraints: ["1", "2", "4"]]]
 
         fingerprint mfr: "031E", prod: "0001", deviceId: "0001", inClusters:"0x5E,0x26,0x70,0x85,0x59,0x55,0x86,0x72,0x5A,0x73,0x32,0x98,0x9F,0x5B,0x6C,0x75,0x22,0x7A" 
     }
@@ -847,6 +854,10 @@ def calculateParameter(number) {
       break
     }
     return value
+}
+
+def setConfigParameter(number, value, size) {
+    return command(setParameter(number, value, size.toInteger()))
 }
 
 def setParameter(number, value, size) {
