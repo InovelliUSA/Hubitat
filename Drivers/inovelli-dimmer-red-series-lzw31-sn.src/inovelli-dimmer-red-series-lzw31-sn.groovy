@@ -167,14 +167,16 @@ def generate_preferences()
         {   
             case "number":
                 input "parameter${i}", "number",
-                    title:getParameterInfo(i, "name") + "\n" + getParameterInfo(i, "description") + "\nRange: " + getParameterInfo(i, "options") + "\nDefault: " + getParameterInfo(i, "default"),
+                    title:getParameterInfo(i, "name") ,
+                    description: getParameterInfo(i, "description") + "<br/>Range: " + getParameterInfo(i, "options") + "<br/>Default: " + getParameterInfo(i, "default"),
                     range: getParameterInfo(i, "options")
                     //defaultValue: getParameterInfo(i, "default")
                     //displayDuringSetup: "${it.@displayDuringSetup}"
             break
             case "enum":
                 input "parameter${i}", "enum",
-                    title:getParameterInfo(i, "name"), // + getParameterInfo(i, "description"),
+                    title:getParameterInfo(i, "name"),
+                    description: getParameterInfo(i, "description") + "<br/>Range: " + getParameterInfo(i, "options") + "<br/>Default: " + getParameterInfo(i, "default"),
                     //defaultValue: getParameterInfo(i, "default"),
                     //displayDuringSetup: "${it.@displayDuringSetup}",
                     options: getParameterInfo(i, "options")
