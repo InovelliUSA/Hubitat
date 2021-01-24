@@ -26,7 +26,8 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  2021-01-23: Adding color prestaging option. 
+ *  2021-01-23: Adding color prestaging option. Getting controller state after turning on or off an effect so the 
+ *              Device state shows correctly in the GUI.
  *
  */
 
@@ -654,13 +655,15 @@ def customEffectStart(effect) {
                      getParameter(23),
                      getParameter(24),
                      getParameter(30),
+                     zwave.switchMultilevelV2.switchMultilevelGet()
                     ]
                    )
 }
 
 def customEffectStop() {
     return commands([setParameter(30, 0, 4),
-                     getParameter(30)
+                     getParameter(30),
+                     zwave.switchMultilevelV2.switchMultilevelGet()
                     ]
                    )
 }
@@ -711,7 +714,7 @@ def pixelEffectStart(number, level = 99) {
     state.pixelEffectLevel = level
     cmdValue += number
     cmdValue += level * 256
-    return command(setParameter(31, cmdValue, 2))
+    return commands([setParameter(31, cmdValue, 2), zwave.switchMultilevelV2.switchMultilevelGet()])
 }
 
 def pixelEffectNext(){
@@ -723,7 +726,7 @@ def pixelEffectPrevious(){
 }
 
 def pixelEffectStop(){
-    return command(setParameter(31, 0, 2))
+    return commands([setParameter(31, 0, 2), zwave.switchMultilevelV2.switchMultilevelGet()])
 }
 
 private huePercentToValue(value){
