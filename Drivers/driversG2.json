@@ -4,7 +4,7 @@
    "author": "Eric Maycock",
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
-   "releaseNotes": "LZW31/LZW31-SN/LZW30/LZW30-SN/LZW36: Adding custom command setConfigParameter(number, value, size)",
+   "releaseNotes": "LZW31/LZW31-SN: Adding extra scenes for config button (firmware 1.52+). LZW30/LZW30-SN/LZW36/LZW45: Putting parameter number in preference description.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -13,7 +13,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-lzw31-sn.src/inovelli-dimmer-red-series-lzw31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.10.1",
+                "version": "21.3.10",
 		"releaseNotes": "" 
    	},
 	{
@@ -23,7 +23,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-lzw31.src/inovelli-dimmer-lzw31.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.10.1",
+                "version": "21.3.10"
 		"releaseNotes": "" 
    	},
 	{
@@ -33,7 +33,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-red-series-lzw30-sn.src/inovelli-switch-red-series-lzw30-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.10.1",
+                "version": "21.3.10"
 		"releaseNotes": "" 
    	},
 	{
@@ -43,7 +43,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-lzw30.src/inovelli-switch-lzw30.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.10.1",
+                "version": "21.3.10"
 		"releaseNotes": "" 
    	},
 	{
@@ -80,7 +80,16 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-lzw36.src/inovelli-fan-light-lzw36.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.10.1"
+                "version": "21.3.10"
+   	},
+	   {
+   		"id" : "66a064ca-b968-11ba-b3de-0242ac270024",
+   		"name": "Inovelli Lightstrip LZW45",
+                "namespace": "InovelliUSA",
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-light-strip-lzw45.src/inovelli-light-strip-lzw45.groovy",
+   		"required": false,
+   		"oauth": false,
+                "version": "21.3.10"
    	}
    ]
 }
