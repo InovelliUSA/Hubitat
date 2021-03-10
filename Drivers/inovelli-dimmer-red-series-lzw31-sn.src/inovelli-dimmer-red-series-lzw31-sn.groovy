@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer Red Series LZW31-SN
  *  Author: Eric Maycock (erocm123)
- *  Date: 2021-03-09
+ *  Date: 2021-03-10
  *
  *  Copyright 2021 Eric Maycock / Inovelli
  *
@@ -14,7 +14,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  2021-03-09: Adding parameter numbers to preferences description. Also, adding new 7 held & 7 released scenes
+ *  2021-03-10: Adding parameter numbers to preferences description. Also, adding new 7 held & 7 released scenes
  *              for config button (firmware 1.52+). 
  *
  *  2021-01-28: Adding parameter 50 which allows you to specify the button press delay. 
@@ -103,6 +103,7 @@ metadata {
         capability "Sensor"
         capability "PushableButton"
         capability "HoldableButton"
+        capability "ReleasableButton"
         capability "Switch Level"
         capability "Configuration"
         capability "Energy Meter"
@@ -181,7 +182,7 @@ def generate_preferences()
             break
             case "enum":
                 input "parameter${i}", "enum",
-                    title:getParameterInfo(i, "name"), // + getParameterInfo(i, "description"),
+                    title:"${i}. " + getParameterInfo(i, "name"), // + getParameterInfo(i, "description"),
                     //defaultValue: getParameterInfo(i, "default"),
                     //displayDuringSetup: "${it.@displayDuringSetup}",
                     options: getParameterInfo(i, "options")
