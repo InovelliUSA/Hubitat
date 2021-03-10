@@ -23,7 +23,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-lzw31.src/inovelli-dimmer-lzw31.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "21.3.10"
+                "version": "21.3.10",
 		"releaseNotes": "" 
    	},
 	{
@@ -33,7 +33,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-red-series-lzw30-sn.src/inovelli-switch-red-series-lzw30-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "21.3.10"
+                "version": "21.3.10",
 		"releaseNotes": "" 
    	},
 	{
@@ -43,7 +43,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-lzw30.src/inovelli-switch-lzw30.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "21.3.10"
+                "version": "21.3.10",
 		"releaseNotes": "" 
    	},
 	{
