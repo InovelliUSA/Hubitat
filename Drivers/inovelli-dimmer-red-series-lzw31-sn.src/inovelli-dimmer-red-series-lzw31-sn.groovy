@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer Red Series LZW31-SN
  *  Author: Eric Maycock (erocm123)
- *  Date: 2021-01-28
+ *  Date: 2021-03-09
  *
  *  Copyright 2021 Eric Maycock / Inovelli
  *
@@ -13,6 +13,9 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2021-03-09: Adding parameter numbers to preferences description. Also, adding new 7 held & 7 released scenes
+ *              for config button (firmware 1.52+). 
  *
  *  2021-01-28: Adding parameter 50 which allows you to specify the button press delay. 
  *
@@ -171,7 +174,7 @@ def generate_preferences()
         {   
             case "number":
                 input "parameter${i}", "number",
-                    title:getParameterInfo(i, "name") + "\n" + getParameterInfo(i, "description") + "\nRange: " + getParameterInfo(i, "options") + "\nDefault: " + getParameterInfo(i, "default"),
+                    title:"${i}. " + getParameterInfo(i, "name") + "\n" + getParameterInfo(i, "description") + "\nRange: " + getParameterInfo(i, "options") + "\nDefault: " + getParameterInfo(i, "default"),
                     range: getParameterInfo(i, "options")
                     //defaultValue: getParameterInfo(i, "default")
                     //displayDuringSetup: "${it.@displayDuringSetup}"
@@ -1233,13 +1236,16 @@ void zwaveEvent(hubitat.zwave.commands.centralscenev1.CentralSceneNotification c
        else buttonEvent(cmd.keyAttributes + 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
        break
        case 1:
-       buttonEvent(6, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
+       if (cmd.sceneNumber == 3) buttonEvent(7, "released", "physical")
+       else buttonEvent(6, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
        break
        case 2:
-       buttonEvent(8, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
+       if (cmd.sceneNumber == 3) buttonEvent(7, "held", "physical")
+       else buttonEvent(8, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
        break
        default:
-       buttonEvent(cmd.keyAttributes - 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
+       if (cmd.sceneNumber == 3) buttonEvent(7, "held", "physical")
+       else buttonEvent(cmd.keyAttributes - 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
        break
     }
 }
@@ -1273,6 +1279,7 @@ def on() {
     state.lastRan = now()
     commands([
         zwave.basicV1.basicSet(value: 0xFF)
+        //zwave.switchMultilevelV2.switchMultilevelSet(value: 99)
     ])
 }
 
@@ -1281,6 +1288,7 @@ def off() {
     state.lastRan = now()
     commands([
         zwave.basicV1.basicSet(value: 0x00)
+        //zwave.switchMultilevelV2.switchMultilevelSet(value: 0)
     ])
 }
 
