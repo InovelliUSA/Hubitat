@@ -1,9 +1,9 @@
 /**
  *  Inovelli Dimmer LZW31
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-10-01
+ *  Date: 2021-03-10
  *
- *  Copyright 2020 Eric Maycock / Inovelli
+ *  Copyright 2021 Eric Maycock / Inovelli
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -13,6 +13,9 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2021-03-10: Adding parameter numbers to preferences description. Also, adding new 7 held & 7 released scenes
+ *              for config button (firmware 1.52+). 
  *
  *  2020-10-01: Adding custom command setConfigParameter(number, value, size) to be able to easily
  *              set parameters from Rule Machine.  
@@ -88,6 +91,9 @@ metadata {
         capability "Switch Level"
         capability "Configuration"
         capability "ChangeLevel"
+        capability "PushableButton"
+        capability "HoldableButton"
+        capability "ReleasableButton"
         
         attribute "lastActivity", "String"
         attribute "lastEvent", "String"
@@ -134,14 +140,14 @@ def generate_preferences()
         {   
             case "number":
                 input "parameter${i}", "number",
-                    title:getParameterInfo(i, "name") + "\n" + getParameterInfo(i, "description") + "\nRange: " + getParameterInfo(i, "options") + "\nDefault: " + getParameterInfo(i, "default"),
+                    title:"${i}. " + getParameterInfo(i, "name") + "\n" + getParameterInfo(i, "description") + "\nRange: " + getParameterInfo(i, "options") + "\nDefault: " + getParameterInfo(i, "default"),
                     range: getParameterInfo(i, "options")
                     //defaultValue: getParameterInfo(i, "default")
                     //displayDuringSetup: "${it.@displayDuringSetup}"
             break
             case "enum":
                 input "parameter${i}", "enum",
-                    title:getParameterInfo(i, "name"), // + getParameterInfo(i, "description"),
+                    title:"${i}. " + getParameterInfo(i, "name"), // + getParameterInfo(i, "description"),
                     //defaultValue: getParameterInfo(i, "default"),
                     //displayDuringSetup: "${it.@displayDuringSetup}",
                     options: getParameterInfo(i, "options")
@@ -717,6 +723,38 @@ def zwaveEvent(hubitat.zwave.commands.configurationv1.ConfigurationReport cmd) {
             }
         break
     }
+}
+
+void zwaveEvent(hubitat.zwave.commands.centralscenev1.CentralSceneNotification cmd) {
+    if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
+    switch (cmd.keyAttributes) {
+       case 0:
+       if (cmd.sceneNumber == 3) buttonEvent(7, "pushed", "physical")
+       else buttonEvent(cmd.keyAttributes + 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
+       break
+       case 1:
+       if (cmd.sceneNumber == 3) buttonEvent(7, "released", "physical")
+       else buttonEvent(6, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
+       break
+       case 2:
+       if (cmd.sceneNumber == 3) buttonEvent(7, "held", "physical")
+       else buttonEvent(8, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
+       break
+       default:
+       if (cmd.sceneNumber == 3) buttonEvent(7, "held", "physical")
+       else buttonEvent(cmd.keyAttributes - 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
+       break
+    }
+}
+
+void buttonEvent(button, value, type = "digital") {
+    if(button != 6)
+        sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Tap '.padRight(button+5, '▼'):' Tap '.padRight(button+5, '▲')}", displayed:false)
+    else
+        sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Hold ▼':' Hold ▲'}", displayed:false)
+    if (infoEnable) log.info "${device.label?device.label:device.name}: Button ${button} was ${value}"
+    
+    sendEvent(name: value, value: button, isStateChange:true)
 }
 
 def cmd2Integer(array) {
