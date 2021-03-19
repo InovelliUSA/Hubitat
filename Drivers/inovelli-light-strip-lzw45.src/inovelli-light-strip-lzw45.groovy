@@ -1,7 +1,7 @@
 /**
  *  Inovelli Light Strip LZW45
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-03-10
+ *  Date: 2021-03-19
  *  Platform: Hubitat
  *
  *  ******************************************************************************************************
@@ -23,6 +23,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2021-03-19: Fixing issue with Color Temperature when device is off. 
  *
  *  2021-03-10: Adding parameter numbers to preferences description. 
  *
@@ -922,7 +924,7 @@ def setColorTemperature(temp) {
     cmds << zwave.switchColorV2.switchColorSet(red: 0, green: 0, blue: 0, warmWhite: warmValue, coldWhite: coldValue)
     if ((device.currentValue("switch") != "on") && (!colorStaging)) {
         if (infoEnable) log.info "${device.label?device.label:device.name}: Bulb is off. Turning on"
-        cmds << zwave.basicV1.basicSet(value: value.level < 100 ? value.level : 99)
+        cmds << zwave.basicV1.basicSet(value: 0xFF)
     }
     sendEvent(name: "colorMode", value: "CT", descriptionText: "${device.getDisplayName()} color mode is CT")
     sendEvent(name: "colorTemperature", value: temp)
