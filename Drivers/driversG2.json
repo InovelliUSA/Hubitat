@@ -4,7 +4,7 @@
    "author": "Eric Maycock",
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
-   "releaseNotes": "LZW31/LZW31-SN: Adding extra scenes for config button (firmware 1.52+). LZW30/LZW30-SN/LZW36/LZW45: Putting parameter number in preference description.",
+   "releaseNotes": "LZW45: Fixing issue with Color Temperature when device is off.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -89,7 +89,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-light-strip-lzw45.src/inovelli-light-strip-lzw45.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "21.3.10"
+                "version": "21.3.19"
    	}
    ]
 }
