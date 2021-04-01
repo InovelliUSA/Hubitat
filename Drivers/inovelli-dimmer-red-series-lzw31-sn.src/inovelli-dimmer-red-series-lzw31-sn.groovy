@@ -109,6 +109,7 @@ metadata {
         capability "Energy Meter"
         capability "Power Meter"
         capability "ChangeLevel"
+	capability "DoubleTapableButton"
 
         
         attribute "lastActivity", "String"
