@@ -14,6 +14,9 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ *  
+ *  2021-04-01: Added capability "DoubleTapableButton" to capabilities
+ *
  *  2021-03-10: Adding parameter numbers to preferences description. Also, adding new 7 held & 7 released scenes
  *              for config button (firmware 1.52+). 
  *
