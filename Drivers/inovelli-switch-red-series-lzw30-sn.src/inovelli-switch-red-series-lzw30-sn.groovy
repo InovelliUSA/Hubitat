@@ -1,7 +1,7 @@
 /**
  *  Inovelli Switch Red Series
  *  Author: Eric Maycock (erocm123)
- *  Date: 2021-03-10
+ *  Date: 2021-04-09
  *
  *  Copyright 2021 Eric Maycock / Inovelli
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2021-04-09: Fix digital command methods "holdUp, holdDown, etc." for those that use them. 
  *
  *  2021-03-10: Adding parameter numbers to preferences description.  
  *
@@ -98,6 +100,8 @@ metadata {
         attribute "lastEvent", "String"
         attribute "firmware", "String"
         attribute "groups", "Number"
+        
+        // Uncomment these lines if you would like to test your scenes with digital button presses.
         /*
         command "pressUpX1"
         command "pressDownX1"
@@ -111,8 +115,11 @@ metadata {
         command "pressDownX5"
         command "holdUp"
         command "holdDown"
+        command "releaseUp"
+        command "releaseDown"
         command "pressConfig"
         */
+        
         command "childOn", ["string"]
         command "childOff", ["string"]
         command "childRefresh", ["string"]
@@ -1105,10 +1112,22 @@ void zwaveEvent(hubitat.zwave.commands.centralscenev1.CentralSceneNotification c
 }
 
 void buttonEvent(button, value, type = "digital") {
-    if(button != 6)
-        sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Tap '.padRight(button+5, '▼'):' Tap '.padRight(button+5, '▲')}", displayed:false)
-    else
-        sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Hold ▼':' Hold ▲'}", displayed:false)
+    switch (button) {
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+            sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Tap '.padRight(button+5, '▼'):' Tap '.padRight(button+5, '▲')}", displayed:false)
+        break
+        case 6:
+            sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Released ▼':' Released ▲'}", displayed:false)
+        break
+        case 8:
+            sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Hold ▼':' Hold ▲'}", displayed:false)
+        break
+    }
+        
     if (infoEnable) log.info "${device.label?device.label:device.name}: Button ${button} was ${value}"
     
     sendEvent(name: value, value: button, isStateChange:true)
@@ -1201,55 +1220,63 @@ private commands(commands, delay=500) {
 }
 
 def pressUpX1() {
-    sendEvent(buttonEvent(1, "pushed"))
+    buttonEvent(1, "pushed")
 }
 
 def pressDownX1() {
-    sendEvent(buttonEvent(1, "held"))
+    buttonEvent(1, "held")
 }
 
 def pressUpX2() {
-    sendEvent(buttonEvent(2, "pushed"))
+    buttonEvent(2, "pushed")
 }
 
 def pressDownX2() {
-    sendEvent(buttonEvent(2, "held"))
+    buttonEvent(2, "held")
 }
 
 def pressUpX3() {
-    sendEvent(buttonEvent(3, "pushed"))
+    buttonEvent(3, "pushed")
 }
 
 def pressDownX3() {
-    sendEvent(buttonEvent(3, "held"))
+    buttonEvent(3, "held")
 }
 
 def pressUpX4() {
-    sendEvent(buttonEvent(4, "pushed"))
+    buttonEvent(4, "pushed")
 }
 
 def pressDownX4() {
-    sendEvent(buttonEvent(4, "held"))
+    buttonEvent(4, "held")
 }
 
 def pressUpX5() {
-    sendEvent(buttonEvent(5, "pushed"))
+    buttonEvent(5, "pushed")
 }
 
 def pressDownX5() {
-    sendEvent(buttonEvent(5, "held"))
+    buttonEvent(5, "held")
 }
 
 def holdUp() {
-    sendEvent(buttonEvent(6, "pushed"))
+    buttonEvent(8, "pushed")
 }
 
 def holdDown() {
-    sendEvent(buttonEvent(6, "held"))
+    buttonEvent(8, "held")
+}
+
+def releaseUp() {
+    buttonEvent(6, "pushed")
+}
+
+def releaseDown() {
+    buttonEvent(6, "held")
 }
 
 def pressConfig() {
-    sendEvent(buttonEvent(7, "pushed"))
+    buttonEvent(7, "pushed")
 }
 
 def setDefaultAssociations() {
