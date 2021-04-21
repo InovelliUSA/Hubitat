@@ -1,0 +1,120 @@
+{
+	"packageName": "Inovelli Drivers (Gen 1)",
+	"minimumHEVersion": "2.1.9",
+	"author": "Eric Maycock",
+	"version": "20.4.30",
+	"dateReleased": "2021-04-21",
+	"releaseNotes": "Initial package release",
+	"drivers" : [
+		{
+			"id" : "",
+			"name": "Inovelli 1-Channel Outdoor Smart Plug NZW96",
+			"namespace": "InovelliUSA",
+			"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-1-channel-outdoor-smart-plug-nzw96.src/inovelli-1-channel-outdoor-smart-plug-nzw96.groovy",
+			"required": false,
+			"oauth": false,
+			"version": "19.8.1",
+			"releaseNotes": "" 
+		},
+		{
+			"id" : "",
+			"name": "Inovelli 1-Channel Smart Plug NZW36 w/Scene",
+			"namespace": "InovelliUSA",
+			"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-1-channel-smart-plug-nzw36-w-scene.src/inovelli-1-channel-smart-plug-nzw36-w-scene.groovy",
+			"required": false,
+			"oauth": false,
+			"version": "",
+			"releaseNotes": "19.8.1" 
+		},
+		{
+			"id" : "",
+			"name": "Inovelli 2-Channel Outdoor Smart Plug NZW97",
+			"namespace": "InovelliUSA",
+			"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-2-channel-outdoor-smart-plug-nzw97.src/inovelli-2-channel-outdoor-smart-plug-nzw97.groovy",
+			"required": false,
+			"oauth": false,
+			"version": "19.8.25",
+			"releaseNotes": "" 
+		},
+		{
+			"id" : "",
+			"name": "Inovelli 2-Channel Smart Plug NZW37",
+			"namespace": "InovelliUSA",
+			"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-2-channel-smart-plug-nzw37.src/inovelli-2-channel-smart-plug-nzw37.groovy",
+			"required": false,
+			"oauth": false,
+			"version": "20.7.14",
+			"releaseNotes": "" 
+		},
+		{
+			"id" : "",
+			"name": "Inovelli Dimmer NZW31-S",
+			"namespace": "InovelliUSA",
+			"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-nzw31-w-scene.src/inovelli-dimmer-nzw31-w-scene.groovy",
+			"required": false,
+			"oauth": false,
+			"version": "20.4.10",
+			"releaseNotes": "" 
+		},
+		{
+			"id" : "",
+			"name": "Inovelli Dimmer NZW31",
+			"namespace": "InovelliUSA",
+			"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-nzw31.src/inovelli-dimmer-nzw31.groovy",
+			"required": false,
+			"oauth": false,
+			"version": "20.4.10",
+			"releaseNotes": "" 
+		},
+		{
+			"id" : "",
+			"name": "Inovelli Dimmer Smart Plug NZW39 w/Scene",
+			"namespace": "InovelliUSA",
+			"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-smart-plug-nzw39-w-scene.src/inovelli-dimmer-smart-plug-nzw39-w-scene.groovy",
+			"required": false,
+			"oauth": false,
+			"version": "19.9.1",
+			"releaseNotes": "" 
+		},
+		{
+			"id" : "",
+			"name": "Inovelli Dimmer Smart Plug NZW39",
+			"namespace": "InovelliUSA",
+			"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-smart-plug-nzw39.src/inovelli-dimmer-smart-plug-nzw39.groovy",
+			"required": false,
+			"oauth": false,
+			"version": "19.8.1",
+			"releaseNotes": "" 
+		},
+		{
+			"id" : "",
+			"name": "Inovelli Door/Window Sensor NZW1201",
+			"namespace": "InovelliUSA",
+			"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-door-window-sensor-nzw1201.src/inovelli-door-window-sensor-nzw1201.groovy",
+			"required": false,
+			"oauth": false,
+			"version": "19.12.10",
+			"releaseNotes": "" 
+		},
+		{
+			"id" : "",
+			"name": "Inovelli Switch NZW30-S",
+			"namespace": "InovelliUSA",
+			"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-nzw30-w-scene.src/inovelli-switch-nzw30-w-scene.groovy",
+			"required": false,
+			"oauth": false,
+			"version": "20.4.10",
+			"releaseNotes": "" 
+		},
+		{
+			"id" : "",
+			"name": "Inovelli Switch NZW30",
+			"namespace": "InovelliUSA",
+			"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-nzw30.src/inovelli-switch-nzw30.groovy",
+			"required": false,
+			"oauth": false,
+			"version": "20.4.10",
+			"releaseNotes": "" 
+		}	
+	]
+}
