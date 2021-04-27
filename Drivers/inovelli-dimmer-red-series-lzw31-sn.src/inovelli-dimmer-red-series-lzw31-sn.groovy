@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer Red Series LZW31-SN
  *  Author: Eric Maycock (erocm123)
- *  Date: 2021-04-09
+ *  Date: 2021-04-26
  *
  *  Copyright 2021 Eric Maycock / Inovelli
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
+ *  2021-04-26: Adding options for parameter 52 (disabled, on/off only mode, smartbulb mode). 
  *
  *  2021-04-09: Fix digital command methods "holdUp, holdDown, etc." for those that use them. 
  *
@@ -996,7 +998,7 @@ def getParameterInfo(number, value){
     parameter.parameter22options=["0":"Load Only", "1":"3-way Toggle", "2":"3-way Momentary"]
     parameter.parameter50options=["1":"100ms", "2":"200ms", "3":"300ms","4":"400ms", "5":"500ms", "6":"600ms","7":"700ms", "8":"800ms", "9":"900ms"]
     parameter.parameter51options=["1":"No (Default)", "0":"Yes"]
-    parameter.parameter52options=["0":"No (Default)", "1":"Yes"]
+    parameter.parameter52options=["0":"Disabled", "1":"On / Off Only", "2":"Smart Bulb"]
     
     parameter.parameter1name="Dimming Speed"
     parameter.parameter2name="Dimming Speed (From Switch)"
@@ -1048,7 +1050,7 @@ def getParameterInfo(number, value){
     parameter.parameter22description="Configure the type of 3-way switch connected to the dimmer."
     parameter.parameter50description="This will set the button press delay if parameter 51 is set to 1. For this parameter 1 = 100ms, 2 = 200ms, 3 = 300ms, etc. up to 900ms (firmware 1.52+)"
     parameter.parameter51description="The 700ms delay that occurs after pressing the physical button to turn the switch on/off is removed. Consequently this also removes the following scenes: 2x, 3x, 4x, 5x tap. 1x tap and config button scenes still work. (firmware 1.47+)"
-    parameter.parameter52description="Optimize power output to be more compatible with smart bulbs. This prevents the dimmer from being able to dim & makes it act like an ON / OFF switch. (firmware 1.47+)"
+    parameter.parameter52description="Change the working mode of the dimmer. Choose either on / off only which makes the device work like an on / off switch. Or choose smart bulb mode which optimized the device for interaction with smart bulbs. (firmware 1.54+)"
     
     return parameter."parameter${number}${value}"
 }
