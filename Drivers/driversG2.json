@@ -4,7 +4,7 @@
    "author": "Eric Maycock",
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
-   "releaseNotes": "LZW30-SN/LZW31-SN: Fix digital command methods holdUp, holdDown, etc. for those that use them. ",
+   "releaseNotes": "LZW31-SN: Adding options for parameter 52 (disabled, on/off only mode, smartbulb mode) ",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -13,7 +13,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-lzw31-sn.src/inovelli-dimmer-red-series-lzw31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "21.4.9",
+                "version": "21.4.26",
 		"releaseNotes": "" 
    	},
 	{
