@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer Red Series LZW31-SN
  *  Author: Eric Maycock (erocm123)
- *  Date: 2021-04-26
+ *  Date: 2021-05-03
  *
  *  Copyright 2021 Eric Maycock / Inovelli
  *
@@ -13,7 +13,9 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
- *
+ *  
+ *  2021-05-03: Adding ability to detect firmware target 1 version. firmware1 = target 1 & firmware0 = target 0. 
+ *  
  *  2021-04-26: Adding options for parameter 52 (disabled, on/off only mode, smartbulb mode). 
  *
  *  2021-04-09: Fix digital command methods "holdUp, holdDown, etc." for those that use them. 
@@ -118,6 +120,8 @@ metadata {
         attribute "lastActivity", "String"
         attribute "lastEvent", "String"
         attribute "firmware", "String"
+        attribute "firmware0", "String"
+        attribute "firmware1", "String"
         attribute "groups", "Number"
         
         // Uncomment these lines if you would like to test your scenes with digital button presses.
@@ -1549,18 +1553,24 @@ def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationGroupingsReport c
     state.associationGroups = cmd.supportedGroupings
 }
 
-def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
+void zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
     if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
     if(cmd.applicationVersion != null && cmd.applicationSubVersion != null) {
 	    def firmware = "${cmd.applicationVersion}.${cmd.applicationSubVersion.toString().padLeft(2,'0')}"
         if (infoEnable) log.info "${device.label?device.label:device.name}: Firmware report received: ${firmware}"
         state.needfwUpdate = "false"
-        createEvent(name: "firmware", value: "${firmware}")
+        sendEvent(name: "firmware", value: "${firmware}")
     } else if(cmd.firmware0Version != null && cmd.firmware0SubVersion != null) {
-	    def firmware = "${cmd.firmware0Version}.${cmd.firmware0SubVersion.toString().padLeft(2,'0')}"
-        if (infoEnable != false) log.info "${device.label?device.label:device.name}: Firmware report received: ${firmware}"
+	    def firmware0 = "${cmd.firmware0Version}.${cmd.firmware0SubVersion.toString().padLeft(2,'0')}"
+        if (infoEnable != false) log.info "${device.label?device.label:device.name}: Firmware report received: ${firmware0}"
         state.needfwUpdate = "false"
-        createEvent(name: "firmware", value: "${firmware}")
+        sendEvent(name: "firmware", value: "${firmware0}")
+        sendEvent(name: "firmware0", value: "${firmware0}")
+    }
+    cmd.targetVersions.each { i ->
+        def firmware = "${i.version}.${i.subVersion.toString().padLeft(2,'0')}"
+        if (infoEnable != false) log.info "${device.label?device.label:device.name}: Firmware Target ${i.target} report received: firmware ${firmware}"
+        sendEvent(name: "firmware${i.target}", value: firmware)
     }
 }
 
