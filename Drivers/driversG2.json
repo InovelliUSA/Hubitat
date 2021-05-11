@@ -4,7 +4,7 @@
    "author": "Eric Maycock",
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
-   "releaseNotes": "LZW31/LZW31-SN: Adding ability to detect firmware target 1 version. firmware1 = target 1 & firmware0 = target 0.  ",
+   "releaseNotes": "LZW31/LZW31-SN: Adding -LED When Off- child device option.  ",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -13,7 +13,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-lzw31-sn.src/inovelli-dimmer-red-series-lzw31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "21.5.3",
+                "version": "21.5.10",
 		"releaseNotes": "" 
    	},
 	{
@@ -23,7 +23,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-lzw31.src/inovelli-dimmer-lzw31.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "21.5.3",
+                "version": "21.5.10",
 		"releaseNotes": "" 
    	},
 	{
