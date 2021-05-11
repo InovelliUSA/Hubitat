@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer Red Series LZW31-SN
  *  Author: Eric Maycock (erocm123)
- *  Date: 2021-05-03
+ *  Date: 2021-05-10
  *
  *  Copyright 2021 Eric Maycock / Inovelli
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *  
+ *  2021-05-10: Adding "LED When Off" child device option. 
  *  
  *  2021-05-03: Adding ability to detect firmware target 1 version. firmware1 = target 1 & firmware0 = target 0. 
  *  
@@ -99,6 +101,14 @@
  *  2019-11-13: Bug fix for not being able to set default level back to 0
  *  2020-02-06: updated by bcopeland - added ChangeLevel capability and relevant commands 
  */
+
+import groovy.transform.Field
+import groovy.json.JsonOutput
+
+@Field static List ledNotificationEndpoints = [16]
+@Field static Map ledColorEndpoints = [103:13]
+@Field static Map ledIntensityEndpoints = [103:14]
+@Field static Map ledIntensityOffEndpoints = [104:15]
  
 metadata {
     definition (name: "Inovelli Dimmer Red Series LZW31-SN", namespace: "InovelliUSA", author: "Eric Maycock", vid: "generic-dimmer", importUrl:"https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-lzw31-sn.src/inovelli-dimmer-red-series-lzw31-sn.groovy") {
@@ -503,6 +513,7 @@ def generate_preferences()
     input "disableRemote", "enum", title: "Disable Remote Control", description: "\nDisable ability to control switch from inside Hubitat", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
     input description: "Use the below options to enable child devices for the specified settings. This will allow you to adjust these settings using Apps such as Rule Machine.", title: "Child Devices", displayDuringSetup: false, type: "paragraph", element: "paragraph"
     input "enableLEDChild", "bool", title: "Create \"LED Color\" Child Device", description: "", required: false, defaultValue: true
+    input "enableLED1OffChild", "bool", title: "Create \"LED When Off\" Child Device", description: "", required: false, defaultValue: false
     input "enableDisableLocalChild", "bool", title: "Create \"Disable Local Control\" Child Device", description: "", required: false, defaultValue: false
     input "enableDisableRemoteChild", "bool", title: "Create \"Disable Remote Control\" Child Device", description: "", required: false, defaultValue: false
     input "enableDefaultLocalChild", "bool", title: "Create \"Default Level (Local)\" Child Device", description: "", required: false, defaultValue: false
@@ -661,6 +672,10 @@ def childSetLevel(String dni, value) {
             cmds << setParameter(14, Math.round(level/10), 1)
             cmds << getParameter(14)
         break
+        case 104:
+            cmds << setParameter(15, Math.round(level/10), 1)
+            cmds << getParameter(15)
+        break
     }
 	return commands(cmds)
 }
@@ -788,6 +803,8 @@ def initialize() {
     else deleteChild("ep102")
     if (enableLEDChild) addChild("ep103", "LED Color", "hubitat", "Generic Component RGBW", false)
     else deleteChild("ep103")
+    if (enableLED1OffChild) addChild("ep104", "LED - When Off", "hubitat", "Generic Component Dimmer", false)
+    else deleteChild("ep104")
     
     [1,2,3,4,5].each { i ->
         if ((settings."parameter16-${i}a"!=null && settings."parameter16-${i}b"!=null && settings."parameter16-${i}c"!=null && settings."parameter16-${i}d"!=null && settings."parameter16-${i}d"!="0") && !childExists("ep${i}")) {
