@@ -1,7 +1,7 @@
 /**
  *  Inovelli Switch LZW30
  *  Author: Eric Maycock (erocm123)
- *  Date: 2021-03-10
+ *  Date: 2021-05-25
  *
  *  Copyright 2021 Eric Maycock / Inovelli
  *
@@ -13,7 +13,11 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
- *
+ *  
+ *  2021-05-25: Updating method that is used to determine whether to send non-secure, S0, or S2. 
+ *  
+ *  2021-05-10: Adding "LED When Off" child device option. 
+ *  
  *  2021-03-10: Adding parameter numbers to preferences description.  
  *
  *  2020-10-01: Adding custom command setConfigParameter(number, value, size) to be able to easily
@@ -73,6 +77,14 @@
  *              Adding the ability to enable z-wave "rf protection" to disable control from z-wave commands.
  *
  */
+
+import groovy.transform.Field
+import groovy.json.JsonOutput
+
+@Field static List ledNotificationEndpoints = [8]
+@Field static Map ledColorEndpoints = [103:5]
+@Field static Map ledIntensityEndpoints = [103:6]
+@Field static Map ledIntensityOffEndpoints = [104:7]
  
 metadata {
     definition (name: "Inovelli Switch LZW30", namespace: "InovelliUSA", author: "Eric Maycock", vid: "generic-switch", importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-lzw30.src/inovelli-switch-lzw30.groovy") {
@@ -148,6 +160,7 @@ def generate_preferences()
     input "disableRemote", "enum", title: "Disable Remote Control", description: "\nDisable ability to control switch from inside Hubitat", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
     input description: "Use the below options to enable child devices for the specified settings. This will allow you to adjust these settings using Apps such as Rule Machine.", title: "Child Devices", displayDuringSetup: false, type: "paragraph", element: "paragraph"
     input "enableLEDChild", "bool", title: "Create \"LED Color\" Child Device", description: "", required: false, defaultValue: true
+    input "enableLED1OffChild", "bool", title: "Create \"LED When Off\" Child Device", description: "", required: false, defaultValue: false
     input "enableDisableLocalChild", "bool", title: "Create \"Disable Local Control\" Child Device", description: "", required: false, defaultValue: false
     input "enableDisableRemoteChild", "bool", title: "Create \"Disable Remote Control\" Child Device", description: "", required: false, defaultValue: false
     input name: "debugEnable", type: "bool", title: "Enable debug logging", defaultValue: true
@@ -243,6 +256,10 @@ def childSetLevel(String dni, value) {
         case 103:
             cmds << setParameter(6, Math.round(level/10), 1)
             cmds << getParameter(6)
+        break
+        case 104:
+            cmds << setParameter(7, Math.round(level/10), 1)
+            cmds << getParameter(7)
         break
     }
 	return commands(cmds)
@@ -379,6 +396,8 @@ def initialize() {
     else deleteChild("ep102")
     if (enableLEDChild) addChild("ep103", "LED Color", "hubitat", "Generic Component RGBW", false)
     else deleteChild("ep103")
+    if (enableLED1OffChild) addChild("ep104", "LED - When Off", "hubitat", "Generic Component Dimmer", false)
+    else deleteChild("ep104")
     
     if (device.label != state.oldLabel) {
         def children = childDevices
@@ -730,27 +749,7 @@ def refresh() {
 }
 
 private command(hubitat.zwave.Command cmd) {
-    if (getDataValue("zwaveSecurePairingComplete") != "true") {
-        return cmd.format()
-    }
-    Short S2 = getDataValue("S2")?.toInteger()
-    String encap = ""
-    String keyUsed = "S0"
-    if (S2 == null) { //S0 existing device
-        encap = "988100"
-    } else if ((S2 & 0x04) == 0x04) { //S2_ACCESS_CONTROL
-        keyUsed = "S2_ACCESS_CONTROL"
-        encap = "9F0304"
-    } else if ((S2 & 0x02) == 0x02) { //S2_AUTHENTICATED
-        keyUsed = "S2_AUTHENTICATED"
-        encap = "9F0302"
-    } else if ((S2 & 0x01) == 0x01) { //S2_UNAUTHENTICATED
-        keyUsed = "S2_UNAUTHENTICATED"
-        encap = "9F0301"
-    } else if ((S2 & 0x80) == 0x80) { //S0 on C7
-        encap = "988100"
-    }
-    return "${encap}${cmd.format()}"
+    return zwaveSecureEncap(cmd)
 }
 
 void zwaveEvent(hubitat.zwave.commands.supervisionv1.SupervisionGet cmd){
