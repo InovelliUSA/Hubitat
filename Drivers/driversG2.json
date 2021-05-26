@@ -4,7 +4,7 @@
    "author": "Eric Maycock",
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
-   "releaseNotes": "LZW30/LZW30-SN/LZW31/LZW31-SN: Updating method that is used to determine whether to send non-secure, S0, or S2. LZW30/LZW30-SN: Adding -LED When Off- child device option.",
+   "releaseNotes": "LZW30/LZW30-SN/LZW31/LZW31-SN/LZW60/LZW36/LZW45: Updating method that is used to determine whether to send non-secure, S0, or S2.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -53,7 +53,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-4-in-1-sensor.src/inovelli-4-in-1-sensor.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.9.1"
+                "version": "21.5.26"
    	},
 	{
    		"id" : "49d6f741-9c58-4310-ab61-0a68874dc2bf",
@@ -80,7 +80,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-lzw36.src/inovelli-fan-light-lzw36.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "21.3.10"
+                "version": "21.5.26"
    	},
 	   {
    		"id" : "66a064ca-b968-11ba-b3de-0242ac270024",
@@ -89,7 +89,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-light-strip-lzw45.src/inovelli-light-strip-lzw45.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "21.3.19"
+                "version": "21.5.26"
    	}
    ]
 }
