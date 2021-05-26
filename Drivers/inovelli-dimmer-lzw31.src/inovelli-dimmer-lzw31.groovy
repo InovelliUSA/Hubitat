@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer LZW31
  *  Author: Eric Maycock (erocm123)
- *  Date: 2021-05-25
+ *  Date: 2021-05-26
  *
  *  Copyright 2021 Eric Maycock / Inovelli
  *
@@ -14,6 +14,8 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *  
+ *  2021-05-26: Adding options for parameter 52 (disabled, on/off only mode, smartbulb mode). Firmware 1.54+.
+ *
  *  2021-05-25: Updating method that is used to determine whether to send non-secure, S0, or S2. 
  *  
  *  2021-05-10: Adding "LED When Off" child device option. 
@@ -646,7 +648,7 @@ def getParameterInfo(number, value){
     parameter.parameter21options=["0":"Non Neutral", "1":"Neutral"]
     parameter.parameter22options=["0":"Load Only", "1":"3-way Toggle", "2":"3-way Momentary"]
     parameter.parameter51options=["1":"No (Default)", "0":"Yes"]
-    parameter.parameter52options=["0":"No (Default)", "1":"Yes"]
+    parameter.parameter52options=["0":"Disabled", "1":"On / Off Only", "2":"Smart Bulb"]
     
     parameter.parameter1name="Dimming Speed"
     parameter.parameter2name="Dimming Speed (From Switch)"
@@ -696,7 +698,7 @@ def getParameterInfo(number, value){
     parameter.parameter21description="Configure the switch to use a neutral wire."
     parameter.parameter22description="Configure the type of 3-way switch connected to the dimmer."
     parameter.parameter51description="The 700ms delay that occurs after pressing the physical button to turn the switch on/off is removed. Consequently this also removes the following scenes: 2x, 3x, 4x, 5x tap. 1x tap and config button scenes still work. (firmware 1.47+)"
-    parameter.parameter52description="Optimize power output to be more compatible with smart bulbs. This prevents the dimmer from being able to dim & makes it act like an ON / OFF switch. (firmware 1.47+)"
+    parameter.parameter52description="Change the working mode of the dimmer. Choose either on / off only which makes the device work like an on / off switch. Or choose smart bulb mode which optimized the device for interaction with smart bulbs. (firmware 1.54+)"
     
     return parameter."parameter${number}${value}"
 }
