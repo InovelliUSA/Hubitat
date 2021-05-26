@@ -4,7 +4,7 @@
    "author": "Eric Maycock",
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
-   "releaseNotes": "LZW30/LZW30-SN/LZW31/LZW31-SN/LZW60/LZW36/LZW45: Updating method that is used to determine whether to send non-secure, S0, or S2.",
+   "releaseNotes": "LZW30/LZW30-SN/LZW31/LZW31-SN/LZW60/LZW36/LZW45: Updating method that is used to determine whether to send non-secure, S0, or S2. LZW31: Adding options for parameter 52 (disabled, on/off only mode, smartbulb mode). Firmware 1.54+.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -23,7 +23,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-lzw31.src/inovelli-dimmer-lzw31.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "21.5.25",
+                "version": "21.5.26",
 		"releaseNotes": "" 
    	},
 	{
