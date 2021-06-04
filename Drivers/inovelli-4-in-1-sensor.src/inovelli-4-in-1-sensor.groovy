@@ -3,7 +3,7 @@
  *  Inovelli 4-in-1 Sensor 
  *   
  *    github: InovelliUSA
- *    Date: 2021-05-26
+ *    Date: 2021-06-04
  *    Copyright Inovelli / Eric Maycock
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -14,6 +14,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *  
+ *  2021-06-04: Adding preference for "wake interval" to be used with threshold reporting. 
  *  
  *  2021-05-25: Updating method that is used to determine whether to send non-secure, S0, or S2. 
  *  
@@ -66,6 +68,10 @@ import groovy.transform.Field
         input description: "If battery powered, the configuration options (aside from temp, humidity, & lux offsets) will not be updated until the " +
             "sensor wakes up (once every 24-Hours). To manually wake up the sensor, press the button on the back 3 times quickly.", 
             title: "Settings", displayDuringSetup: false, type: "paragraph", element: "paragraph"
+        input "wakeInterval", "number",
+            title: "Wake Interval",
+            description: "Interval, in seconds, used with threshold reporting. Range: 0..2678400\nDefault: 43200",
+            range: "0..2678400"
         input "parameter10", "number",
             title: "Low Battery Alert Level",
             description: "At what battery level should the sensor send a low battery alert\nRange: 10..50\nDefault: 10",
@@ -522,9 +528,9 @@ def initialize() {
         if (infoEnable != false) log.info "${device.label?device.label:device.name}: Illuminance report not yet received. Sending request"
         cmds << zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:3, scale:1)
     }
-    if(state.wakeInterval == null || state.wakeInterval != 43200){
-        if (infoEnable != false) log.info "${device.label?device.label:device.name}: Setting Wake Interval to 43200"
-        cmds << zwave.wakeUpV1.wakeUpIntervalSet(seconds: 43200, nodeid:zwaveHubNodeId)
+    if(state.wakeInterval == null || state.wakeInterval != settings.wakeInterval){
+        if (infoEnable != false) log.info "${device.label?device.label:device.name}: Setting Wake Interval to ${settings.wakeInterval? settings.wakeInterval : 43200}"
+        cmds << zwave.wakeUpV1.wakeUpIntervalSet(seconds: settings.wakeInterval? settings.wakeInterval : 43200, nodeid:zwaveHubNodeId)
         cmds << zwave.wakeUpV1.wakeUpIntervalGet()
     }
     
