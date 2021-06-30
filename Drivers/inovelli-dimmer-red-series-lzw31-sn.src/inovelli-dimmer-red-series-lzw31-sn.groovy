@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer Red Series LZW31-SN
  *  Author: Eric Maycock (erocm123)
- *  Date: 2021-05-25
+ *  Date: 2021-06-30
  *
  *  Copyright 2021 Eric Maycock / Inovelli
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *  
+ *  2021-06-30: Scene support for aux switch (up, down, held, released) to be used with Smart Bulb. (Firmware 1.54+)
  *  
  *  2021-05-25: Updating method that is used to determine whether to send non-secure, S0, or S2. 
  *  
@@ -1267,19 +1269,19 @@ void zwaveEvent(hubitat.zwave.commands.centralscenev1.CentralSceneNotification c
     switch (cmd.keyAttributes) {
        case 0:
        if (cmd.sceneNumber == 3) buttonEvent(7, "pushed", "physical")
-       else buttonEvent(cmd.keyAttributes + 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
+       else buttonEvent(cmd.keyAttributes + 1, (cmd.sceneNumber == 2 || cmd.sceneNumber == 4? "pushed" : "held"), "physical")
        break
        case 1:
        if (cmd.sceneNumber == 3) buttonEvent(7, "released", "physical")
-       else buttonEvent(6, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
+       else buttonEvent(6, (cmd.sceneNumber == 2 || cmd.sceneNumber == 4? "pushed" : "held"), "physical")
        break
        case 2:
        if (cmd.sceneNumber == 3) buttonEvent(7, "held", "physical")
-       else buttonEvent(8, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
+       else buttonEvent(8, (cmd.sceneNumber == 2 || cmd.sceneNumber == 4? "pushed" : "held"), "physical")
        break
        default:
        if (cmd.sceneNumber == 3) buttonEvent(7, "held", "physical")
-       else buttonEvent(cmd.keyAttributes - 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
+       else buttonEvent(cmd.keyAttributes - 1, (cmd.sceneNumber == 2 || cmd.sceneNumber == 4? "pushed" : "held"), "physical")
        break
     }
 }
