@@ -53,7 +53,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-4-in-1-sensor.src/inovelli-4-in-1-sensor.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "21.6.29"
+                "version": "21.7.2"
    	},
 	{
    		"id" : "49d6f741-9c58-4310-ab61-0a68874dc2bf",
