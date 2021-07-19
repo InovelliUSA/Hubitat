@@ -4,7 +4,7 @@
    "author": "Eric Maycock",
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
-   "releaseNotes": "LZW60: Fix for negative values with luminance reports.",
+   "releaseNotes": "LZW42/LZW45: Fix for duration and level not working with setColorTemperature command",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -62,7 +62,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-bulb-multi-color-lzw42.src/inovelli-bulb-multi-color-lzw42.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.4.16"
+                "version": "21.7.19"
    	},
 	{
    		"id" : "4184e20b-43f2-4e4e-8b39-3881e5427e8c",
@@ -89,7 +89,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-light-strip-lzw45.src/inovelli-light-strip-lzw45.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "21.5.26"
+                "version": "21.7.19"
    	}
    ]
 }
