@@ -1,7 +1,7 @@
 /**
  *  Inovelli Light Strip LZW45
  *  Author: Eric Maycock (erocm123)
- *  Date: 2021-05-26
+ *  Date: 2021-07-19
  *  Platform: Hubitat
  *
  *  ******************************************************************************************************
@@ -24,6 +24,8 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *  
+ *  2021-07-19: Fix for duration and level not working with "setColorTemperature" command. 
+ *    
  *  2021-05-25: Updating method that is used to determine whether to send non-secure, S0, or S2. 
  *  
  *  2021-03-19: Fixing issue with Color Temperature when device is off. 
@@ -916,17 +918,23 @@ def setColor(value) {
     commands(cmds)// + "delay 4000" + commands(queryAllColors(), 500)
 }
 
-def setColorTemperature(temp) {
-    if (infoEnable) log.info "${device.label?device.label:device.name}: setColorTemperature($temp)"
+def setColorTemperature(temp, level = null, tt = null) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: setColorTemperature($temp, $level, $tt)"
+    int dimmingDuration=0
+    if (tt) dimmingDuration=tt
+	else if (colorTransition) dimmingDuration=colorTransition
     def cmds = []
     if (temp < COLOR_TEMP_MIN) temp = COLOR_TEMP_MIN
     if (temp > COLOR_TEMP_MAX) temp = COLOR_TEMP_MAX
     def warmValue = ((COLOR_TEMP_MAX - temp) / COLOR_TEMP_DIFF * 255) as Integer
     def coldValue = 255 - warmValue
-    cmds << zwave.switchColorV2.switchColorSet(red: 0, green: 0, blue: 0, warmWhite: warmValue, coldWhite: coldValue)
+    cmds << zwave.switchColorV2.switchColorSet(red: 0, green: 0, blue: 0, warmWhite: warmValue, coldWhite: coldValue, dimmingDuration: dimmingDuration)
     if ((device.currentValue("switch") != "on") && (!colorStaging)) {
         if (infoEnable) log.info "${device.label?device.label:device.name}: Bulb is off. Turning on"
         cmds << zwave.basicV1.basicSet(value: 0xFF)
+    }
+    if (level) {
+        cmds << zwave.switchMultilevelV2.switchMultilevelSet(value: level < 100 ? level : 99, dimmingDuration: tt!=null?tt:2)  
     }
     sendEvent(name: "colorMode", value: "CT", descriptionText: "${device.getDisplayName()} color mode is CT")
     sendEvent(name: "colorTemperature", value: temp)
