@@ -1,5 +1,5 @@
 /**
- *  Copyright 2019 Inovelli / Eric Maycock
+ *  Copyright 2021 Inovelli / Eric Maycock
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -13,7 +13,7 @@
  *  Inovelli Bulb Multi-Color LZW42
  *
  *  Author: Eric Maycock
- *  Date: 2019-9-9
+ *  Date: 2021-07-19
  *  updated by bcopeland 1/7/2020
  *		Added color pre-staging option
  *		Added power restored memory configuration
@@ -64,7 +64,8 @@
  *    	added gamma correction as an optional setting
  *  updated by bcopeland 4/16/2020
  *      updated ambiguous language
- *
+ *  updated by erocm123 7/19/2021
+ *      adding new options for "setColorTemperature" command
  */
 
 import groovy.transform.Field
@@ -339,10 +340,11 @@ void setColor(value) {
 	runIn(dimmingDuration, "refreshColor")
 }
 
-void setColorTemperature(temp) {
-	if (logEnable) log.debug "setColorTemperature($temp)"
+void setColorTemperature(temp, level = null, tt = null) {
+	if (logEnable) log.debug "setColorTemperature($temp, $level, $tt)"
 	int dimmingDuration=0
-	if (colorTransition) dimmingDuration=colorTransition
+    if (tt) dimmingDuration=tt
+	else if (colorTransition) dimmingDuration=colorTransition
 	List<hubitat.zwave.Command> cmds = []
 	if (temp < COLOR_TEMP_MIN) temp = COLOR_TEMP_MIN
 	if (temp > COLOR_TEMP_MAX) temp = COLOR_TEMP_MAX
@@ -353,6 +355,7 @@ void setColorTemperature(temp) {
 		if (logEnable) log.debug "Bulb is off. Turning on"
 		cmds.add(zwave.basicV1.basicSet(value: 0xFF))
 	}
+    if (level) setLevel(level, tt)
 	sendToDevice(cmds)
 	eventProcess(name: "colorMode", value: "CT", descriptionText: "${device.getDisplayName()} color mode is CT")
 	runIn(dimmingDuration, "refreshColor")
