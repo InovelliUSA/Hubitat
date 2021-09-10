@@ -3,7 +3,7 @@
  *  Inovelli 4-in-1 Sensor 
  *   
  *    github: InovelliUSA
- *    Date: 2021-07-02
+ *    Date: 2021-09-10
  *    Copyright Inovelli / Eric Maycock
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -14,6 +14,10 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *  
+ *  2021-09-10: Adding refresh option for devices included with 5x button tap (firmware 2.05). 
+ *              Optimized to submit config changes upon clicking "Save Preferences" for 5x button
+ *              tap included devices. 
  *  
  *  2021-07-02: Fix for negative values with luminance reports. 
  *  
@@ -52,6 +56,7 @@ import groovy.transform.Field
         capability "Illuminance Measurement"
         capability "Sensor"
         capability "Battery"
+        capability "Refresh"
         
         command "resetBatteryRuntime"
         command "setAssociationGroup", [[name: "Group Number*",type:"NUMBER", description: "Provide the association group number to edit"], 
@@ -507,6 +512,8 @@ def updated() {
     if (state.realLuminance != null) sendEvent(name:"illuminance", value: getAdjustedLuminance(state.realLuminance))
     if (settings.parameter12 == 0) sendEvent(name:"motion", value: "inactive")
     state.needfwUpdate = ""
+    def cmds = initialize()
+    commands(cmds)
 }
 
 def initialize() {
@@ -657,6 +664,28 @@ private getAdjustedLuminance(value) {
        return value
     }
     
+}
+
+def refresh() {
+   	if (infoEnable != false) log.info "$device.displayName refresh()"
+
+    def cmds = []
+    if (state.lastRefresh != null && now() - state.lastRefresh < 5000) {
+        if (infoEnable != false) log.info "Refresh Double Press"
+        state.wakeInterval = null
+        cmds << zwave.versionV1.versionGet()
+        cmds << zwave.wakeUpV1.wakeUpIntervalGet()
+    } else {
+        cmds << zwave.batteryV1.batteryGet()
+        cmds << zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:1, scale:1)
+        cmds << zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:3, scale:1)
+        cmds << zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:5, scale:1)
+        cmds << zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:27, scale:1)
+    }
+
+    state.lastRefresh = now()
+    
+    commands(cmds)
 }
 
 def resetBatteryRuntime() {
