@@ -1,7 +1,7 @@
 /**
  *  Inovelli Fan + Light LZW36
  *  Author: Eric Maycock (erocm123)
- *  Date: 2021-05-26
+ *  Date: 2021-11-02
  *
  *  Copyright 2021 Inovelli / Eric Maycock
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *  
+ *  2021-11-02: Fix and add support for Hubitat's change in componentSetColorTemperature (now supports level).
  *  
  *  2021-05-26: Updating method that is used to determine whether to send non-secure, S0, or S2. 
  *  
@@ -639,12 +641,17 @@ def componentSetColor(cd, value) {
     if(cmds) commands(cmds)
 }
 
-def componentSetColorTemperature(cd, value) {
+def componentSetColorTemperature(cd, value, level = null, duration = null) {
     if (infoEnable != "false") log.info "${device.label?device.label:device.name}: $cd.deviceNetworkId, componentSetColorTemperature($value)"
     if (infoEnable) log.info "${device.label?device.label:device.name}: Setting LED color value to 255"
     state.lastRan = now()
     state.colorTemperature = value
     def cmds = []
+    if (level != null) {
+        def ledLevel = Math.round(level/10)
+        cmds << setParameter(ledIntensityEndpoints[channelNumber(cd.deviceNetworkId)], ledLevel, 1)
+        cmds << getParameter(ledIntensityEndpoints[channelNumber(cd.deviceNetworkId)])
+    }
     cmds << setParameter(ledColorEndpoints[channelNumber(cd.deviceNetworkId)], 255, 2)
     cmds << getParameter(ledColorEndpoints[channelNumber(cd.deviceNetworkId)])
     if(cmds) commands(cmds)
