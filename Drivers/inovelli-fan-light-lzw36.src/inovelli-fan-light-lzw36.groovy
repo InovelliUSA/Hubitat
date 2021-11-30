@@ -1,7 +1,7 @@
 /**
  *  Inovelli Fan + Light LZW36
  *  Author: Eric Maycock (erocm123)
- *  Date: 2021-11-02
+ *  Date: 2021-11-30
  *
  *  Copyright 2021 Inovelli / Eric Maycock
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *  
+ *  2021-11-30: Adding push & hold methods for Hubitat capability updates.
  *  
  *  2021-11-02: Fix and add support for Hubitat's change in componentSetColorTemperature (now supports level).
  *  
@@ -2097,6 +2099,14 @@ def integer2Cmd(value, size) {
     } catch (e) {
         if (debugEnable) log.debug "Error: integer2Cmd $e Value: $value"
     }
+}
+
+void push(button) {
+   sendEvent(name: "pushed", value: button, isStateChange: true, type: "digital")
+}
+
+void hold(button) {
+   sendEvent(name: "held", value: button, isStateChange: true, type: "digital")
 }
 
 def setDefaultAssociations() {
