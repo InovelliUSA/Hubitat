@@ -1,7 +1,7 @@
 /**
  *  Inovelli Light Strip LZW45
  *  Author: Eric Maycock (erocm123)
- *  Date: 2021-07-19
+ *  Date: 2021-11-30
  *  Platform: Hubitat
  *
  *  ******************************************************************************************************
@@ -23,6 +23,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *  
+ *  2021-11-30: Adding push & hold methods for Hubitat capability updates.
  *  
  *  2021-07-19: Fix for duration and level not working with "setColorTemperature" command. 
  *    
@@ -1066,6 +1068,14 @@ private int gammaCorrect(value) {
     def temp=value/255
     def correctedValue=(temp>0.4045) ? Math.pow((temp+0.055)/ 1.055, 2.4) : (temp / 12.92)
     return Math.round(correctedValue * 255) as Integer
+}
+
+void push(button) {
+   sendEvent(name: "pushed", value: button, isStateChange: true, type: "digital")
+}
+
+void hold(button) {
+   sendEvent(name: "held", value: button, isStateChange: true, type: "digital")
 }
 
 def setDefaultAssociations() {
