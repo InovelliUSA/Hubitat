@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer LZW31
  *  Author: Eric Maycock (erocm123)
- *  Date: 2021-11-24
+ *  Date: 2021-12-29
  *
  *  Copyright 2021 Eric Maycock / Inovelli
  *
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *  
+ *  2021-12-29: Adding numberOfButtons event for limited scene support (firmware 1.52 only).
  *  
  *  2021-11-24: Increase accuracy of digital vs phsyical detection.
  *  
@@ -27,7 +29,7 @@
  *  2021-05-03: Adding ability to detect firmware target 1 version. firmware1 = target 1 & firmware0 = target 0. 
  *  
  *  2021-03-10: Adding parameter numbers to preferences description. Also, adding new 7 held & 7 released scenes
- *              for config button (firmware 1.52+). 
+ *              for config button (firmware 1.52). 
  *
  *  2020-10-01: Adding custom command setConfigParameter(number, value, size) to be able to easily
  *              set parameters from Rule Machine.  
@@ -447,6 +449,8 @@ private deleteChild(id){
 }
 
 def initialize() {
+    sendEvent(name: "numberOfButtons", value: 8, displayed: true)
+	
     if (enableDefaultLocalChild) addChild("ep9", "Default Local Level", "hubitat", "Generic Component Dimmer", false)
     else deleteChild("ep9")
     if (enableDefaultZWaveChild) addChild("ep10", "Default Z-Wave Level", "hubitat", "Generic Component Dimmer", false)
