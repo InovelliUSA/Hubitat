@@ -13,7 +13,7 @@
  *  Inovelli Bulb Multi-Color LZW42
  *
  *  Author: Eric Maycock
- *  Date: 2021-07-19
+ *  Date: 2022-01-13
  *  updated by bcopeland 1/7/2020
  *      Added color pre-staging option
  *      Added power restored memory configuration
@@ -69,7 +69,7 @@
  *  updated by zarklord 1/13/2022
  *      added level pre-staging option
  *      added option for instant change for colors when the device is off
- *      added option to allow level to persist accross mode changes or go back to max level
+ *      added option to allow level to persist across mode changes or go back to max level
  *      setLevel now properly updates the level of the hsl color when in RGB color mode
  *      improved gamma correction
  *      color pre staging is properly respected when the level is adjusted at the same time as the color
