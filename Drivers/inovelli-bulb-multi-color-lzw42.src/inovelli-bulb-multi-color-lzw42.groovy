@@ -309,7 +309,7 @@ private void setRealLevel(level, duration = null) {
     if (duration) dimmingDuration=duration
     else if (dimmingSpeed) dimmingDuration=dimmingSpeed.toInteger()
         
-    level=Math.max(level, 99)
+    level=Math.min(level, 99.0f)
     
     if (levelStaging && device.currentValue("switch") == "off") {
         state.level = level
