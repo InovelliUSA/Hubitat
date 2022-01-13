@@ -75,6 +75,7 @@
  *      color pre staging is properly respected when the level is adjusted at the same time as the color
  *      fixed a bug causing color states to update 5 times every time the color changed changed.
  *      function ordering changed to be more logical
+ *      only get color updates for the color channels that actually changed
  */
 
 import groovy.transform.Field
@@ -202,6 +203,14 @@ private void refreshColor() {
     sendToDevice(queryAllColors())
 }
 
+private void refreshRGBColor() {
+    sendToDevice(queryRGBColors())
+}
+
+private void refreshCTColor() {
+    sendToDevice(queryCTColors())
+}
+
 void installed() {
     if (logEnable) log.debug "installed()..."
     forceEventProcess(name: "level", value: 100, unit: "%")
@@ -216,12 +225,25 @@ void installed() {
 
 private List<hubitat.zwave.Command> queryAllColors() {
     List<hubitat.zwave.Command> cmds=[]
+    cmds.addAll(queryRGBColors())
+    cmds.addAll(queryCTColors())
+    return cmds
+}
+
+private List<hubitat.zwave.Command> queryRGBColors() {
+    List<hubitat.zwave.Command> cmds=[]
     if (!state.colorReceived) initializeVars()
-    WHITE_NAMES.each {
+    RGB_NAMES.each {
         state.colorReceived[it] = null
         cmds.add(zwave.switchColorV2.switchColorGet(colorComponent: it, colorComponentId: ZWAVE_COLOR_COMPONENT_ID[it]))
     }
-    RGB_NAMES.each {
+    return cmds
+}
+
+private List<hubitat.zwave.Command> queryCTColors() {
+    List<hubitat.zwave.Command> cmds=[]
+    if (!state.colorReceived) initializeVars()
+    WHITE_NAMES.each {
         state.colorReceived[it] = null
         cmds.add(zwave.switchColorV2.switchColorGet(colorComponent: it, colorComponentId: ZWAVE_COLOR_COMPONENT_ID[it]))
     }
@@ -287,22 +309,23 @@ private void setRealLevel(level, duration = null) {
     if (duration) dimmingDuration=duration
     else if (dimmingSpeed) dimmingDuration=dimmingSpeed.toInteger()
         
-    if (level > 99)
-        level=99
+    level=Math.max(level, 99)
     
     if (levelStaging && device.currentValue("switch") == "off") {
         state.level = level
         forceEventProcess(name: "realLevel", value: level == 99 ? 100 : level, unit: "%")
     } else {
-        sendToDevice(zwave.switchMultilevelV2.switchMultilevelSet(value: level, dimmingDuration: duration))
+        sendToDevice(zwave.switchMultilevelV2.switchMultilevelSet(value: level, dimmingDuration: dimmingDuration))
     }
 }
 
 void setLevel(level, duration = null) {
     if (logEnable) log.debug "setLevel($level, $duration)"
-    
+
+    state.remove("level")
     if (state.colorMode == "RGB") {
-        setColor([hue: device.currentValue("hue"), saturation: device.currentValue("saturation"), level: level, duration: duration, fromLevel: true])
+        setRealColor([hue: device.currentValue("hue"), saturation: device.currentValue("saturation"), level: level, duration: duration])
+        setRealLevel(100, dimmingDuration)
     } else {
         setRealLevel(level, duration)
     }
@@ -316,6 +339,29 @@ void setSaturation(percent) {
 void setHue(value) {
     if (logEnable) log.debug "setHue($value)"
     setColor([hue: value, saturation: device.currentValue("saturation")])
+}
+
+void setRealColor(value) {
+    int dimmingDuration=0
+    if (value.duration) dimmingDuration=value.duration
+    else if (colorTransition) dimmingDuration=colorTransition
+
+    int colorChangeDimmingDuration = dimmingDuration
+    if (instantChangeWhenOff && device.currentValue("switch") == "off") colorChangeDimmingDuration=0
+    
+    List rgb = hubitat.helper.ColorUtils.hsvToRGB([value.hue, value.saturation, value.level])
+    
+    if (enableGammaCorrect) {
+        rgb[0] = gammaCorrect(rgb[0])
+        rgb[1] = gammaCorrect(rgb[1])
+        rgb[2] = gammaCorrect(rgb[2])
+    }
+    
+    if (logEnable) log.debug "r:" + rgb[0] + ", g: " + rgb[1] +", b: " + rgb[2]
+    
+    sendToDevice(zwave.switchColorV2.switchColorSet(red: rgb[0], green: rgb[1], blue: rgb[2], warmWhite: 0, coldWhite: 0, dimmingDuration: colorChangeDimmingDuration))
+    setColorMode("RGB")
+    runIn(colorChangeDimmingDuration, "refreshRGBColor")
 }
 
 void setColor(value) {
@@ -341,43 +387,20 @@ void setColor(value) {
     
     if (logEnable) log.debug "setColor($value)"
     
-    int dimmingDuration=0
-    if (value.duration) dimmingDuration=value.duration
-    else if (colorTransition) dimmingDuration=colorTransition
-
-    int colorChangeDimmingDuration = dimmingDuration
-    if (instantChangeWhenOff && device.currentValue("switch") == "off") colorChangeDimmingDuration=0
-    
-    List rgb = hubitat.helper.ColorUtils.hsvToRGB([value.hue, value.saturation, value.level])
-    
-    if (enableGammaCorrect) {
-        rgb[0] = gammaCorrect(rgb[0])
-        rgb[1] = gammaCorrect(rgb[1])
-        rgb[2] = gammaCorrect(rgb[2])
-    }
-    
-    if (logEnable) log.debug "r:" + rgb[0] + ", g: " + rgb[1] +", b: " + rgb[2]
-    
-    sendToDevice(zwave.switchColorV2.switchColorSet(red: rgb[0], green: rgb[1], blue: rgb[2], warmWhite: 0, coldWhite: 0, dimmingDuration: colorChangeDimmingDuration))
-    setColorMode("RGB")
-    runIn(colorChangeDimmingDuration, "refreshColor")
+    setRealColor(value)
 
     //the real brightness would only be a multiplier to the actual brightness, the behavior most people would expect to happen would need this to be at 100   
-    if (value.fromLevel) {
-        setRealLevel(100, dimmingDuration)
-    } else {
-        if (isColorModeChange) {
-            if (device.currentValue("switch") == "off" && colorStaging) {
-                forceEventProcess(name: "realLevel", value: 100, unit: "%")
-            } else {
-                setRealLevel(100, dimmingDuration)
-            }
+    if (isColorModeChange) {
+        if (device.currentValue("switch") == "off" && colorStaging) {
+            forceEventProcess(name: "realLevel", value: 100, unit: "%")
+        } else {
+            setRealLevel(100, dimmingDuration)
         }
+    }
 
-        if (device.currentValue("switch") == "off" && !colorStaging) {
-            if (logEnable) log.debug "Bulb is off. Turning on"
-            on(dimmingDuration)
-        }
+    if (device.currentValue("switch") == "off" && !colorStaging) {
+        if (logEnable) log.debug "Bulb is off. Turning on"
+        on(dimmingDuration)
     }
 }
 
@@ -412,7 +435,7 @@ void setColorTemperature(temp, level = null, tt = null) {
     
     sendToDevice(zwave.switchColorV2.switchColorSet(warmWhite: warmValue, coldWhite: coldValue, dimmingDuration: colorChangeDimmingDuration))
     setColorMode("CT")
-    runIn(colorChangeDimmingDuration, "refreshColor")
+    runIn(colorChangeDimmingDuration, "refreshCTColor")
 
     if (levelValue && ((device.currentValue("switch") == "on" || !colorStaging)))
         setRealLevel(levelValue, dimmingDuration)
@@ -482,40 +505,34 @@ void zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorReport cmd) {
     if (!state.colorReceived) initializeVars()
     state.colorReceived[cmd.colorComponent] = cmd.value
     
-    if (RGB_NAMES.every { state.colorReceived[it] != null }) {
-        if (state.colorMode=="RGB") {
-            List<Integer> colors = RGB_NAMES.collect { state.colorReceived[it] }
-            if (logEnable) log.debug "colors: $colors"
-            // Send the color as hex format
-            String hexColor = hubitat.helper.ColorUtils.rgbToHEX(colors)
-            eventProcess(name: "color", value: hexColor)
+    if (RGB_NAMES.every { state.colorReceived[it] != null } && state.colorMode=="RGB") {
+        List<Integer> colors = RGB_NAMES.collect { state.colorReceived[it] }
+        if (logEnable) log.debug "colors: $colors"
+        // Send the color as hex format
+        String hexColor = hubitat.helper.ColorUtils.rgbToHEX(colors)
+        eventProcess(name: "color", value: hexColor)
 
-            // Send the color as hue and saturation
-            List hsv = hubitat.helper.ColorUtils.rgbToHSV(colors)
-            if (logEnable) log.debug "hsv: $hsv"
-            setGenericName(hsv[0])
-            eventProcess(name: "hue", value: hsv[0].round())
-            eventProcess(name: "saturation", value: hsv[1].round())
-            forceEventProcess(name: "hsLevel", value: hsv[2].round())
-        }
-        RGB_NAMES.each { state.colorReceived[it] = null }
-    } else if (WHITE_NAMES.every { state.colorReceived[it] != null}) {
-        if (state.colorMode=="CT") {
-            int warmWhite = state.colorReceived[WARM_WHITE]
-            int coldWhite = state.colorReceived[COLD_WHITE]
-            if (logEnable) log.debug "warmWhite: $warmWhite, coldWhite: $coldWhite"
-            if (warmWhite == 0 && coldWhite == 0) {
-                eventProcess(name: "colorTemperature", value: COLOR_TEMP_MIN)
-            } else {
-                int colorTemp = COLOR_TEMP_MIN + (COLOR_TEMP_DIFF / 2)
-                if (warmWhite != coldWhite) {
-                    colorTemp = (COLOR_TEMP_MAX - (COLOR_TEMP_DIFF * warmWhite) / 255) as Integer
-                }
-                eventProcess(name: "colorTemperature", value: colorTemp)
-                setGenericTempName(colorTemp)
+        // Send the color as hue and saturation
+        List hsv = hubitat.helper.ColorUtils.rgbToHSV(colors)
+        if (logEnable) log.debug "hsv: $hsv"
+        setGenericName(hsv[0])
+        eventProcess(name: "hue", value: hsv[0].round())
+        eventProcess(name: "saturation", value: hsv[1].round())
+        forceEventProcess(name: "hsLevel", value: hsv[2].round())
+    } else if (WHITE_NAMES.every { state.colorReceived[it] != null} && state.colorMode=="CT") {
+        int warmWhite = state.colorReceived[WARM_WHITE]
+        int coldWhite = state.colorReceived[COLD_WHITE]
+        if (logEnable) log.debug "warmWhite: $warmWhite, coldWhite: $coldWhite"
+        if (warmWhite == 0 && coldWhite == 0) {
+            eventProcess(name: "colorTemperature", value: COLOR_TEMP_MIN)
+        } else {
+            int colorTemp = COLOR_TEMP_MIN + (COLOR_TEMP_DIFF / 2)
+            if (warmWhite != coldWhite) {
+                colorTemp = (COLOR_TEMP_MAX - (COLOR_TEMP_DIFF * warmWhite) / 255) as Integer
             }
+            eventProcess(name: "colorTemperature", value: colorTemp)
+            setGenericTempName(colorTemp)
         }
-        WHITE_NAMES.each { state.colorReceived[it] = null }
     }
 }
 
