@@ -70,6 +70,7 @@
  *      added level pre-staging option
  *      added option for instant change for colors when the device is off
  *      added option to allow level to persist across mode changes or go back to max level
+ *      added option for confirming light state, default off, this significantly reduces zwave usage, at the potential of being innaccurate.
  *      setLevel now properly updates the level of the hsl color when in RGB color mode
  *      improved gamma correction
  *      color pre staging is properly respected when the level is adjusted at the same time as the color
@@ -106,6 +107,7 @@ metadata {
         input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: false
         input name: "levelStaging", type: "bool", description: "", title: "Enable level pre-staging", defaultValue: false
         input name: "instantChangeWhenOff", type: "bool", description: "", title: "Enable instant change when the bulb is off", defaultValue: true
+        input name: "confirmLightState", type: "bool", description: "Off = Faster, but potentially less accurate. On = Slower, but always accurate", title: "Confirm lightbulb state", defaultValue: false
         input name: "colorTransition", type: "number", description: "", title: "Color fade time:", defaultValue: 0
         input name: "dimmingSpeed", type: "number", description: "", title: "Dimming speed:", defaultValue: 1
         input name: "eventFilter", type: "bool", title: "Filter out duplicate events", defaultValue: false
@@ -275,6 +277,10 @@ void stopLevelChange() {
     sendToDevice(zwave.switchMultilevelV2.switchMultilevelStopLevelChange())
 }
 
+void setOnOffState(state) {
+    eventProcess(name: "switch", value: state, descriptionText: "$device.displayName was turned $state")
+}
+
 void on(tt = null) {
     if (logEnable) log.debug "on($tt)"
     //Check if dimming speed exists and set the duration
@@ -291,6 +297,11 @@ void on(tt = null) {
        level = 99
 
     sendToDevice(zwave.switchMultilevelV2.switchMultilevelSet(value: level, dimmingDuration: duration))
+    if (!confirmLightState) {
+        setOnOffState("on")
+        if (level != 0xFF)
+            setRealLevelState(level)
+    }
 }
 
 void off(tt = null) {
@@ -301,6 +312,13 @@ void off(tt = null) {
     else if (dimmingSpeed) duration=dimmingSpeed.toInteger()
 
     sendToDevice(zwave.switchMultilevelV2.switchMultilevelSet(value: 0x00, dimmingDuration: duration))
+    if (!confirmLightState) {
+        setOnOffState("off")
+    }
+}
+
+void setRealLevelState(level) {
+    forceEventProcess(name: "realLevel", value: level == 99 ? 100 : level , unit: "%")
 }
 
 private void setRealLevel(level, duration = null) {
@@ -313,7 +331,7 @@ private void setRealLevel(level, duration = null) {
     
     if (levelStaging && device.currentValue("switch") == "off") {
         state.level = level
-        forceEventProcess(name: "realLevel", value: level == 99 ? 100 : level, unit: "%")
+        setRealLevelState(level)
     } else {
         sendToDevice(zwave.switchMultilevelV2.switchMultilevelSet(value: level, dimmingDuration: dimmingDuration))
     }
@@ -341,6 +359,17 @@ void setHue(value) {
     setColor([hue: value, saturation: device.currentValue("saturation")])
 }
 
+void setColorState(color) {    
+    eventProcess(name: "color", value: hubitat.helper.ColorUtils.rgbToHEX(color))
+    
+    // Send the color as hue and saturation
+    List hsv = hubitat.helper.ColorUtils.rgbToHSV(color)
+    setGenericName(hsv[0])
+    eventProcess(name: "hue", value: hsv[0].round())
+    eventProcess(name: "saturation", value: hsv[1].round())
+    forceEventProcess(name: "hsLevel", value: hsv[2].round())
+}
+
 void setRealColor(value) {
     int dimmingDuration=0
     if (value.duration) dimmingDuration=value.duration
@@ -361,7 +390,11 @@ void setRealColor(value) {
     
     sendToDevice(zwave.switchColorV2.switchColorSet(red: rgb[0], green: rgb[1], blue: rgb[2], warmWhite: 0, coldWhite: 0, dimmingDuration: colorChangeDimmingDuration))
     setColorMode("RGB")
-    runIn(colorChangeDimmingDuration, "refreshRGBColor")
+    if (!confirmLightState) {
+        setColorState(rgb)
+    } else {
+        runIn(colorChangeDimmingDuration, "refreshRGBColor")
+    }
 }
 
 void setColor(value) {
@@ -392,7 +425,7 @@ void setColor(value) {
     //the real brightness would only be a multiplier to the actual brightness, the behavior most people would expect to happen would need this to be at 100   
     if (isColorModeChange) {
         if (device.currentValue("switch") == "off" && colorStaging) {
-            forceEventProcess(name: "realLevel", value: 100, unit: "%")
+            setRealLevelState(100)
         } else {
             setRealLevel(100, dimmingDuration)
         }
@@ -401,6 +434,19 @@ void setColor(value) {
     if (device.currentValue("switch") == "off" && !colorStaging) {
         if (logEnable) log.debug "Bulb is off. Turning on"
         on(dimmingDuration)
+    }
+}
+
+void setColorTemperatureState(warmWhite, coldWhite) {
+    if (warmWhite == 0 && coldWhite == 0) {
+        eventProcess(name: "colorTemperature", value: COLOR_TEMP_MIN)
+    } else {
+        int colorTemp = COLOR_TEMP_MIN + (COLOR_TEMP_DIFF / 2)
+        if (warmWhite != coldWhite) {
+            colorTemp = (COLOR_TEMP_MAX - (COLOR_TEMP_DIFF * warmWhite) / 255) as Integer
+        }
+        eventProcess(name: "colorTemperature", value: colorTemp)
+        setGenericTempName(colorTemp)
     }
 }
 
@@ -435,7 +481,11 @@ void setColorTemperature(temp, level = null, tt = null) {
     
     sendToDevice(zwave.switchColorV2.switchColorSet(warmWhite: warmValue, coldWhite: coldValue, dimmingDuration: colorChangeDimmingDuration))
     setColorMode("CT")
-    runIn(colorChangeDimmingDuration, "refreshCTColor")
+    if (!confirmLightState) {
+        setColorTemperatureState(warmValue, coldValue)
+    } else {
+        runIn(colorChangeDimmingDuration, "refreshCTColor")
+    }
 
     if (levelValue && ((device.currentValue("switch") == "on" || !colorStaging)))
         setRealLevel(levelValue, dimmingDuration)
@@ -482,10 +532,9 @@ void zwaveEvent(hubitat.zwave.commands.configurationv1.ConfigurationReport cmd) 
 }
 
 private void dimmerEvents(hubitat.zwave.Command cmd) {
-    def value = (cmd.value ? "on" : "off")
-    eventProcess(name: "switch", value: value, descriptionText: "$device.displayName was turned $value")
+    setOnOffState(cmd.value ? "on" : "off")
     if (cmd.value) {
-        forceEventProcess(name: "realLevel", value: cmd.value == 99 ? 100 : cmd.value , unit: "%")
+        setRealLevelState(cmd.value)
     }
 }
 
@@ -506,33 +555,14 @@ void zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorReport cmd) {
     state.colorReceived[cmd.colorComponent] = cmd.value
     
     if (RGB_NAMES.every { state.colorReceived[it] != null } && state.colorMode=="RGB") {
-        List<Integer> colors = RGB_NAMES.collect { state.colorReceived[it] }
-        if (logEnable) log.debug "colors: $colors"
-        // Send the color as hex format
-        String hexColor = hubitat.helper.ColorUtils.rgbToHEX(colors)
-        eventProcess(name: "color", value: hexColor)
-
-        // Send the color as hue and saturation
-        List hsv = hubitat.helper.ColorUtils.rgbToHSV(colors)
-        if (logEnable) log.debug "hsv: $hsv"
-        setGenericName(hsv[0])
-        eventProcess(name: "hue", value: hsv[0].round())
-        eventProcess(name: "saturation", value: hsv[1].round())
-        forceEventProcess(name: "hsLevel", value: hsv[2].round())
+        List<Integer> color = RGB_NAMES.collect { state.colorReceived[it] }        
+        if (logEnable) log.debug "color: $color"
+        setColorState(color)
     } else if (WHITE_NAMES.every { state.colorReceived[it] != null} && state.colorMode=="CT") {
         int warmWhite = state.colorReceived[WARM_WHITE]
         int coldWhite = state.colorReceived[COLD_WHITE]
         if (logEnable) log.debug "warmWhite: $warmWhite, coldWhite: $coldWhite"
-        if (warmWhite == 0 && coldWhite == 0) {
-            eventProcess(name: "colorTemperature", value: COLOR_TEMP_MIN)
-        } else {
-            int colorTemp = COLOR_TEMP_MIN + (COLOR_TEMP_DIFF / 2)
-            if (warmWhite != coldWhite) {
-                colorTemp = (COLOR_TEMP_MAX - (COLOR_TEMP_DIFF * warmWhite) / 255) as Integer
-            }
-            eventProcess(name: "colorTemperature", value: colorTemp)
-            setGenericTempName(colorTemp)
-        }
+        setColorTemperatureState(warmWhite, coldWhite)
     }
 }
 
