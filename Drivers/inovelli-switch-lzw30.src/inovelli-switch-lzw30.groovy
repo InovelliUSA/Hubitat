@@ -1,9 +1,9 @@
 /**
  *  Inovelli Switch LZW30
  *  Author: Eric Maycock (erocm123)
- *  Date: 2021-11-02
+ *  Date: 2022-02-03
  *
- *  Copyright 2021 Eric Maycock / Inovelli
+ *  Copyright 2022 Eric Maycock / Inovelli
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -14,6 +14,8 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *  
+ *  2022-02-03: Fixing bug when LED color gets stuck on "custom value".
+ *
  *  2021-11-02: Fix and add support for Hubitat's change in componentSetColorTemperature (now supports level).
  *  
  *  2021-05-25: Updating method that is used to determine whether to send non-secure, S0, or S2. 
@@ -451,7 +453,8 @@ def calculateParameter(number) {
     def value = 0
     switch (number){
       case "5":
-          if (settings.parameter5custom =~ /^([0-9]{1}|[0-9]{2}|[0-9]{3})$/) value = hueValueToZwaveValue(settings.parameter5custom.toInteger())
+          if (settings.parameter5) value = settings."parameter${number}"
+          else if (settings.parameter5custom =~ /^([0-9]{1}|[0-9]{2}|[0-9]{3})$/) value = hueValueToZwaveValue(settings.parameter5custom.toInteger())
           else value = settings."parameter${number}"
       break
       case "8-1":
