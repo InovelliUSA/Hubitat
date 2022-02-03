@@ -4,7 +4,7 @@
    "author": "Eric Maycock",
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
-   "releaseNotes": "LZW30-SN/LZW31-SN/LZW36/LZW45: Adding push & hold methods for Hubitat capability updates.",
+   "releaseNotes": "LZW30-SN/LZW31-SN/LZW30/LZW31: Fixing bug when LED color gets stuck on custom value.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -13,7 +13,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-lzw31-sn.src/inovelli-dimmer-red-series-lzw31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "21.11.30",
+                "version": "21.12.29",
 		"releaseNotes": "" 
    	},
 	{
@@ -23,7 +23,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-lzw31.src/inovelli-dimmer-lzw31.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "21.11.2",
+                "version": "22.2.3",
 		"releaseNotes": "" 
    	},
 	{
@@ -33,7 +33,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-red-series-lzw30-sn.src/inovelli-switch-red-series-lzw30-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "21.11.30",
+                "version": "22.2.3",
 		"releaseNotes": "" 
    	},
 	{
@@ -43,7 +43,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-lzw30.src/inovelli-switch-lzw30.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "21.11.2",
+                "version": "22.2.3",
 		"releaseNotes": "" 
    	},
 	{
