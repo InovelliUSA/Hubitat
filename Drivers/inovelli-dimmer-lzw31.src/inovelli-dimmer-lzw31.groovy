@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer LZW31
  *  Author: Eric Maycock (erocm123)
- *  Date: 2021-12-29
+ *  Date: 2022-02-03
  *
  *  Copyright 2021 Eric Maycock / Inovelli
  *
@@ -14,6 +14,8 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *  
+ *  2021-12-29: Fixing bug when LED color gets stuck on "custom value".
+ *
  *  2021-12-29: Adding numberOfButtons event for limited scene support (firmware 1.52 only).
  *  
  *  2021-11-24: Increase accuracy of digital vs phsyical detection.
@@ -523,7 +525,8 @@ def calculateParameter(number) {
     def value = 0
     switch (number){
       case "13":
-          if (settings.parameter13custom =~ /^([0-9]{1}|[0-9]{2}|[0-9]{3})$/) value = hueValueToZwaveValue(settings.parameter13custom.toInteger())
+          if (settings.parameter13) value = settings."parameter${number}"
+          else if (settings.parameter13custom =~ /^([0-9]{1}|[0-9]{2}|[0-9]{3})$/) value = hueValueToZwaveValue(settings.parameter13custom.toInteger())
           else value = settings."parameter${number}"
       break
       case "16-1":
