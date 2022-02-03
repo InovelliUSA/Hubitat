@@ -3,7 +3,7 @@
  *  Author: Eric Maycock (erocm123)
  *  Date: 2022-02-03
  *
- *  Copyright 2021 Eric Maycock / Inovelli
+ *  Copyright 2022 Eric Maycock / Inovelli
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -14,7 +14,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *  
- *  2021-12-29: Fixing bug when LED color gets stuck on "custom value".
+ *  2021-02-03: Fixing bug when LED color gets stuck on "custom value".
  *
  *  2021-12-29: Adding numberOfButtons event for limited scene support (firmware 1.52 only).
  *  
