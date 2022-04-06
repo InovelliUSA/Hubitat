@@ -1365,7 +1365,7 @@ def setLevel(value) {
 def setLevel(value, duration) {
     if (infoEnable) log.info "${device.label?device.label:device.name}: setLevel($value, $duration)"
     state.lastRan = now()
-    def dimmingDuration = duration < 128 ? duration : 128 + Math.round(duration / 60)
+    def dimmingDuration = duration!=null ? (duration < 128 ? duration : 128 + Math.round(duration / 60)):0
     commands([
         zwave.switchMultilevelV2.switchMultilevelSet(value: value < 100 ? value : 99, dimmingDuration: dimmingDuration)
     ])
