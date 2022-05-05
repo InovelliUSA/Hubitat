@@ -1,5 +1,5 @@
 /**
- *  Copyright 2019 Inovelli / Eric Maycock
+ *  Copyright 2022 Inovelli / Eric Maycock
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -59,6 +59,8 @@
  *  	corrected incorrect options for parameter 2
  *  updated by bcopeland 4/16/2020
  *      updated ambiguous language
+ *  updated by erocm123 5/4/2022
+ *      Fix start level change problem.
  */
 
 import groovy.transform.Field
@@ -199,7 +201,7 @@ void eventProcess(Map evt) {
 void startLevelChange(direction) {
 	boolean upDownVal = direction == "down" ? true : false
 	if (logEnable) log.debug "got startLevelChange(${direction})"
-	sendToDevice(zwave.switchMultilevelV2.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal))
+	sendToDevice(zwave.switchMultilevelV3.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal, incDec: 1, stepSize: 1, dimmingDuration: settings."parameter1"!=null? settings."parameter1":3))
 }
 
 void stopLevelChange() {
