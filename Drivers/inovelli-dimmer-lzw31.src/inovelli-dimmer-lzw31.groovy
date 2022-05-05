@@ -1,7 +1,7 @@
 /**
  *  Inovelli Dimmer LZW31
  *  Author: Eric Maycock (erocm123)
- *  Date: 2022-02-03
+ *  Date: 2022-05-04
  *
  *  Copyright 2022 Eric Maycock / Inovelli
  *
@@ -14,7 +14,9 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *  
- *  2021-02-03: Fixing bug when LED color gets stuck on "custom value".
+ *  2022-05-04: Fixing start level change problem.
+ *  
+ *  2022-02-03: Fixing bug when LED color gets stuck on "custom value".
  *
  *  2021-12-29: Adding numberOfButtons event for limited scene support (firmware 1.52 only).
  *  
@@ -271,7 +273,7 @@ private zwaveValueToHuePercent(value){
 def startLevelChange(direction) {
     def upDownVal = direction == "down" ? true : false
 	if (infoEnable) log.debug "${device.label?device.label:device.name}: startLevelChange(${direction})"
-    commands([zwave.switchMultilevelV2.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal)])
+    commands([zwave.switchMultilevelV3.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal, incDec: 1, stepSize: 1, dimmingDuration: settings."parameter1"!=null? settings."parameter1":3)])
 }
 
 def stopLevelChange() {
