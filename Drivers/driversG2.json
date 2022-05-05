@@ -4,7 +4,7 @@
    "author": "Eric Maycock",
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
-   "releaseNotes": "LZW30-SN/LZW31-SN/LZW30/LZW31: Fixing bug when LED color gets stuck on custom value.",
+   "releaseNotes": "LZW31-SN/LZW31/LZW41/LZW42/LZW45: Fixing start level change problem.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -13,7 +13,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-lzw31-sn.src/inovelli-dimmer-red-series-lzw31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "21.12.29",
+                "version": "22.5.4",
 		"releaseNotes": "" 
    	},
 	{
@@ -23,7 +23,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-lzw31.src/inovelli-dimmer-lzw31.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "22.2.3",
+                "version": "22.5.4",
 		"releaseNotes": "" 
    	},
 	{
@@ -62,7 +62,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-bulb-multi-color-lzw42.src/inovelli-bulb-multi-color-lzw42.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "21.7.19"
+                "version": "22.5.4"
    	},
 	{
    		"id" : "4184e20b-43f2-4e4e-8b39-3881e5427e8c",
@@ -71,7 +71,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-bulb-multi-white-lzw41.src/inovelli-bulb-multi-white-lzw41.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.4.16"
+                "version": "22.5.4"
    	},
 	{
    		"id" : "66b164ca-b968-11ea-b3de-0242ac130004",
@@ -89,7 +89,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-light-strip-lzw45.src/inovelli-light-strip-lzw45.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "21.11.30"
+                "version": "22.5.4"
    	}
    ]
 }
