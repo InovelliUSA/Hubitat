@@ -1,7 +1,7 @@
 /**
  *  Inovelli Light Strip LZW45
  *  Author: Eric Maycock (erocm123)
- *  Date: 2021-11-30
+ *  Date: 2022-05-04
  *  Platform: Hubitat
  *
  *  ******************************************************************************************************
@@ -23,6 +23,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *  
+ *  2022-05-04: Fixing start level change problem.
  *  
  *  2021-11-30: Adding push & hold methods for Hubitat capability updates.
  *  
@@ -842,7 +844,7 @@ private void refreshColor() {
 def startLevelChange(direction) {
     def upDownVal = direction == "down" ? true : false
     if (infoEnable) log.debug "${device.label?device.label:device.name}: startLevelChange(${direction})"
-    commands([zwave.switchMultilevelV2.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal)])
+    commands([zwave.switchMultilevelV3.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal, incDec: 1, stepSize: 1, dimmingDuration: settings."parameter2"!=null? settings."parameter2":3)])
 }
 
 def stopLevelChange() {
