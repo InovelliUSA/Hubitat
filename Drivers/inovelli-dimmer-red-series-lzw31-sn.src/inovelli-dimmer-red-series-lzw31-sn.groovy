@@ -1,9 +1,9 @@
 /**
  *  Inovelli Dimmer Red Series LZW31-SN
  *  Author: Eric Maycock (erocm123)
- *  Date: 2021-12-29
+ *  Date: 2022-05-04
  *
- *  Copyright 2021 Eric Maycock / Inovelli
+ *  Copyright 2022 Eric Maycock / Inovelli
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -13,6 +13,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *  
+ *  2022-05-04: Fixing start level change problem.
  *  
  *  2021-12-29: Fixing bug when LED color gets stuck on "custom value".
  *  
@@ -654,7 +656,7 @@ private zwaveValueToHuePercent(value){
 def startLevelChange(direction) {
     def upDownVal = direction == "down" ? true : false
 	if (infoEnable) log.debug "${device.label?device.label:device.name}: startLevelChange(${direction})"
-    commands([zwave.switchMultilevelV2.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal)])
+    commands([zwave.switchMultilevelV3.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal, incDec: 1, stepSize: 1, dimmingDuration: settings."parameter1"!=null? settings."parameter1":3)])
 }
 
 def stopLevelChange() {
@@ -1017,8 +1019,8 @@ def getParameterInfo(number, value){
     parameter.parameter2options="0..101"
     parameter.parameter3options="0..101"
     parameter.parameter4options="0..101"
-    parameter.parameter5options="1..45"
-    parameter.parameter6options="55..99"
+    parameter.parameter5options="1..98"
+    parameter.parameter6options="2..99"
     parameter.parameter7options=["1":"Yes", "0":"No"]
     parameter.parameter8options="0..32767"
     parameter.parameter9options="0..99"
