@@ -13,7 +13,7 @@
  *  Inovelli Bulb Multi-Color LZW42
  *
  *  Author: Eric Maycock
- *  Date: 2022-05-04
+ *  Date: 2022-06-10
  *  updated by bcopeland 1/7/2020
  *		Added color pre-staging option
  *		Added power restored memory configuration
@@ -66,7 +66,7 @@
  *      updated ambiguous language
  *  updated by erocm123 7/19/2021
  *      adding new options for "setColorTemperature" command
- *  updated by erocm123 5/04/2022
+ *  updated by erocm123 6/10/2022
  *      Fix start level change problem.
  */
 
@@ -221,7 +221,8 @@ void eventProcess(Map evt) {
 void startLevelChange(direction) {
 	boolean upDownVal = direction == "down" ? true : false
 	if (logEnable) log.debug "got startLevelChange(${direction})"
-	sendToDevice(zwave.switchMultilevelV3.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal, incDec: 1, stepSize: 1, dimmingDuration: settings."parameter1"!=null? settings."parameter1":3))
+	//sendToDevice(zwave.switchMultilevelV3.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal, incDec: 1, stepSize: 1, dimmingDuration: 3))
+    sendToDevice(zwave.switchMultilevelV2.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal, dimmingDuration: settings."dimmingSpeed"!=null? settings."dimmingSpeed":3))
 }
 
 void stopLevelChange() {
