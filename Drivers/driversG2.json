@@ -4,6 +4,7 @@
    "author": "Eric Maycock",
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
+   "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
    "releaseNotes": "LZW31-SN/LZW31/LZW41/LZW42/LZW45: Fixing start level change problem.",
    "drivers" : [
    	{
