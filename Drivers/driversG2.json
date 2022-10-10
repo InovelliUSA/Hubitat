@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "LZW31-SN/LZW31/LZW41/LZW42/LZW45: Fixing start level change problem.",
+   "releaseNotes": "Adding VZM31-SN Blue Series 2-in-1.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -91,6 +91,16 @@
    		"required": false,
    		"oauth": false,
                 "version": "22.5.4"
+   	},
+	{
+   		"id" : "c0d82d86-1545-49b6-943e-3435cccce7d6",
+   		"name": "Inovelli 2-in-1 Blue Series VZM31-SN",
+                "namespace": "InovelliUSA",
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-blue-series-vzm31-sn.src/inovelli-dimmer-blue-series-vzm31-sn.groovy",
+   		"required": false,
+   		"oauth": false,
+                "version": "22.8.14",
+		"releaseNotes": "" 
    	}
    ]
 }
