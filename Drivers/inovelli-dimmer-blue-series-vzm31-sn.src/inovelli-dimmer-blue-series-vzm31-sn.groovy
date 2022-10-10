@@ -133,7 +133,7 @@ import hubitat.helper.ColorUtils
 import java.security.MessageDigest
 
 metadata {
-    definition (name: "Inovelli VZM31-SN Zigbee 2-in-1 Dimmer", namespace: "InovelliUSA", author: "E.Maycock/M.Amber", filename: "Inovelli-zigbee-2-in-1-dimmer", importUrl:"https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-blue-series-vzm31-sn.src/inovelli-dimmer-blue-series-vzm31-sn.groovy") { 
+    definition (name: "Inovelli Dimmer 2-in-1 Blue Series VZM31-SN", namespace: "InovelliUSA", author: "E.Maycock/M.Amber", filename: "Inovelli-zigbee-2-in-1-dimmer", importUrl:"https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-blue-series-vzm31-sn.src/inovelli-dimmer-blue-series-vzm31-sn.groovy") { 
         
         capability "Actuator"
         capability "Bulb"
