@@ -914,7 +914,9 @@ def setColor(value) {
     }
     if ((!colorStaging)){
         if (infoEnable) log.info "${device.label?device.label:device.name}: Bulb is off. Turning on"
-        cmds << zwave.basicV1.basicSet(value: value.level < 100 ? value.level : 99)
+        cmds << zwave.switchMultilevelV2.switchMultilevelSet(value: value.level < 100 ? value.level : 99)
+        cmds << zwave.switchMultilevelV2.switchMultilevelGet()
+        
     }
     sendEvent(name: "colorMode", value: "RGB", descriptionText: "${device.getDisplayName()} color mode is RGB")
     sendEvent(name: "hue", value: value.hue)
