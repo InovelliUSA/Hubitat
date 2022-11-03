@@ -1,11 +1,11 @@
-def getDriverDate() { return "2022-08-14" }  // **** DATE OF THE DEVICE DRIVER **** //
+def getDriverDate() { return "2022-11-02" }  // **** DATE OF THE DEVICE DRIVER **** //
 /**
 * Inovelli VZM31-SN Blue Series Zigbee 2-in-1 Dimmer
 *
 * Author: Eric Maycock (erocm123)
 * Contributor: Mark Amber (marka75160)
 *
-* Copyright 2021 Eric Maycock / Inovelli
+* Copyright 2022 Eric Maycock / Inovelli
 * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 * in compliance with the License. You may obtain a copy of the License at:
 *
@@ -121,6 +121,7 @@ def getDriverDate() { return "2022-08-14" }  // **** DATE OF THE DEVICE DRIVER *
 * 2022-08-02(MA) fix fan high speed not working with neutral; don't display min-level and max-level when in on/off mode; fix p9-p10 so they only get written if changed
 * 2022-08-09(MA) added Trace logging; setCluster/setAttribute commands will Get current value if you leave Value blank
 * 2022-08-14(MA) emulate QuickStart for dimmer(can be disabled); add presetLevel command to use in Rule Machine - can also be done with setPrivateCluster custom command
+* 2022-11-02(EM) added warning for firmware update and requirement for double click. Enabled maximum level setting in on/off mode for "problem load" troubleshooting in 3-way dumb mode
 *
 * !!!!!!!!!! DON'T FORGET TO UPDATE THE DRIVER DATE AT THE TOP OF THIS PAGE !!!!!!!!!!
 **/
@@ -357,7 +358,7 @@ metadata {
 
 def getParameterNumbers() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
     if (parameter258 == "1")  //on/off mode
-        return [258,22,52,11,12,17,18,19,20,21,50,51,95,96,97,98,256,257,259,260,261]
+        return [258,22,52,10,11,12,17,18,19,20,21,50,51,95,96,97,98,256,257,259,260,261]
     else                      //dimmer mode
         return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,23,50,51,53,95,96,97,98,256,257,260]
 }
@@ -1967,10 +1968,16 @@ List updateFirmware() {
     if (infoEnable) log.info "${device.label?device.label:device.name}: updateFirmware(switch's fwDate: ${state.fwDate}, switch's fwVersion: ${state.fwVersion})"
     state.lastCommand = "Update Firmware"
     state.lastCommandTime = nowFormatted()
-    def cmds = []
-    cmds += zigbee.updateFirmware()
-    if (traceEnable) log.trace "updateFirmware $cmds"
-    return cmds
+    if (state.lastUpdate != null && now() - state.lastUpdate < 2000) {
+        def cmds = []
+        cmds += zigbee.updateFirmware()
+        if (traceEnable) log.trace "updateFirmware $cmds"
+        return cmds
+    } else {
+        log.info "Firmware in this channel may be \"beta\" quality. Please check https://community.inovelli.com/c/switches/switch-firmware/42 before proceeding. Double click \"Update Firmware\" to proceed"
+    }
+    state.lastUpdate = now()
+    return []
 }
 //  ****  COMMENTED OUT BECAUSE I DON'T THINK THESE METHODS ARE USED ANYWHERE  ****
 //
