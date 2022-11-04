@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "VZM31-SN: added warning for firmware update and requirement for double click. Enabled maximum level setting in on/off mode for \"problem load\" troubleshooting in 3-way dumb mode",
+   "releaseNotes": "VZM31-SN: updates for fw2.05: addeded param 262; added additional LED effects rising,falling,fast/slow, etc.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -99,7 +99,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-blue-series-vzm31-sn.src/inovelli-dimmer-blue-series-vzm31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "22.11.02",
+                "version": "22.11.03",
 		"releaseNotes": "" 
    	}
    ]
