@@ -1,4 +1,4 @@
-def getDriverDate() { return "2022-11-03" }  // **** DATE OF THE DEVICE DRIVER **** //
+def getDriverDate() { return "2022-11-05" }  // **** DATE OF THE DEVICE DRIVER **** //
 /**
 * Inovelli VZM31-SN Blue Series Zigbee 2-in-1 Dimmer
 *
@@ -123,6 +123,8 @@ def getDriverDate() { return "2022-11-03" }  // **** DATE OF THE DEVICE DRIVER *
 * 2022-08-14(MA) emulate QuickStart for dimmer(can be disabled); add presetLevel command to use in Rule Machine - can also be done with setPrivateCluster custom command
 * 2022-11-02(EM) added warning for firmware update and requirement for double click. Enabled maximum level setting in on/off mode for "problem load" troubleshooting in 3-way dumb mode
 * 2022-11-03(MA) updates for fw2.05: addeded param 262; added additional LED effects rising,falling,fast/slow, etc.
+* 2022-11-04(MA) fix 'siren' fast/slow effects (18/19) were backwards
+* 2022-11-05(MA) fix selection of multiple individual leds with ledEffectOne (e.g.1357 to select the odd leds and 246 to select the even leds)
 *
 * !!!!!!!!!! DON'T FORGET TO UPDATE THE DRIVER DATE AT THE TOP OF THIS PAGE !!!!!!!!!!
 **/
@@ -195,7 +197,7 @@ metadata {
 
         command "initialize"
         
-        command "ledEffectAll",        [[name: "Type*",type:"ENUM", description: "1=Solid, 2=Fast Blink, 3=Slow Blink, 4=Pulse, 5=Chase, 6=Open/Close, 7=Small-to-Big, 8=Aurora, 9=Slow Falling, 10=Medium Falling, 11=Fast Falling, 12=Slow Rising, 13=Medium Rising, 14=Fast Rising, 15=Medium Blink, 16=Slow Chase, 17=Fast Chase, 18=Slow Siren, 19=Fast Siren, 0=LEDs off, 255=Clear Notification", constraints: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,0,255]],
+        command "ledEffectAll",        [[name: "Type*",type:"ENUM", description: "1=Solid, 2=Fast Blink, 3=Slow Blink, 4=Pulse, 5=Chase, 6=Open/Close, 7=Small-to-Big, 8=Aurora, 9=Slow Falling, 10=Medium Falling, 11=Fast Falling, 12=Slow Rising, 13=Medium Rising, 14=Fast Rising, 15=Medium Blink, 16=Slow Chase, 17=Fast Chase, 18=Fast Siren, 19=Slow Siren, 0=LEDs off, 255=Clear Notification", constraints: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,0,255]],
                                         [name: "Color",type:"NUMBER", description: "0-254=Hue Color, 255=White, default=Red"], 
                                         [name: "Level", type:"NUMBER", description: "0-100=LED Intensity, default=100"], 
                                         [name: "Duration", type:"NUMBER", description: "1-60=seconds, 61-120=1-120 minutes, 121-254=1-134 hours, 255=Indefinitely, default=255"]]
@@ -1008,9 +1010,9 @@ def ledEffectOne(lednum, effect=1, color=0, level=100, duration=255) {
         Integer cmdColor = color.toInteger()
         Integer cmdLevel = level.toInteger()
         Integer cmdDuration = duration.toInteger()
-        cmds = zigbee.command(0xfc31,0x03,["mfgCode":"0x122F"],defaultDelay,"${intTo8bitUnsignedHex(cmdLedNum)} ${intTo8bitUnsignedHex(cmdEffect)} ${intTo8bitUnsignedHex(cmdColor)} ${intTo8bitUnsignedHex(cmdLevel)} ${intTo8bitUnsignedHex(cmdDuration)}")
+        cmds += zigbee.command(0xfc31,0x03,["mfgCode":"0x122F"],defaultDelay,"${intTo8bitUnsignedHex(cmdLedNum)} ${intTo8bitUnsignedHex(cmdEffect)} ${intTo8bitUnsignedHex(cmdColor)} ${intTo8bitUnsignedHex(cmdLevel)} ${intTo8bitUnsignedHex(cmdDuration)}")
     }
-    if (traceEnable) log.trace "ledEffectone $cmds"
+    if (traceEnable) log.trace "ledEffectOne $cmds"
     return cmds
 }
 
