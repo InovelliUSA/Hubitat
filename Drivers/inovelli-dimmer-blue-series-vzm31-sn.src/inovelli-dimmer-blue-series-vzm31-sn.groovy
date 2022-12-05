@@ -1,4 +1,4 @@
-def getDriverDate() { return "2022-11-05" }  // **** DATE OF THE DEVICE DRIVER **** //
+def getDriverDate() { return "2022-11-26" }  // **** DATE OF THE DEVICE DRIVER **** //
 /**
 * Inovelli VZM31-SN Blue Series Zigbee 2-in-1 Dimmer
 *
@@ -125,8 +125,16 @@ def getDriverDate() { return "2022-11-05" }  // **** DATE OF THE DEVICE DRIVER *
 * 2022-11-03(MA) updates for fw2.05: addeded param 262; added additional LED effects rising,falling,fast/slow, etc.
 * 2022-11-04(MA) fix 'siren' fast/slow effects (18/19) were backwards
 * 2022-11-05(MA) fix selection of multiple individual leds with ledEffectOne (e.g.1357 to select the odd leds and 246 to select the even leds)
+* 2022-11-17(MA) more fixes for when user enters decimal (floating) values for an integer parameter
+* 2022-11-18(MA) fix startLevelChange with null duration
+* 2022-11-24(MA) improvements to quickStartEmulation
+* 2022-11-26(MA) fix Config Default not defaulting all parameters
 *
-* !!!!!!!!!! DON'T FORGET TO UPDATE THE DRIVER DATE AT THE TOP OF THIS PAGE !!!!!!!!!!
+* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+* !!                                                                                                                     !!
+* !! DON'T FORGET TO UPDATE THE DRIVER DATE AT THE TOP OF THIS PAGE AND CHANGE THE (BETA) NAME DEF IN THE METADATA BELOW !!
+* !!                                                                                                                     !!
+* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 **/
 
 import groovy.json.JsonSlurper
@@ -135,9 +143,16 @@ import groovy.transform.Field
 import hubitat.helper.ColorUtils
 //import hubitat.helper.HexUtils
 import java.security.MessageDigest
-
+/**
+* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+* !!                                                                                          !!
+* !! COMMENT/UNCOMMENT THE PROPER NAME DEFINITIONS (BETA OR PRODUCTION) IN THE METADATA BELOW !!
+* !!                                                                                          !!
+* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+**/
 metadata {
     definition (name: "Inovelli Dimmer 2-in-1 Blue Series VZM31-SN", namespace: "InovelliUSA", author: "E.Maycock/M.Amber", filename: "Inovelli-zigbee-2-in-1-dimmer", importUrl:"https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-blue-series-vzm31-sn.src/inovelli-dimmer-blue-series-vzm31-sn.groovy") { 
+    //definition (name: "Inovelli VZM31-SN (beta)",                    namespace: "InovelliUSA", author: "E.Maycock/M.Amber", filename: "Inovelli-zigbee-2-in-1-dimmer", importUrl:"https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-blue-series-vzm31-sn.src/inovelli-dimmer-blue-series-vzm31-sn.groovy") { 
         
         capability "Actuator"
         capability "Bulb"
@@ -193,7 +208,7 @@ metadata {
         command "bindInitiator"
         command "bindTarget"
 
-        command "configure",           [[name: "Option", type: "ENUM", description: "User=user changed settings only, All=configure all settings, Default=set all settings to default", constraints: [" ","User","All","Default"]]]
+        command "configure",           [[name: "Option", type: "ENUM", description: "blank=current states only, User=user changed settings only, All=configure all settings, Default=set all settings to default", constraints: [" ","User","All","Default"]]]
 
         command "initialize"
         
@@ -312,8 +327,8 @@ metadata {
                 if (state.model?.substring(0,5)!="VZM35") {
                     input "parameter${i}level", "number",
                         title: darkSlateBlue(bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name + " Level")), 
-                        description: italic("Startup Level for LED bulbs to turn on before dropping to lower level.<br>Range=1..100 Default=100"),
-                        defaultValue: "100",
+                        description: italic("Startup Level for LED bulbs to turn on before dropping to lower level.<br>Range=1..100 Default=50"),
+                        defaultValue: defaultQuickLevel,
                         range: "1..100"
                 }
             }
@@ -353,9 +368,9 @@ metadata {
         input name: "infoEnable",          type: "bool",   title: bold("Enable Info Logging"),   defaultValue: true
         input name: "traceEnable",         type: "bool",   title: bold("Enable Trace Logging"),  defaultValue: false
         input name: "debugEnable",         type: "bool",   title: bold("Enable Debug Logging"),  defaultValue: false
-        input name: "disableInfoLogging",  type: "number", title: bold("Disable Info Logging"),  description: italic("after this number of minutes<br>(0=Do not disable)"),  defaultValue: 20
-        input name: "disableTraceLogging", type: "number", title: bold("Disable Trace Logging"), description: italic("after this number of minutes<br>(0=Do not disable)"),  defaultValue: 10
-        input name: "disableDebugLogging", type: "number", title: bold("Disable Debug Logging"), description: italic("after this number of minutes<br>(0=Do not disable)"), defaultValue: 5
+        input name: "disableInfoLogging",  type: "number", title: bold("Disable Info Logging after this number of minutes"),  description: italic("\t(0=Do not disable)"), defaultValue: 20
+        input name: "disableTraceLogging", type: "number", title: bold("Disable Trace Logging after this number of minutes"), description: italic("\t(0=Do not disable)"), defaultValue: 10
+        input name: "disableDebugLogging", type: "number", title: bold("Disable Debug Logging after this number of minutes"), description: italic("\t(0=Do not disable)"), defaultValue: 5
     }
 }
 
@@ -740,7 +755,26 @@ def getParameterNumbers() {   //controls which options are available depending o
 ]
 
 @Field static Integer defaultDelay = 500    //default delay to use for zigbee commands (in milliseconds)
-@Field static Integer longerDelay = 2500    //longer delay to use for changing switch modes (in milliseconds)
+@Field static Integer defaultQuickLevel=50  //default startup level for QuickStart emulation
+@Field static Integer longerDelay = 2500    //longer delay to use for changing modes (in milliseconds)
+
+def infoLogsOff() {
+    log.warn "${device.label?device.label:device.name}: "+fireBrick("Disabling Info logging after timeout")
+    device.updateSetting("infoEnable",[value:"false",type:"bool"])
+    device.updateSetting("disableInfoLogging",[value:"0",type:"number"])
+}
+
+def traceLogsOff() {
+    log.warn "${device.label?device.label:device.name}: "+fireBrick("Disabling Trace logging after timeout")
+    device.updateSetting("traceEnable",[value:"false",type:"bool"])
+    device.updateSetting("disableTraceLogging",[value:"0",type:"number"])
+}
+
+def debugLogsOff() {
+    log.warn "${device.label?device.label:device.name}: "+fireBrick("Disabling Debug logging after timeout")
+    device.updateSetting("debugEnable",[value:"false",type:"bool"])
+    device.updateSetting("disableDebugLogging",[value:"0",type:"number"])
+}
 
 def bind(cmds=[] ) {
     if (infoEnable) log.info "${device.label?device.label:device.name}: bind(${cmds})"
@@ -791,7 +825,7 @@ def calculateDuration(direction) {
 
 def calculateParameter(number) {
     //if (debugEnable) log.debug "${device.label?device.label:device.name}: calculateParameter(${number})"
-    def value = (settings."parameter${number}"!=null?settings."parameter${number}":configParams["parameter${number.toString().padLeft(3,'0')}"].default).toInteger()
+    def value = Math.round((settings."parameter${number}"!=null?settings."parameter${number}":configParams["parameter${number.toString().padLeft(3,'0')}"].default).toFloat())
     switch (number){
         case 9:     //Min Level
         case 10:    //Max Level
@@ -804,7 +838,7 @@ def calculateParameter(number) {
         case 96:    //custom hue for LED Indicator (when Off)
             //360-hue values need to be converted to byte values before sending to the device
             if (settings."parameter${number}custom" =~ /^([0-9]{1}|[0-9]{2}|[0-9]{3})$/) {
-                value = Math.round(settings."parameter${number}custom"/360*255)
+                value = Math.round((settings."parameter${number}custom")/360*255)
             }
             else {   //else custom hue is invalid format or not selected
                 if(settings."parameter${number}custom"!=null) {
@@ -841,6 +875,7 @@ def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS D
     state.lastCommand = "Configure " + option
     state.lastCommandTime = nowFormatted()
     state.driverDate = getDriverDate()
+    if (infoEnable||traceEnable||debugEnable) log.info "${device.label?device.label:device.name}: Driver Date $state.driverDate" 
     sendEvent(name: "numberOfButtons", value: 14, displayed:false)
     def cmds = []
 //  cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0000 {${device.zigbeeId}} {}", "delay ${defaultDelay}"] //Basic Cluster
@@ -874,7 +909,7 @@ def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS D
         cmds += ["he rattr ${device.deviceNetworkId} 0x01 0x0008 0x0010                    {}", "delay ${defaultDelay}"] //get OnOff Transition Time
     cmds += ["he rattr ${device.deviceNetworkId} 0x01 0x0008 0x0011                    {}", "delay ${defaultDelay}"] //get Default Remote On Level
     cmds += ["he rattr ${device.deviceNetworkId} 0x01 0x0008 0x4000                    {}", "delay ${defaultDelay}"] //get Startup Level
-    if (option!="All") { //if we didn't pick option "All" (so we don't read them twice) then preload the dimming/ramp rates and key parameters so they are not null in calculations
+    if (option!="All" && option!="Default") { //if we didn't pick option "All" or "Default" (so we don't read them twice) then preload the dimming/ramp rates and key parameters so they are not null in calculations
         for(int i = 1;i<=8;i++) cmds += getAttribute(0xfc31, i)
         cmds += getAttribute(0xfc31, 258)       //switch mode
         cmds += getAttribute(0xfc31, 22)        //aux switch type
@@ -926,33 +961,19 @@ def cycleSpeed() {    // FOR FAN ONLY
     return cmds
 }
 
-def infoLogsOff() {
-    log.warn "${device.label?device.label:device.name}: "+fireBrick("Disabling info logging after timeout")
-    device.updateSetting("infoEnable",[value:"false",type:"bool"])
-    device.updateSetting("disableInfoLogging",[value:"0",type:"number"])
-}
-
-def traceLogsOff() {
-    log.warn "${device.label?device.label:device.name}: "+fireBrick("Disabling trace logging after timeout")
-    device.updateSetting("traceEnable",[value:"false",type:"bool"])
-    device.updateSetting("disableTraceLogging",[value:"0",type:"number"])
-}
-
-def debugLogsOff() {
-    log.warn "${device.label?device.label:device.name}: "+fireBrick("Disabling debug logging after timeout")
-    device.updateSetting("debugEnable",[value:"false",type:"bool"])
-    device.updateSetting("disableDebugLogging",[value:"0",type:"number"])
-}
-
 def initialize() {    //CALLED DURING HUB BOOTUP IF "INITIALIZE" CAPABILITY IS DECLARED IN METADATA SECTION
     //Typically used for things that need refreshing or re-connecting at bootup (e.g. LAN integrations but not zigbee bindings)
     if (infoEnable) log.info "${device.label?device.label:device.name}: initialize()"
+    device.clearSetting("parameter23level") 
+    device.clearSetting("parameter95custom") 
+    device.clearSetting("parameter96custom") 
     state.clear()
-    def cmds = []
-    cmds += refresh()
-    state.driverDate = getDriverDate()
     state.lastCommand = "Initialize"
     state.lastCommandTime = nowFormatted()
+    state.driverDate = getDriverDate()
+    //if (infoEnable||traceEnable||debugEnable) log.info "${device.label?device.label:device.name}: Driver Date $state.driverDate"	//this is also done in refresh()
+    def cmds = []
+    cmds += refresh()
     return cmds
 }
 
@@ -982,7 +1003,7 @@ def ledEffectAll(effect=1, color=0, level=100, duration=255) {
     if (infoEnable) log.info "${device.label?device.label:device.name}: ledEffectALL(${effect},${color},${level},${duration})"
     state.lastCommand = "Led Effect All"// (${effect},${color},${level},${duration})"
     state.lastCommandTime = nowFormatted()
-    sendEvent(name:"ledEffect", value: (effect==255?"Stop":"Start")+" All", displayed:false)
+    sendEvent(name:"ledEffect", value: "All-LED Effect"+(effect==255?" Stop":"$effect"), displayed:false)
     def cmds =[]
     Integer cmdEffect = effect.toInteger()
     Integer cmdColor = color.toInteger()
@@ -1001,7 +1022,7 @@ def ledEffectOne(lednum, effect=1, color=0, level=100, duration=255) {
     if (infoEnable) log.info "${device.label?device.label:device.name}: ledEffectOne(${lednum},${effect},${color},${level},${duration})"
     state.lastCommand = "Led Effect Led${lednum}"// (${effect},${color},${level},${duration})"
     state.lastCommandTime = nowFormatted()
-	sendEvent(name:"ledEffect", value: (effect==255?"Stop":"Start")+" LED${lednum}", displayed:false)
+	sendEvent(name:"ledEffect", value: "LED${lednum} Effect"+(effect==255?" Stop":"$effect"), displayed:false)
     def cmds = []
     lednum.each {
         it= Math.min(Math.max((it!=null?it:1).toInteger(),1),7)
@@ -1042,8 +1063,8 @@ def on() {
     state.lastCommand = "On"  // (${device.currentValue('level')}%" + ", ${rampRate/10}s)"// (parameter258=="0"?", ${rampRate/10}s)":")")
     state.lastCommandTime = nowFormatted()
     def cmds = []
-    if (state.model?.substring(0,5)!="VZM35") cmds += quickStartEmulation()  //if this is not the Fan Switch then emulate QuickStart
-    cmds += zigbee.on(defaultDelay)
+	cmds += zigbee.on(settings.parameter23?.toInteger()>0?10:defaultDelay)
+    if (state.model?.substring(0,5)!="VZM35" && settings.parameter23?.toInteger()>0) cmds += quickStartEmulation() //if this is not the Fan Switch and Quickstart is enabled then emulate QuickStart
     if (traceEnable) log.trace "on $cmds"
     return cmds
 }
@@ -1575,7 +1596,7 @@ def parse(String description) {
             else if (infoEnable||debugEnable) log.warn "${device.label?device.label:device.name}: "+fireBrick("${clusterLookup(clusterHex)}(${clusterHex}) UNKNOWN COMMAND" + (debugEnable?"\t$descMap\t${zigbee.getEvent(description)}":""))
             break
         default:
-            if (infoEnable||debugEnable) log.warn "${device.label?device.label:device.name}: "+fireBrick("Cluster:$clusterHex UNKNOWN CLUSTER" + (debugEnable?"\t$descMap\t${zigbee.getEvent(description)}":""))
+            if (infoEnable||debugEnable) log.warn "${device.label?device.label:device.name}: "+fireBrick("Cluster:$clusterHex UNKNOWN CLUSTER \t$descMap\t${zigbee.getEvent(description)}")
             break
     }
     state.lastEventTime =      nowFormatted() 
@@ -1601,8 +1622,31 @@ def presetLevel(value) {    //possible future command
     def cmds = []
     Integer scaledValue = value==null?null:Math.min(Math.max(convertPercentToByte(value.toInteger()),1),255)  //ZigBee levels range from 0x01-0xfe with 00 and ff = 'use previous'
     cmds += setPrivateCluster(13, scaledValue, 8)
-    //if (traceEnable) log.trace "preset $cmds"
+    if (traceEnable) log.trace "preset $cmds"
     return cmds
+}
+
+def quickStartEmulation() {
+    setQuickStartVariables()
+	def cmds= []
+    if (state.model?.substring(0,5)!="VZM35") {  //IF not the Fan switch THEN emulate QuickStart 
+		if (settings.parameter23.toInteger()>0 ) {  //don't quickStart if not enabled
+			if (infoEnable) log.info "${device.label?device.label:device.name}: quickStartEmulation(${state.parameter23value?.toInteger()*100}ms, ${state.parameter23level})"
+			def startLevel = device.currentValue("level")
+			cmds += zigbee.setLevel(state.parameter23level?.toInteger(),0,state.parameter23value?.toInteger()*100)  //QuickStart should jump to level (0 duration) with brief delay after
+			cmds += zigbee.setLevel(startLevel.toInteger(),0,defaultDelay) 
+		}
+	}
+    if (traceEnable) log.trace "quickStart $cmds"
+    return cmds
+}
+
+def setQuickStartVariables() {
+    if (state.model?.substring(0,5)!="VZM35") {  //IF not the Fan switch THEN set the QuickStart variables manually
+        settings.parameter23 =  (settings.parameter23!=null?settings.parameter23:configParams["parameter023"].default).toInteger()
+        state.parameter23value = Math.round((settings.parameter23?:0).toFloat())
+        state.parameter23level = Math.round((settings.parameter23level?:defaultQuickLevel).toFloat())
+    }
 }
   
 def refresh(option) {
@@ -1610,6 +1654,8 @@ def refresh(option) {
     if (infoEnable) log.info "${device.label?device.label:device.name}: refresh(${option})"
     state.lastCommand = "Refresh " + option
     state.lastCommandTime = nowFormatted()
+    state.driverDate = getDriverDate()
+    if (infoEnable||traceEnable||debugEnable) log.info "${device.label?device.label:device.name}: Driver Date $state.driverDate"
     def cmds = []
     //cmds += zigbee.readAttribute(0x0000, 0x0000, [:], defaultDelay)    //CLUSTER_BASIC ZCL Version
     //cmds += zigbee.readAttribute(0x0000, 0x0001, [:], defaultDelay)    //CLUSTER_BASIC Application Version
@@ -1754,6 +1800,7 @@ def getAttribute(Integer cluster, Integer attrInt, Map additionalParams = [:], I
         if (infoEnable) log.info "${device.label?device.label:device.name}: Receive  attribute ${attrInt.toString().padLeft(3," ")} value ${state.parameter23value?.toString().padLeft(3," ")}\t(QuickStart " + 
             (state.parameter23value?.toInteger()==0?red("disabled"):"${state?.parameter23value.toInteger()*100} milliseconds ") + ")"
         if (infoEnable) log.info "${device.label?device.label:device.name}: Receive  attribute ${attrInt.toString().padLeft(3," ")} level ${state.parameter23level?.toString().padLeft(3," ")}\t(QuickStart startup level)"
+        if (settings.parameter23level?.toInteger()==defaultQuickLevel) device.clearSetting("parameter23level") 
     }
     def cmds = []
     //String mfgCode = "{}"
@@ -1782,32 +1829,11 @@ def setLevel(newLevel,duration=null) {
     state.lastCommandTime = nowFormatted()
     if (duration!=null) duration = duration.toInteger()*10  //firmware duration in 10ths
     def cmds = []
-    if (state.model?.substring(0,5)!="VZM35") cmds += quickStartEmulation()  //if this is not the Fan Switch then emulate QuickStart
     cmds += duration==null?zigbee.setLevel(newLevel):zigbee.setLevel(newLevel,duration)
     if (traceEnable) log.trace "setLevel $cmds"
     return cmds
 }
-
-def quickStartEmulation() {
-    setQuickStartVariables()
-    def cmds= []
-    if (settings.parameter23.toInteger()>0 && device.currentValue("switch")=="off") {  //don't QuickStart if switch is already on
-        if (infoEnable) log.info "${device.label?device.label:device.name}: quickStartEmulation(${settings.parameter23.toInteger()*100}ms, ${settings.parameter23level})"
-        def startLevel = device.currentValue("level")
-        cmds += zigbee.setLevel(state.parameter23level.toInteger(),0,state.parameter23value.toInteger()*100)  //QuickStart should jump to level (0 duration) with brief delay after
-        cmds += zigbee.setLevel(startLevel.toInteger(),0,defaultDelay) 
-    }
-    return cmds
-}
-
-def setQuickStartVariables() {
-    if (state.model?.substring(0,5)!="VZM35") {  //IF not the Fan switch THEN set the QuickStart variables manually
-        settings.parameter23 =  (settings.parameter23!=null?settings.parameter23:configParams["parameter023"].default).toInteger()
-        state.parameter23value = settings.parameter23?:0
-        state.parameter23level = settings.parameter23level?:100
-    }
-}
-
+ 
 def setSpeed(value) {  // FOR FAN ONLY
     if (infoEnable) log.info "${device.label?device.label:device.name}: setSpeed(${value})"
     state.lastCommand = "Set Speed (${value})"
@@ -1876,23 +1902,22 @@ def setZigbeeAttribute(cluster, attributeId, value=null, size=8) {
 def startLevelChange(direction, duration=null) {
     def newLevel = direction=="up"?100:device.currentValue("switch")=="off"?0:1
 	if (parameter258=="1") duration=0  //if switch mode is on/off then ramping is 0
-    //if (duration==null){               //if we didn't pass in the duration then get it from parameters
-    //    if (direction=="up")           //if direction is up use parameter1 dimming duration
-    //        duration = (parameter1!=null?parameter1:configParams["parameter001"].default)?.toInteger()    //dimming up, use parameter1, if null use default
-    //    else                           //else direction is down so use parameter5 dim duration unless default then use parameter1 dim duration
-    //        duration = (parameter5!=null?parameter5:(parameter1!=null?parameter1:configParams["parameter001"].default))?.toInteger()
-    //}
-    //else {
-    //    duration = duration*10          //we passed in seconds but calculations are based on 10ths of seconds
-    //}
-    //if (duration==null) duration = configParams["parameter001"].default.toInteger()	//catch-all just in case we still have a null then use parameter001 default
-    if (infoEnable) log.info "${device.label?device.label:device.name}: startLevelChange(${direction}, ${duration}s)"
-    state.lastCommand = "Start Level Change"// (${direction}" + (duration==0?")":", ${duration/10}s)")  //duration is in 10ths of seconds
+    if (duration==null){               //if we didn't pass in the duration then get it from parameters
+        if (direction=="up")           //if direction is up use parameter1 dimming duration
+            duration = (parameter1!=null?parameter1:configParams["parameter001"].default)?.toInteger()    //dimming up, use parameter1, if null use default
+        else                           //else direction is down so use parameter5 dim duration unless default then use parameter1 dim duration
+            duration = (parameter5!=null?parameter5:(parameter1!=null?parameter1:configParams["parameter001"].default))?.toInteger()
+    }
+    else {
+        duration = duration*10          //we passed in seconds but zigbee uses 10ths of seconds
+    }
+    if (duration==null) duration = configParams["parameter001"].default.toInteger()	//catch-all just in case we still have a null then use parameter001 default
+    if (infoEnable) log.info "${device.label?device.label:device.name}: startLevelChange(${direction}, ${duration/10}s)"  //duration is in 10ths of seconds
+    state.lastCommand = "Start Level Change"
     state.lastCommandTime = nowFormatted()
-    if (duration!=null) duration = duration.toInteger()*10  //firmware duration in 10ths
     def cmds = []
     cmds += duration==null?zigbee.setLevel(newLevel):zigbee.setLevel(newLevel, duration)
-    log.trace "startLevel $cmds"
+    //if (traceEnable) log.trace "startLevel $cmds"
     return cmds
 }
 
@@ -1912,13 +1937,13 @@ def toggle() {
     state.lastCommand = "Toggle ($toggleDirection)"
     state.lastCommandTime = nowFormatted()
     def cmds = []
-    if (state.model?.substring(0,5)!="VZM35") cmds += quickStartEmulation()  //if this is not the Fan Switch then emulate QuickStart
-    //cmds += zigbee.command(CLUSTER_ON_OFF, COMMAND_TOGGLE)  //toggle is inconsistent with QiuckStart, so we emulate toggle with on/off instead
+    //cmds += zigbee.command(CLUSTER_ON_OFF, COMMAND_TOGGLE)  //toggle is inconsistent with QuickStart, so we emulate toggle with on/off instead
     //if having trouble keeping multiple bulbs in sync, use the below code to emulate toggle
-    if (device.currentValue("switch")=="off")            //uncomment these lines to convert Toggle to On/Off commands 
-       cmds += zigbee.on(defaultDelay)                   //
-    else                                                 //
-       cmds += zigbee.off(defaultDelay)                  //
+    if (device.currentValue("switch")=="off") 
+       cmds += zigbee.on(settings.parameter23?.toInteger()>0?10:defaultDelay)
+    else
+       cmds += zigbee.off(defaultDelay)
+    if (state.model?.substring(0,5)!="VZM35" && device.currentValue("switch")=="off") cmds += quickStartEmulation()  //if this is not the Fan Switch then emulate QuickStart
     if (traceEnable) log.trace "toggle $cmds"
     return cmds
 }
@@ -1926,9 +1951,7 @@ def toggle() {
 def updated(option) { // called when "Save Preferences" is requested
     option = (option==null||option==" ")?"":option
     if (infoEnable) log.info "${device.label?device.label:device.name}: updated(${option})"
-    if (infoEnable   && disableInfoLogging)   runIn(disableInfoLogging*60,infoLogsOff)
-    if (traceEnable  && disableTraceLogging)  runIn(disableTraceLogging*60,traceLogsOff)
-    if (debugEnable  && disableDebugLogging)  runIn(disableDebugLogging*60,debugLogsOff) 
+    state.driverDate = getDriverDate()
     def changedParams = []
     def cmds = []
     def nothingChanged = true
@@ -1943,9 +1966,12 @@ def updated(option) { // called when "Save Preferences" is requested
             defaultValue=convertPercentToByte(defaultValue)
             oldValue=convertPercentToByte(oldValue)
         }
-        if ((i==95 && parameter95custom!=null)||(i==96 && parameter96custom!=null)) {                                         //IF  a custom hue value is set
-            if ((Math.round(settings?."parameter${i}custom"?.toInteger()/360*255)==settings?."parameter${i}"?.toInteger())) { //AND custom setting is same as normal setting
-                device.clearSetting("parameter${i}custom")                                                                    //THEN clear custom hue and use normal color 
+		if (i==23 && parameter23level!=null) {
+			if (parameter23level==defaultQuickLevel) device.clearSetting("parameter23level")
+			}
+        if ((i==95 && parameter95custom!=null)||(i==96 && parameter96custom!=null)) {                                       //IF  a custom hue value is set
+            if ((Math.round(settings?."parameter${i}custom"?.toFloat()/360*255)==settings?."parameter${i}"?.toInteger())) { //AND custom setting is same as normal setting
+                device.clearSetting("parameter${i}custom")                                                                  //THEN clear custom hue and use normal color 
                 if (infoEnable) log.info "${device.label?device.label:device.name}: Cleared Custom Hue setting since it equals standard color setting"
             }
             oldvalue=state."parameter${i}custom"!=null?state."parameter${i}custom".toInteger():oldValue
@@ -1955,13 +1981,14 @@ def updated(option) { // called when "Save Preferences" is requested
             newValue = defaultValue
             if (debugEnable) log.debug "${device.label?device.label:device.name}: updated() has cleared parameter${attrInt}"
             device.clearSetting("parameter${i}")  //and clear the local settings so they go back to default values
-            if ((i==95)||(i==96)) device.clearSetting("parameter${i}custom")    //clear the custom hue colors also
+            if (i==23)          device.clearSetting("parameter${i}level")    //clear the custom quickstart level
+            if (i==95 || i==96) device.clearSetting("parameter${i}custom")   //clear the custom custom hue values
         }
         //If a setting changed OR we selected ALL then update parameters in the switch (but don't change switch modes when ALL is selected)
         //log.debug "Param:$i default:$defaultValue oldValue:$oldValue newValue:$newValue setting:${settings."parameter$i"} `$option`"
         if ((newValue!=oldValue) 
         || ((option=="User")&&(settings."parameter${i}"!=null)) 
-        || ((option=="All")&&(i!=258))) {
+        || ((option=="Default"||option=="All")&&(i!=258))) {
             if ((i==52)||(i==258)) setAttrDelay = setAttrDelay!=longerDelay?longerDelay:defaultDelay  //IF   we're changing modes THEN delay longer
             else                   setAttrDelay = defaultDelay                                        //ELSE set back to default delay if we already delayed previously
             cmds += setAttribute(0xfc31, i, calculateSize(configParams["parameter${i.toString().padLeft(3,'0')}"].size), newValue.toInteger(), ["mfgCode":"0x122F"], setAttrDelay)
@@ -1981,6 +2008,18 @@ def updated(option) { // called when "Save Preferences" is requested
         log.trace "${device.label?device.label:device.name}: Trace logging  "   + (traceEnable?green("Enabled"):red("Disabled"))
         log.debug "${device.label?device.label:device.name}: Debug logging "    + (debugEnable?green("Enabled"):red("Disabled"))
     }
+    if (infoEnable  && disableInfoLogging) {
+		log.info "${device.label?device.label:device.name}: Info Logging will be disabled in $disableInfoLogging minutes"
+		runIn(disableInfoLogging*60,infoLogsOff)
+		}
+    if (traceEnable && disableTraceLogging)  {
+		log.trace "${device.label?device.label:device.name}: Trace Logging will be disabled in $disableTraceLogging minutes"
+		runIn(disableTraceLogging*60,traceLogsOff)
+		}
+    if (debugEnable && disableDebugLogging)  {
+		log.debug "${device.label?device.label:device.name}: Debug Logging will be disabled in $disableDebugLogging minutes"
+		runIn(disableDebugLogging*60,debugLogsOff) 
+		}
     return cmds
 }
 
@@ -1999,36 +2038,6 @@ List updateFirmware() {
     state.lastUpdateFw = now()
     return []
 }
-//  ****  COMMENTED OUT BECAUSE I DON'T THINK THESE METHODS ARE USED ANYWHERE  ****
-//
-//ArrayList<String> zigbeeWriteAttribute(Integer cluster, Integer attributeId, Integer dataType, Integer value, Map additionalParams = [:], int delay = defaultDelay) {
-//    if (debugEnable||traceEnable) log.trace "${device.label?device.label:device.name}: zigbeeWriteAttribute($cluster,$attributeId,$dataType,$value,$additionalParams,$delay)"
-//    if (delay==null||delay==0) delay = defaultDelay
-//    ArrayList<String> cmds = setAttribute(cluster, attributeId, dataType, value, additionalParams, delay)
-//    //cmds[0] = cmds[0].replace('0xnull', '0x01')
-//    if (debugEnable) log.debug "${device.label?device.label:device.name}: zigbeeWriteAttribute cmds=${cmds}"
-//    return cmds
-//}
-//
-//ArrayList<String> zigbeeWriteAttribute(Integer endpoint, Integer cluster, Integer attributeId, Integer dataType, Integer value, Map additionalParams = [:], int delay = defaultDelay) {
-//    if (debugEnable||traceEnable) log.trace "${device.label?device.label:device.name}: zigbeeWriteAttribute($endpoint,$cluster,$attributeId,$dataType,$value,$additionalParams,$delay)"
-//    if (delay==null||delay==0) delay = defaultDelay
-//    String mfgCode = ""
-//    if(additionalParams.containsKey("mfgCode"))
-//        mfgCode = " ${zigbee.convertToHexString(zigbee.convertHexToInt(additionalParams.get("mfgCode")), 4)}"
-//    //Integer size = dataType==0x21?4:2
-//    //String wattrArgs = "0x${device.deviceNetworkId} " +
-//    //                   "0x${zigbee.convertToHexString(endpoint, 2)} " +
-//    //                   "0x${zigbee.convertToHexString(cluster, 4)} " + 
-//    //                   "0x${zigbee.convertToHexString(attributeId, 4)} " + 
-//    //                   "0x${zigbee.convertToHexString(dataType, 2)} " + 
-//    //                   "0x${zigbee.convertToHexString(value, size)} " 
-//    //                   "${mfgCode}"
-//    //ArrayList<String> cmds = ["he wattr $wattrArgs", "delay $delay"]
-//    ArrayList<String> cmds = setAttribute(cluster, attributeId, dataType, value, additionalParams, delay)
-//    if (debugEnable) log.debug "${device.label?device.label:device.name}: zigbeeWriteAttribute cmds=${cmds}"
-//    return cmds
-//}
 
 void ZigbeePrivateCommandEvent(data) {
     if (debugEnable) log.debug "${device.label?device.label:device.name}: ButtonNumber: ${data[0]} ButtonAttributes: ${data[1]}"
@@ -2308,7 +2317,7 @@ String underline(s) { return "<u>$s</u>" }
 
 String hue(h,s) { 
     h = Math.min(Math.max((h!=null?h:170),1),255)    //170 is Inovelli factory default blue
-    if (h==255) s = '<font style="background-color:Gray;color:White;"> ' + s + ' </font>'
+    if (h==255) s = '<font style="background-color:slateGray;color:White;"> ' + s + ' </font>'
     else        s = '<font color="' + hubitat.helper.ColorUtils.rgbToHEX(hubitat.helper.ColorUtils.hsvToRGB([(h/255*100), 100, 100])) + '">' + s + '</font>'
     return s
 }
