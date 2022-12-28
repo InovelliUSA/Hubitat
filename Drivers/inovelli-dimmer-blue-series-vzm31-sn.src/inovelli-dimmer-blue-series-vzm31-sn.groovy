@@ -1,4 +1,4 @@
-def getDriverDate() { return "2022-11-26" }  // **** DATE OF THE DEVICE DRIVER **** //
+def getDriverDate() { return "2022-12-12" }  // **** DATE OF THE DEVICE DRIVER **** REMEMBER TO CHANGE DRIVER NAME IN METADATA BELOW **** //
 /**
 * Inovelli VZM31-SN Blue Series Zigbee 2-in-1 Dimmer
 *
@@ -129,12 +129,13 @@ def getDriverDate() { return "2022-11-26" }  // **** DATE OF THE DEVICE DRIVER *
 * 2022-11-18(MA) fix startLevelChange with null duration
 * 2022-11-24(MA) improvements to quickStartEmulation
 * 2022-11-26(MA) fix Config Default not defaulting all parameters
+* 2022-12-12(MA) add presetLevel command; allow param15 to be set in on/off mode; workaround for setLevel bug in firmware (firmware ignores off-on duration)
 *
-* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-* !!                                                                                                                     !!
-* !! DON'T FORGET TO UPDATE THE DRIVER DATE AT THE TOP OF THIS PAGE AND CHANGE THE (BETA) NAME DEF IN THE METADATA BELOW !!
-* !!                                                                                                                     !!
-* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11!!
+* !!                                                                 !!
+* !! DON'T FORGET TO UPDATE THE DRIVER DATE AT THE TOP OF THIS PAGE  !!
+* !!                                                                 !!
+* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 **/
 
 import groovy.json.JsonSlurper
@@ -143,17 +144,10 @@ import groovy.transform.Field
 import hubitat.helper.ColorUtils
 //import hubitat.helper.HexUtils
 import java.security.MessageDigest
-/**
-* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-* !!                                                                                          !!
-* !! COMMENT/UNCOMMENT THE PROPER NAME DEFINITIONS (BETA OR PRODUCTION) IN THE METADATA BELOW !!
-* !!                                                                                          !!
-* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-**/
+
 metadata {
-    definition (name: "Inovelli Dimmer 2-in-1 Blue Series VZM31-SN", namespace: "InovelliUSA", author: "E.Maycock/M.Amber", filename: "Inovelli-zigbee-2-in-1-dimmer", importUrl:"https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-blue-series-vzm31-sn.src/inovelli-dimmer-blue-series-vzm31-sn.groovy") { 
-    //definition (name: "Inovelli VZM31-SN (beta)",                    namespace: "InovelliUSA", author: "E.Maycock/M.Amber", filename: "Inovelli-zigbee-2-in-1-dimmer", importUrl:"https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-blue-series-vzm31-sn.src/inovelli-dimmer-blue-series-vzm31-sn.groovy") { 
-        
+    definition (name: "Inovelli Dimmer 2-in-1 Blue Series VZM31-SN", namespace: "InovelliUSA", author: "E.Maycock/M.Amber", filename: "Inovelli-zigbee-2-in-1-dimmer", importUrl:"https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-blue-series-vzm31-sn.src/inovelli-dimmer-blue-series-vzm31-sn.groovy" ) 
+	{ 
         capability "Actuator"
         capability "Bulb"
         capability "ChangeLevel"
@@ -224,9 +218,9 @@ metadata {
                                         [name: "Duration", type:"NUMBER", description: "1-60=seconds, 61-120=1-120 minutes, 121-254=1-134 hours, 255=Indefinitely, default=255"]]
         
         //uncomment the next line if you want a "presetLevel" command to use in Rule Manager.  Can also be done with setPrivateCluster(13, level, 8) instead
-        //command "presetLevel",          [[name: "Level", type: "NUMBER", description: "Level to preset (1 to 101)"]]           
+        command "presetLevel",          [[name: "Level", type: "NUMBER", description: "Level to preset (1 to 101)"]]           
         
-        command "refresh",             [[name: "Option", type: "ENUM", description: "blank=current states only, User=user changed settings only, All=refresh all settings",constraints: [" ","User","All"]]]
+        command "refresh",              [[name: "Option", type: "ENUM", description: "blank=current states only, User=user changed settings only, All=refresh all settings",constraints: [" ","User","All"]]]
 
         command "resetEnergyMeter"
 
@@ -376,7 +370,7 @@ metadata {
 
 def getParameterNumbers() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
     if (parameter258 == "1")  //on/off mode
-        return [258,22,52,10,11,12,17,18,19,20,21,50,51,95,96,97,98,256,257,259,260,261,262]
+        return [258,22,52,10,11,12,15,17,18,19,20,21,50,51,95,96,97,98,256,257,259,260,261,262]
     else                      //dimmer mode
         return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,23,50,51,53,95,96,97,98,256,257,260,262]
 }
@@ -525,7 +519,7 @@ def getParameterNumbers() {   //controls which options are available depending o
     parameter015 : [
         number: 15,
         name: "Level After Power Restored",
-        description: "The level the switch will return to when power is restored after power failure.<br>0=Off<br>1-100=Set Level<br>101=Use previous level.",
+        description: "The level the switch will return to when power is restored after power failure (if Switch is in On/Off Mode any level 1-100 will convert to 100).<br>0=Off<br>1-100=Set Level<br>101=Use previous level.",
         range: "0..101",
         default: 101,
         size: 8,
@@ -592,7 +586,7 @@ def getParameterNumbers() {   //controls which options are available depending o
         type: "enum",
         value: null
         ],
-    parameter023 : [ //implemented in firmware for the fan, emulated in this driver for 2-in-1 Dimmer
+    parameter023 : [ //implemented in firmware for the fan,
         number: 23,
         name: "Quick Start",
         description: "Duration of higher power when the light goes from OFF to ON (for LEDs that need higher power to turn on but can be dimmed lower) 0=Disabled",
@@ -820,7 +814,7 @@ def calculateDuration(direction) {
                     rampRate = (parameter7!=null?parameter7:(parameter3!=null?parameter3:(parameter1!=null?parameter1:configParams["parameter001"].default)))?.toInteger()
                 break
         }
-    }	
+    }
 }
 
 def calculateParameter(number) {
@@ -1829,11 +1823,13 @@ def setLevel(newLevel,duration=null) {
     state.lastCommandTime = nowFormatted()
     if (duration!=null) duration = duration.toInteger()*10  //firmware duration in 10ths
     def cmds = []
+    //if (state.model?.substring(0,5)!="VZM35") cmds += quickStartEmulation()  //if this is not the Fan Switch then emulate QuickStart
+    if (device.currentValue("switch")=="off") cmds += zigbee.setLevel(1,0,100)  //if switch is off, start fading up from 1 (not the previous level)
     cmds += duration==null?zigbee.setLevel(newLevel):zigbee.setLevel(newLevel,duration)
     if (traceEnable) log.trace "setLevel $cmds"
     return cmds
 }
- 
+
 def setSpeed(value) {  // FOR FAN ONLY
     if (infoEnable) log.info "${device.label?device.label:device.name}: setSpeed(${value})"
     state.lastCommand = "Set Speed (${value})"
@@ -1846,13 +1842,13 @@ def setSpeed(value) {  // FOR FAN ONLY
         case "low": 
             cmds += zigbee.setLevel(25) 
             break
-        case "medium-low": 
+        case "medium-low":             //placeholder since Hubitat natively supports 5-speed fans
             cmds += zigbee.setLevel(33) 
             break
         case "medium": 
             cmds += zigbee.setLevel(50) 
             break
-        case "medium-high": 
+        case "medium-high":            //placeholder since Hubitat natively supports 5-speed fans
             cmds += zigbee.setLevel(66) 
             break
         case "high": 
