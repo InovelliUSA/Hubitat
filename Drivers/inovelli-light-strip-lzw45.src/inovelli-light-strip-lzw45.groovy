@@ -1,7 +1,7 @@
 /**
  *  Inovelli Light Strip LZW45
  *  Author: Eric Maycock (erocm123)
- *  Date: 2022-05-04
+ *  Date: 2022-12-29
  *  Platform: Hubitat
  *
  *  ******************************************************************************************************
@@ -23,6 +23,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *  
+ *  2022-12-29: Adding Light Capability for Homekit.
  *  
  *  2022-05-04: Fixing start level change problem.
  *  
@@ -60,6 +62,7 @@ metadata {
         capability "Energy Meter"
         capability "Power Meter"
         capability "ChangeLevel"
+        capability "Light"
 
         attribute "colorName", "string"
         attribute "lastActivity", "String"
