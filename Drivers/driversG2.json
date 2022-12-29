@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "VZM31-SN: add presetLevel command; allow param15 to be set in on/off mode; workaround for setLevel bug in firmware (firmware ignores off-on duration)",
+   "releaseNotes": "LZW42 / LZW45: Adding Light capability for Homekit support. VZM31-SN: add presetLevel command; allow param15 to be set in on/off mode; workaround for setLevel bug in firmware (firmware ignores off-on duration)",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -63,7 +63,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-bulb-multi-color-lzw42.src/inovelli-bulb-multi-color-lzw42.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "22.5.4"
+                "version": "22.12.29"
    	},
 	{
    		"id" : "4184e20b-43f2-4e4e-8b39-3881e5427e8c",
@@ -90,7 +90,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-light-strip-lzw45.src/inovelli-light-strip-lzw45.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "22.5.4"
+                "version": "22.12.29"
    	},
 	{
    		"id" : "c0d82d86-1545-49b6-943e-3435cccce7d6",
