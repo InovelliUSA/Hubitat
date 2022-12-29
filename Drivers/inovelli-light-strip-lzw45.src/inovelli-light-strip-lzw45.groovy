@@ -24,7 +24,8 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *  
- *  2022-12-29: Adding Light Capability for Homekit.
+ *  2022-12-29: Adding Light Capability for Homekit. Also adding "color transition" to allow for smooth changing from one
+ *              color to another. 
  *  
  *  2022-05-04: Fixing start level change problem.
  *  
@@ -176,6 +177,7 @@ metadata {
                 0:"Off", 1:"Solid", 2:"Chase", 3:"Fast Blink", 4:"Slow Blink", 5:"Fast Fade", 6:"Slow Fade"]
         }
         input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: false
+        input name: "colorTransition", type: "number", description: "", title: "Color fade time:", defaultValue: 0
         input description: "Use the below options to enable child devices for the specified settings. This will allow you to adjust these settings using " +
             "SmartApps such as Smart Lighting.", title: "Child Devices", displayDuringSetup: false, type: "paragraph", element: "paragraph"
         input "enableDefaultLocalChild", "bool", title: "Create \"Default Level (Local)\" Child Device", description: "", required: false, defaultValue: "false"
@@ -908,12 +910,15 @@ def setHue(value) {
 def setColor(value) {
     if (infoEnable) log.info "${device.label?device.label:device.name}: setColor($value)"
     def cmds = []
+    int dimmingDuration=0
+    if (tt) dimmingDuration=tt
+	else if (colorTransition) dimmingDuration=colorTransition
     if (value.hex) {
         def c = value.hex.findAll(/[0-9a-fA-F]{2}/).collect { Integer.parseInt(it, 16) }
-        cmds << zwave.switchColorV3.switchColorSet(red: c[0], green: c[1], blue: c[2], warmWhite: 0, coldWhite: 0)
+        cmds << zwave.switchColorV3.switchColorSet(red: c[0], green: c[1], blue: c[2], warmWhite: 0, coldWhite: 0, dimmingDuration: dimmingDuration)
     } else {
         def rgb = hubitat.helper.ColorUtils.hsvToRGB([value.hue, value.saturation, 100])
-        cmds << zwave.switchColorV3.switchColorSet(red: rgb[0], green: rgb[1], blue: rgb[2], warmWhite:0, coldWhite:0)
+        cmds << zwave.switchColorV3.switchColorSet(red: rgb[0], green: rgb[1], blue: rgb[2], warmWhite:0, coldWhite:0, dimmingDuration: dimmingDuration)
     }
     if ((!colorStaging)){
         if (infoEnable) log.info "${device.label?device.label:device.name}: Bulb is off. Turning on"
