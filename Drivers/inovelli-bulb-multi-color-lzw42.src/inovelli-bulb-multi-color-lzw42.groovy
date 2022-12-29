@@ -13,7 +13,7 @@
  *  Inovelli Bulb Multi-Color LZW42
  *
  *  Author: Eric Maycock
- *  Date: 2022-06-10
+ *  Date: 2022-12-29
  *  updated by bcopeland 1/7/2020
  *		Added color pre-staging option
  *		Added power restored memory configuration
@@ -68,6 +68,8 @@
  *      adding new options for "setColorTemperature" command
  *  updated by erocm123 6/10/2022
  *      Fix start level change problem.
+ *  adding Light Capability for Homekit.
+ *  
  */
 
 import groovy.transform.Field
@@ -84,6 +86,7 @@ metadata {
 		capability "Configuration"
 		capability "ChangeLevel"
 		capability "ColorMode"
+                capability "Light"
 
 		attribute "colorName", "string"
 		attribute "firmware", "String"
