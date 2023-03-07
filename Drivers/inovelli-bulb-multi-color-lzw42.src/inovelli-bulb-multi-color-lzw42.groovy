@@ -343,7 +343,7 @@ void setColor(value) {
 	}
 	sendToDevice(cmds)
 	eventProcess(name: "colorMode", value: "RGB", descriptionText: "${device.getDisplayName()} color mode is RGB")
-	runIn(dimmingDuration, "refreshColor")
+	runIn(dimmingDuration, "refresh")
 }
 
 void setColorTemperature(temp, level = null, tt = null) {
@@ -364,7 +364,7 @@ void setColorTemperature(temp, level = null, tt = null) {
     if (level) setLevel(level, tt)
 	sendToDevice(cmds)
 	eventProcess(name: "colorMode", value: "CT", descriptionText: "${device.getDisplayName()} color mode is CT")
-	runIn(dimmingDuration, "refreshColor")
+	runIn(dimmingDuration, "refresh")
 }
 
 private void setGenericTempName(temp){
