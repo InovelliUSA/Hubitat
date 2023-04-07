@@ -1,11 +1,11 @@
-def getDriverDate() { return "2022-12-12" }  // **** DATE OF THE DEVICE DRIVER **** REMEMBER TO CHANGE DRIVER NAME IN METADATA BELOW **** //
+def getDriverDate() { return "2023-04-07" }  // **** DATE OF THE DEVICE DRIVER **** REMEMBER TO CHANGE DRIVER NAME IN METADATA BELOW **** //
 /**
 * Inovelli VZM31-SN Blue Series Zigbee 2-in-1 Dimmer
 *
 * Author: Eric Maycock (erocm123)
 * Contributor: Mark Amber (marka75160)
 *
-* Copyright 2022 Eric Maycock / Inovelli
+* Copyright 2023 Eric Maycock / Inovelli
 * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 * in compliance with the License. You may obtain a copy of the License at:
 *
@@ -130,6 +130,7 @@ def getDriverDate() { return "2022-12-12" }  // **** DATE OF THE DEVICE DRIVER *
 * 2022-11-24(MA) improvements to quickStartEmulation
 * 2022-11-26(MA) fix Config Default not defaulting all parameters
 * 2022-12-12(MA) add presetLevel command; allow param15 to be set in on/off mode; workaround for setLevel bug in firmware (firmware ignores off-on duration)
+* 2023-04-07(EM) Adding group binding support. See: https://community.inovelli.com/t/how-to-s-setup-zigbee-group-binding-hubitat/13909/1
 *
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11!!
 * !!                                                                 !!
@@ -359,6 +360,9 @@ metadata {
                     range: "0..360"
             }
         }
+        input name: "groupbinding1",       type: "number", title: bold("Group Bind # 1"),        defaultValue: false
+        input name: "groupbinding2",       type: "number", title: bold("Group Bind # 2"),        defaultValue: false
+        input name: "groupbinding3",       type: "number", title: bold("Group Bind # 3"),        defaultValue: false
         input name: "infoEnable",          type: "bool",   title: bold("Enable Info Logging"),   defaultValue: true
         input name: "traceEnable",         type: "bool",   title: bold("Enable Trace Logging"),  defaultValue: false
         input name: "debugEnable",         type: "bool",   title: bold("Enable Debug Logging"),  defaultValue: false
@@ -1997,6 +2001,40 @@ def updated(option) { // called when "Save Preferences" is requested
     }
     changedParams.each{ i ->     //read back the parameters we've changed so the state variables are updated 
         cmds += getAttribute(0xfc31, i)
+    }
+
+    if (groupbinding1) {
+        cmds += ["zdo bind 0x${device.deviceNetworkId} 0x02 0x01 0x0006 {${device.zigbeeId}} {${zigbee.convertToHexString(groupbinding1?.toInteger(), 4)}}"]
+        cmds += ["zdo bind 0x${device.deviceNetworkId} 0x02 0x01 0x0008 {${device.zigbeeId}} {${zigbee.convertToHexString(groupbinding1?.toInteger(), 4)}}"]
+        state.groupbinding1 = groupbinding1
+    } else {
+        if (state.groupbinding1) {
+            cmds += ["zdo unbind 0x${device.deviceNetworkId} 0x02 0x01 0x0006 {${device.zigbeeId}} {${zigbee.convertToHexString(state.groupbinding1?.toInteger(), 4)}}"]
+            cmds += ["zdo unbind 0x${device.deviceNetworkId} 0x02 0x01 0x0008 {${device.zigbeeId}} {${zigbee.convertToHexString(state.groupbinding1?.toInteger(), 4)}}"]
+            state.groupbinding1 = null
+        }
+    }
+    if (groupbinding2) {
+        cmds += ["zdo bind 0x${device.deviceNetworkId} 0x02 0x01 0x0006 {${device.zigbeeId}} {${zigbee.convertToHexString(groupbinding2?.toInteger(), 4)}}"]
+        cmds += ["zdo bind 0x${device.deviceNetworkId} 0x02 0x01 0x0008 {${device.zigbeeId}} {${zigbee.convertToHexString(groupbinding2?.toInteger(), 4)}}"]
+        state.groupbinding2 = groupbinding2
+    } else {
+        if (state.groupbinding2) {
+            cmds += ["zdo unbind 0x${device.deviceNetworkId} 0x02 0x01 0x0006 {${device.zigbeeId}} {${zigbee.convertToHexString(state.groupbinding2?.toInteger(), 4)}}"]
+            cmds += ["zdo unbind 0x${device.deviceNetworkId} 0x02 0x01 0x0008 {${device.zigbeeId}} {${zigbee.convertToHexString(state.groupbinding2?.toInteger(), 4)}}"]
+            state.groupbinding2 = null
+        }
+    }
+    if (groupbinding3) {
+        cmds += ["zdo bind 0x${device.deviceNetworkId} 0x02 0x01 0x0006 {${device.zigbeeId}} {${zigbee.convertToHexString(groupbinding3?.toInteger(), 4)}}"]
+        cmds += ["zdo bind 0x${device.deviceNetworkId} 0x02 0x01 0x0008 {${device.zigbeeId}} {${zigbee.convertToHexString(groupbinding3?.toInteger(), 4)}}"]
+        state.groupbinding3 = groupbinding3
+    } else {
+        if (state.groupbinding3) {
+            cmds += ["zdo unbind 0x${device.deviceNetworkId} 0x02 0x01 0x0006 {${device.zigbeeId}} {${zigbee.convertToHexString(state.groupbinding3?.toInteger(), 4)}}"]
+            cmds += ["zdo unbind 0x${device.deviceNetworkId} 0x02 0x01 0x0008 {${device.zigbeeId}} {${zigbee.convertToHexString(state.groupbinding3?.toInteger(), 4)}}"]
+            state.groupbinding3 = null
+        }
     }
     if (nothingChanged && (infoEnable||debugEnable||traceEnable)) {
         log.info "${device.label?device.label:device.name}: No DEVICE settings were changed"
