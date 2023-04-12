@@ -1,4 +1,4 @@
-def getDriverDate() { return "2023-04-10" }  // **** DATE OF THE DEVICE DRIVER **** //
+def getDriverDate() { return "2023-04-11" }  // **** DATE OF THE DEVICE DRIVER **** //
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZM31-SN Blue Series Zigbee 2-in-1 Dimmer
@@ -157,6 +157,7 @@ def getDriverDate() { return "2023-04-10" }  // **** DATE OF THE DEVICE DRIVER *
 * 2023-04-07(EM) Adding group binding support. See: https://community.inovelli.com/t/how-to-s-setup-zigbee-group-binding-hubitat/13909/1
 * 2023-04-09(MA) added range/error checking to group binding; enhanced cluster name reporting; remove "beta" designation for v2.14 public release
 * 2023-04-10(MA) Hotfix P25 is 1-bit boolean, not 1-byte integer
+* 2023-04-11(MA) Hotfix Add parsing for P125; fix P55-56 not scaling to percent
 *
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 * !!                                                                 !!
@@ -1007,18 +1008,20 @@ def bind(cmds=[]) {
 }
 
 def bindSlave() {
-    if (infoEnable||traceEnable) log.info "${device.displayName}: bindSlave()"
-    state.lastCommandSent =                         			 "bindSlave()"
+    if (infoEnable) log.info "${device.displayName}: bindSlave()"
+    state.lastCommandSent =             			"bindSlave()"
     state.lastCommandTime = nowFormatted()
     def cmds = zigbee.command(0x0003, 0x00, [:], defaultDelay, "20 00")
+    if (traceEnable) log.trace "${device.displayName}: bindSlave $cmds"
     return cmds
 }
 
 def bindSource() {
-    if (infoEnable||traceEnable) log.info "${device.displayName}: bindSource()" 
-    state.lastCommandSent =                         			 "bindSource()" 
+    if (infoEnable) log.info "${device.displayName}: bindSource()" 
+    state.lastCommandSent =            			    "bindSource()" 
     state.lastCommandTime = nowFormatted()
     def cmds = zigbee.command(0xfc31,0x04,["mfgCode":"0x122F"],defaultDelay,"0")
+    if (traceEnable) log.trace "${device.displayName}: bindSource $cmds"
     return cmds
 }
 
@@ -1035,6 +1038,8 @@ def calculateParameter(number) {
         case 13:    //Default Level (local)
         case 14:    //Default Level (remote)
         case 15:    //Level after power restored
+		case 55:	//Double-Tap UP Level
+		case 56:	//Double-Tap DOWN Level
             value = convertPercentToByte(value)    //convert levels from percent to byte values before sending to the device
             break
         case 18:    //Active Power Reports (percent change)
@@ -1076,7 +1081,11 @@ def calculateSize(size=8) {
 }
 
 def clusterLookup(cluster) {
-    return zigbee?.clusterLookup(cluster!=null?cluster:0xfc31)
+    return zigbee?.clusterLookup(cluster)?:cluster==0x8021?"Binding Cluster":
+										   cluster==0x8022?"UNBinding Cluster":
+										   cluster==0x8032?"Routing Table Cluster":
+										   cluster==0xFC31?"Private Cluster":
+										   "Cluster:0x${zigbee.convertToHexString(cluster,4)}"
 }
 
 def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS DISCOVERED OR WHEN CONFIGURE BUTTON SELECTED ON DEVICE PAGE
@@ -1354,7 +1363,7 @@ def parse(String description) {
     def attrInt =    descMap.attrInt==null?null:descMap.attrInt.toInteger()
     def clusterHex = descMap.clusterId==null?"0x${descMap.cluster}":"0x${descMap.clusterId}"
     def clusterInt = descMap.clusterInt==null?null:descMap.clusterInt.toInteger()
-	def clusterName= clusterLookup(clusterInt)?:clusterInt==0x8021?"BINDING CLUSTER":clusterint==0x8022?"UNBINDING CLUSTER":clusterInt==0xFC31?"PRIVATE CLUSTER":"Cluster:$clusterHex"
+	def clusterName= clusterLookup(clusterInt)
     def valueStr =   descMap.value ?: "unknown"
     switch (clusterInt){
         case 0x0000:    //BASIC CLUSTER
@@ -1430,7 +1439,34 @@ def parse(String description) {
                     if (infoEnable) log.info "${device.displayName}: Report received Group Name Support: $valueStr"
                     break
                 default:
-                    if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN ATTRIBUTE:$attrInt DESCMAP:$descMap")
+                    if (attrInt==null && descMap.messageType=="00" && descMap.direction=="01") {
+						def groupNum = zigbee.convertHexToInt(descMap.data[2]+descMap.data[1])
+						switch (descMap.command) {
+							case "00":
+								if (infoEnable) log.info "${device.displayName}: Add Group $groupNum"
+								break
+							case "01":
+								if (infoEnable) log.info "${device.displayName}: View Group $groupNum"
+								break
+							case "02":
+								if (infoEnable) log.info "${device.displayName}: Get Group $groupNum"
+								break
+							case "03":
+								if (infoEnable) log.info "${device.displayName}: Remove Group $groupNum"
+								break
+							case "04":
+								if (infoEnable) log.info "${device.displayName}: Remove all groups"
+								break
+							case "05":
+								if (infoEnable) log.info "${device.displayName}: Add group if Identifying"
+								break
+							default:
+								if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN COMMAND:$descMap.command DESCMAP:$descMap")
+								break
+						}
+					} else {
+						if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN ATTRIBUTE:$attrInt DESCMAP:$descMap")
+						}
                     break
             }
             break
@@ -1608,13 +1644,13 @@ def parse(String description) {
 				default:
                     if (attrInt==null && descMap.command=="0B" && descMap.direction=="01") {
                         if (parameter51.toInteger()>0) {    //not sure why the firmware sends these when there are no bindings
-                            if (descMap.data[0]=="00" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Move To Level"
-                            if (descMap.data[0]=="01" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Move Up/Down"
-                            if (descMap.data[0]=="02" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Step"
-                            if (descMap.data[0]=="03" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Stop Level Change"
-                            if (descMap.data[0]=="04" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Move To Level (with On/Off)"
-                            if (descMap.data[0]=="05" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Move Up/Down (with On/Off)"
-                            if (descMap.data[0]=="06" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Step (with On/Off)"
+                            if (descMap.data[0]=="00" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Move To Level ${descMap.data}"
+                            if (descMap.data[0]=="01" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Move Up/Down ${descMap.data}"
+                            if (descMap.data[0]=="02" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Step ${descMap.data}"
+                            if (descMap.data[0]=="03" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Stop Level Change ${descMap.data}"
+                            if (descMap.data[0]=="04" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Move To Level (with On/Off) ${descMap.data}"
+                            if (descMap.data[0]=="05" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Move Up/Down (with On/Off) ${descMap.data}"
+                            if (descMap.data[0]=="06" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Step (with On/Off) ${descMap.data}"
                         }
                     }
                     else if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN ATTRIBUTE:$attrInt DESCMAP:$descMap")
@@ -1710,6 +1746,7 @@ def parse(String description) {
             }
             break
         case 0x8021:    //BINDING CLUSTER
+            if (infoEnable||debugEnable) log.info "${device.displayName}: "+darkOrange("Binding Cluster")
             if (traceEnable) log.trace "${device.displayName}: ${clusterName} (" +
                                        "clusterId:${descMap.cluster?:descMap.clusterId}" +
                                        (descMap.attrId==null?"":" attrId:${descMap.attrId}") +
@@ -1718,6 +1755,7 @@ def parse(String description) {
                                        ")"
             break
         case 0x8022:    //UNBINDING CLUSTER
+            if (infoEnable||debugEnable) log.info "${device.displayName}: "+darkOrange("UNBinding Cluster")
             if (traceEnable) log.trace "${device.displayName}: ${clusterName} (" +
                                        "clusterId:${descMap.cluster?:descMap.clusterId}" +
                                        (descMap.attrId==null?"":" attrId:${descMap.attrId}") +
@@ -1726,7 +1764,7 @@ def parse(String description) {
                                        ")"
             break
         case 0x8032:    //ROUTING TABLE CLUSTER
-            if (infoEnable||debugEnable) log.info "${device.displayName}: "+darkOrange("ROUTING TABLE CLUSTER")
+            if (infoEnable||debugEnable) log.info "${device.displayName}: "+darkOrange("Routing Table Cluster")
             if (traceEnable) log.trace "${device.displayName}: ${clusterName} (" +
                                        "clusterId:${descMap.cluster?:descMap.clusterId}" +
                                        (descMap.attrId==null?"":" attrId:${descMap.attrId}") +
@@ -1866,10 +1904,10 @@ def parse(String description) {
                         infoMsg += " (Double-Tap Down " + (valueInt==0?red("disabled"):green("enabled")) + ")"
                         break
                     case 55:  //Double-Tap UP level
-                        infoMsg += " (Double-Tap Up level $valueInt)"
+                        infoMsg += " (Double-Tap Up level ${convertByteToPercent(valueInt)}%)"
                         break
                     case 56:  //Double-Tap DOWN level
-                        infoMsg += " (Double-Tap Down level $valueInt)"
+                        infoMsg += " (Double-Tap Down level ${convertByteToPercent(valueInt)}%)"
                         break
 					case 58:  //Exclusion Behavior
                         infoMsg += " (Exclusion: " + (valueInt==0?"LED Bar does not pulse":valueInt==1?"LED Bar pulses blue":valueInt==2?"do not Exclude":"unknown") + ")"
@@ -1902,6 +1940,9 @@ def parse(String description) {
 						break
 					case 123:	//Aux Switch Scenes
                         infoMsg += " (Aux Scenes " + (valueInt==0?red("disabled"):green("enabled")) + ")"
+						break
+					case 125:	//Binding Off-to-On Sync Level
+                        infoMsg += " (Send Level with Binding Off/On " + (valueInt==0?red("disabled"):green("enabled")) + ")"
 						break
                     case 156:    //Local Protection
 					case 256:
@@ -1950,12 +1991,18 @@ def parse(String description) {
                         infoMsg += " (LED bar display levels: ${valueInt?:'full range'})"
                         break
                     default:
-                        infoMsg += " [0x${intTo32bitUnsignedHex(valueInt)}] " + orangeRed(" *** Undefined Parameter $attrInt ***")
+                        infoMsg += " [0x${intTo32bitUnsignedHex(valueInt)}] " + orangeRed("Undefined Parameter $attrInt")
                         break
                 }
                 if (infoEnable) log.info infoMsg
                 state."parameter${attrInt}value" = valueInt  //update state variable with value received from device
-                if ((attrInt==9)||(attrInt==10)||(attrInt==13)||(attrInt==14)||(attrInt==15)) valueInt = convertByteToPercent(valueInt)    //these attributes are stored as bytes but presented as percentages
+                if ((attrInt==9)
+				|| (attrInt==10)
+				|| (attrInt==13)
+				|| (attrInt==14)
+				|| (attrInt==15)
+				|| (attrInt==55)
+				|| (attrInt==56)) valueInt = convertByteToPercent(valueInt)    //these attributes are stored as bytes but presented as percentages
                 if (attrInt>0) device.updateSetting("parameter${attrInt}",[value:"${valueInt}",type:configParams["parameter${attrInt.toString().padLeft(3,"0")}"].type?.toString()]) //update local setting with value received from device  
                 if ((attrInt==95 && parameter95custom!=null)||(attrInt==96 && parameter96custom!=null)) {   //if custom hue was set, update the custom state variable also
                     device.updateSetting("parameter${attrInt}custom",[value:"${Math.round(valueInt/255*360)}",type:configParams["parameter${attrInt.toString().padLeft(3,"0")}"].type?.toString()])
@@ -1977,7 +2024,7 @@ def parse(String description) {
 							}
 						}
 					}
-					if (traceEnable||debugEnable) log.info "${device.displayName}: Dimming Method = ${state.dimmingMethod}"
+					if (traceEnable||debugEnable) log.trace "${device.displayName}: Dimming Method = ${state.dimmingMethod}"
 				}
                 if ((valueInt==configParams["parameter${attrInt.toString()?.padLeft(3,"0")}"]?.default?.toInteger())             //IF  setting is the default
                 && (attrInt!=21)&&(attrInt!=22)&&(attrInt!=51)&&(attrInt!=52)&&(attrInt!=257)&&(attrInt!=158)&&(attrInt!=258)) { //AND not read-only or primary config params
@@ -1991,7 +2038,7 @@ def parse(String description) {
             if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("UNKNOWN CLUSTER($clusterHex)  $descMap ${zigbee.getEvent(description)}")
 			break
     }
-    state.lastEventReceived =  clusterInt==0xfc31?"PRIVATE_CLUSTER":(clusterLookup(clusterInt)?:"Cluster:$clusterHex")
+    state.lastEventReceived =  clusterName
     state.lastEventTime =      nowFormatted()
     state.lastEventAttribute = attrInt
     state.lastEventValue =     descMap.value
@@ -2315,8 +2362,8 @@ def setSpeed(value) {  // FOR FAN ONLY
 }
 
 def setZigbeeAttribute(cluster, attributeId, value=null, size=8) {
-    if (traceEnable) log.trace value!=null?"${device.displayName}: setZigbeeAttribute(${cluster}, ${attributeId}, ${value}, ${size})":"${device.displayName}: getZigbeeAttribute(${cluster}, ${attributeId})"
-    state.lastCommandSent =                          value!=null? "setZigbeeAttribute(${cluster}, ${attributeId}, ${value}, ${size})":                       "getZigbeeAttribute(${cluster}, ${attributeId})"
+    if (infoEnable) log.info value!=null?"${device.displayName}: setZigbeeAttribute(${cluster}, ${attributeId}, ${value}, ${size})":"${device.displayName}: getZigbeeAttribute(${cluster}, ${attributeId})"
+    state.lastCommandSent =                        value!=null? "setZigbeeAttribute(${cluster}, ${attributeId}, ${value}, ${size})":                       "getZigbeeAttribute(${cluster}, ${attributeId})"
     state.lastCommandTime = nowFormatted()
     def cmds = []
     Integer setCluster = cluster.toInteger()
@@ -2386,7 +2433,7 @@ def updated(option) { // called when "Save Preferences" is requested
     getParameterNumbers().each{ i ->
         defaultValue=configParams["parameter${i.toString().padLeft(3,'0')}"].default.toInteger()
         oldValue=state."parameter${i}value"!=null?state."parameter${i}value".toInteger():defaultValue
-		if ((i==9)||(i==10)||(i==13)||(i==14)||(i==15)) {    //convert the percent preferences back to byte values before testing for changes
+		if ((i==9)||(i==10)||(i==13)||(i==14)||(i==15)||(i==55)||(i==56)) {    //convert the percent preferences back to byte values before testing for changes
 			defaultValue=convertPercentToByte(defaultValue)
 			oldValue=convertPercentToByte(oldValue)
         }
@@ -2432,7 +2479,7 @@ def updated(option) { // called when "Save Preferences" is requested
 		cmds += getParameter(51)	//update number of bindings counter
         nothingChanged = false
     } else {
-        if (!groupbinding1 && state.groupbinding1) {
+        if (!groupbinding1 && state?.groupbinding1) {
             cmds += bind(["zdo unbind 0x${device.deviceNetworkId} 0x02 0x01 0x0006 {${device.zigbeeId}} {${zigbee.convertToHexString(state.groupbinding1?.toInteger(), 4)}}"])
             cmds += bind(["zdo unbind 0x${device.deviceNetworkId} 0x02 0x01 0x0008 {${device.zigbeeId}} {${zigbee.convertToHexString(state.groupbinding1?.toInteger(), 4)}}"])
             state.groupbinding1 = null
@@ -2449,7 +2496,7 @@ def updated(option) { // called when "Save Preferences" is requested
 		cmds += getParameter(51)	//update number of bindings counter
         nothingChanged = false
     } else {
-        if (!groupbinding2 && state.groupbinding2) {
+        if (!groupbinding2 && state?.groupbinding2) {
             cmds += bind(["zdo unbind 0x${device.deviceNetworkId} 0x02 0x01 0x0006 {${device.zigbeeId}} {${zigbee.convertToHexString(state.groupbinding2?.toInteger(), 4)}}"])
             cmds += bind(["zdo unbind 0x${device.deviceNetworkId} 0x02 0x01 0x0008 {${device.zigbeeId}} {${zigbee.convertToHexString(state.groupbinding2?.toInteger(), 4)}}"])
             state.groupbinding2 = null
@@ -2466,7 +2513,7 @@ def updated(option) { // called when "Save Preferences" is requested
 		cmds += getParameter(51)	//update number of bindings counter
         nothingChanged = false
     } else {
-        if (!groupbinding3 && state.groupbinding3) {
+        if (!groupbinding3 && state?.groupbinding3) {
             cmds += bind(["zdo unbind 0x${device.deviceNetworkId} 0x02 0x01 0x0006 {${device.zigbeeId}} {${zigbee.convertToHexString(state.groupbinding3?.toInteger(), 4)}}"])
             cmds += bind(["zdo unbind 0x${device.deviceNetworkId} 0x02 0x01 0x0008 {${device.zigbeeId}} {${zigbee.convertToHexString(state.groupbinding3?.toInteger(), 4)}}"])
             state.groupbinding3 = null
