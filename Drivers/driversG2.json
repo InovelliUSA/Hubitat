@@ -94,7 +94,7 @@
    	},
 	{
    		"id" : "c0d82d86-1545-49b6-943e-3435cccce7d6",
-   		"name": "Inovelli 2-in-1 Blue Series VZM31-SN",
+   		"name": "Inovelli Dimmer 2-in-1 Blue Series VZM31-SN",
                 "namespace": "InovelliUSA",
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-blue-series-vzm31-sn.src/inovelli-dimmer-blue-series-vzm31-sn.groovy",
    		"required": false,
