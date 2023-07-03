@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "VZM31-SN: Hotfix P25 is 1-bit boolean, not 1-byte integer",
+   "releaseNotes": "VZW31-SN: Red series 2-1 initial release",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -100,6 +100,16 @@
    		"required": false,
    		"oauth": false,
                 "version": "23.4.12",
+		"releaseNotes": "" 
+   	},
+	{
+   		"id" : "effbd34b-1d62-4fff-889b-566d70a72531",
+   		"name": "Inovelli Dimmer 2-in-1 Red Series VZW31-SN",
+                "namespace": "InovelliUSA",
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-vzw31-sn.src/inovelli-dimmer-red-series-vzw31-sn.groovy",
+   		"required": false,
+   		"oauth": false,
+                "version": "23.7.3",
 		"releaseNotes": "" 
    	}
    ]
