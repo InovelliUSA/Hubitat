@@ -54,7 +54,7 @@ def getDriverDate() { return "2023-04-03 ${orangeRed("(beta)")}" }  // **** DATE
 import groovy.transform.Field
 
 metadata {
-    definition (name: "Inovelli Dimmer 2-in-1 Red Series VZW31-SN", namespace: "InovelliUSA", author: "E.Maycock/M.Amber", importUrl: "")
+    definition (name: "Inovelli Dimmer 2-in-1 Red Series VZW31-SN", namespace: "InovelliUSA", author: "E.Maycock/M.Amber", importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-vzw31-sn.src/inovelli-dimmer-red-series-vzw31-sn.groovy")
 	{
 		capability "Actuator"	//device can "do" something (has commands)
         capability "Sensor"		//device can "report" something (has attributes)
