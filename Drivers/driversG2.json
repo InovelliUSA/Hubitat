@@ -109,7 +109,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-vzw31-sn.src/inovelli-dimmer-red-series-vzw31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "23.7.3",
+                "version": "23.7.4",
 		"releaseNotes": "" 
    	}
    ]
