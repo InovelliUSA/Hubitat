@@ -1,4 +1,4 @@
-def getDriverDate() { return "2023-04-11" }  // **** DATE OF THE DEVICE DRIVER **** //
+def getDriverDate() { return "2023-07-01" /** + orangeRed(" (beta)") **/ }  // **** DATE OF THE DEVICE DRIVER **** //
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZM31-SN Blue Series Zigbee 2-in-1 Dimmer
@@ -8,7 +8,7 @@ def getDriverDate() { return "2023-04-11" }  // **** DATE OF THE DEVICE DRIVER *
 * Platform: Hubitat
 *
 * Copyright 2023 Eric Maycock / Inovelli
-
+*
 * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 * in compliance with the License. You may obtain a copy of the License at:
 *
@@ -158,6 +158,15 @@ def getDriverDate() { return "2023-04-11" }  // **** DATE OF THE DEVICE DRIVER *
 * 2023-04-09(MA) added range/error checking to group binding; enhanced cluster name reporting; remove "beta" designation for v2.14 public release
 * 2023-04-10(MA) Hotfix P25 is 1-bit boolean, not 1-byte integer
 * 2023-04-11(MA) Hotfix Add parsing for P125; fix P55-56 not scaling to percent
+* 2023-04-16(MA) enhanced Group Binding to automatically bind/unbind groups that add/remove this switch in the Groups and Scenes App
+* 2023-04-17(MA) add gray background to the lighter yellow-green hues for easier viewing; lots of code cleanup; 
+* 2023-04-19(MA) rename bindSlave/bindSource back to bindTarget/bindInitiator to keep in line with Zigbee terminology
+* 2023-04-22(MA) update presetLevel to set Local AND Remote default levels; more code cleanup
+* 2023-05-01(MA) misc. minor bug fixes
+* 2023-05-08(MA) fix duration on startLevelChange; fix input number range for P23
+* 2023-06-01(MA) remove "double-click to update firmware" logic since new Hubitat firmware now prompts user to click OK or CANCEL 
+* 2023-06-15(MA) re-sync all models (VZM31/VZM35/VSW31) for consistent verbiage/function
+* 2023-07-01(MA) removed "beta" designation
 *
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 * !!                                                                 !!
@@ -181,11 +190,12 @@ metadata {
 
         capability "ChangeLevel"
         capability "Configuration"
-        capability "EnergyMeter"
+        capability "EnergyMeter"				//Fan does not support energy monitoring but Dimmer does
         //capability "FanControl"
         capability "HoldableButton"
+		capability "Initialize"
         capability "LevelPreset"
-        capability "PowerMeter"
+        capability "PowerMeter"					//Fan does not support power monitoring but Dimmer does
         capability "PushableButton"
         capability "Refresh"
         capability "ReleasableButton"
@@ -225,70 +235,70 @@ metadata {
         command "releaseConfig"
         **/
         
-        command "bind",				   [[name: "Command String", type: "STRING", description: "passthru for Binding Apps but may be used to manually enter ZDO Bind/Unbind commands"]]
-        command "bindSlave",		   [[name: "click on Slave switch to initiate binding with Source switch"]]
-        command "bindSource",          [[name: "click on Source switch to complete binding with Slave switch"]]
+        command "bind",				   [[name:"Command String", type:"STRING", description: "passthru for Binding Apps but may be used to manually enter ZDO Bind/Unbind commands"]]
+        command "bindInitiator",       [[name:"use this 2nd on source (initiator) switch to COMPLETE binding with slave switch"]]
+        command "bindTarget",		   [[name:"use this 1st on slave (target) switch to START binding with source switch"]]
 
-        command "configure",           [[name: "Option", type: "ENUM", description: "blank=current states only, User=user changed settings only, All=configure all settings, Default=set all settings to default", constraints: [" ","User","All","Default"]]]
+        command "configure",           [[name:"Option",    type:"ENUM",   description:"blank=current states only, User=user changed settings only, All=configure all settings, Default=set all settings to default", constraints:[" ","User","All","Default"]]]
 
-		command "identify",			   [[name: "Seconds", type: "NUMBER", description: "number of seconds to blink the LED bar so it can be identified (leave blank to see remaining seconds in the logs)"]]
+		command "identify",			   [[name:"Seconds",   type:"NUMBER", description:"number of seconds to blink the LED bar so it can be identified (leave blank to see remaining seconds in the logs)"],
+										[name:"number of seconds to blink the LED bar so it can be identified (leave blank to see remaining seconds in the logs)"]]
 		
-        command "initialize",		   [[name: "clear state variables, clear LED notifications, refresh current states"]]
+        command "initialize",		   [[name:"clear state variables, clear LED notifications, refresh current states"]]
         
-        command "ledEffectAll",        [[name: "Effect*",type:"ENUM",
+        command "ledEffectAll",        [[name:"Effect*",   type:"ENUM",
 											description:  "255=Stop,  1=Solid,  2=Fast Blink,  3=Slow Blink,  4=Pulse,  5=Chase,  6=Open/Close,  7=Small-to-Big,  8=Aurora,  9=Slow Falling,  10=Medium Falling,  11=Fast Falling,  12=Slow Rising,  13=Medium Rising,  14=Fast Rising,  15=Medium Blink,  16=Slow Chase,  17=Fast Chase,  18=Fast Siren,  19=Slow Siren,  0=LEDs off",
 											constraints: ["255=Stop","1=Solid","2=Fast Blink","3=Slow Blink","4=Pulse","5=Chase","6=Open/Close","7=Small-to-Big","8=Aurora","9=Slow Falling","10=Medium Falling","11=Fast Falling","12=Slow Rising","13=Medium Rising","14=Fast Rising","15=Medium Blink","16=Slow Chase","17=Fast Chase","18=Fast Siren","19=Slow Siren","0=LEDs off"]],
-                                        [name: "Color",    type:"NUMBER", description: "0-254=Hue Color, 255=White, default=Red"],
-                                        [name: "Level",    type:"NUMBER", description: "0-100=LED Intensity, default=100"],
-                                        [name: "Duration", type:"NUMBER", description: "1-60=seconds, 61-120=1-120 minutes, 121-254=1-134 hours, 255=Indefinitely, default=60"]]
+                                        [name:"Color",     type:"NUMBER", description: "0-254=Hue Color, 255=White, default=Red"],
+                                        [name:"Level",     type:"NUMBER", description: "0-100=LED Intensity, default=100"],
+                                        [name:"Duration",  type:"NUMBER", description: "1-60=seconds, 61-120=1-120 minutes, 121-254=1-134 hours, 255=Indefinitely, default=60"]]
         
-        command "ledEffectOne",        [[name: "LEDnum*",type:"ENUM", description: "LED 1-7", constraints: ["7 (top)","6","5","4 (middle)","3","2","1 (bottom)","123 (bottom half)","567 (top half)","12 (bottom 3rd)","345 (middle 3rd)","67 (top 3rd)","147 (bottom-middle-top)","1357 (odd)","246 (even)"]],
-                                        [name: "Effect*",type:"ENUM",
-											description:  "255=Stop,  1=Solid,  2=Fast Blink,  3=Slow Blink,  4=Pulse,  5=Chase,  6=Falling,  7=Rising,  8=Aurora,  0=LED off",
-											constraints: ["255=Stop","1=Solid","2=Fast Blink","3=Slow Blink","4=Pulse","5=Chase","6=Falling","7=Rising","8=Aurora","0=LED off"]],
-                                        [name: "Color",    type:"NUMBER", description: "0-254=Hue Color, 255=White, default=Red"],
-                                        [name: "Level",    type:"NUMBER", description: "0-100=LED Intensity, default=100"],
-                                        [name: "Duration", type:"NUMBER", description: "1-60=seconds, 61-120=1-120 minutes, 121-254=1-134 hours, 255=Indefinitely, default=60"]]
+        command "ledEffectOne",        [[name:"LEDnum*",   type:"ENUM",   description: "LED 1-7", constraints: ["7 (top)","6","5","4 (middle)","3","2","1 (bottom)","123 (bottom half)","567 (top half)","12 (bottom 3rd)","345 (middle 3rd)","67 (top 3rd)","147 (bottom-middle-top)","1357 (odd)","246 (even)"]],
+                                        [name:"Effect*",   type:"ENUM", 
+											description: "255=Stop,  1=Solid,  2=Fast Blink,  3=Slow Blink,  4=Pulse,  5=Chase,  6=Falling,  7=Rising,  8=Aurora,  0=LED off", 
+											constraints:["255=Stop","1=Solid","2=Fast Blink","3=Slow Blink","4=Pulse","5=Chase","6=Falling","7=Rising","8=Aurora","0=LED off"]],
+                                        [name:"Color",     type:"NUMBER", description:"0-254=Hue Color, 255=White, default=Red"],
+                                        [name:"Level",     type:"NUMBER", description:"0-100=LED Intensity, default=100"],
+                                        [name:"Duration",  type:"NUMBER", description:"1-60=seconds, 61-120=1-120 minutes, 121-254=1-134 hours, 255=Indefinitely, default=60"]]
 
-        command "presetLevel",         [[name: "Level",   type: "NUMBER", description: "Level to preset (1 to 101)"]]
+        command "presetLevel",         [[name:"Level",     type:"NUMBER", description:"Level to preset (1 to 101)"]]
         
-        command "refresh",             [[name: "Option",  type: "ENUM",   description: "blank=current states only, User=user changed settings only, All=refresh all settings", constraints: [" ","User","All"]]]
+        command "refresh",             [[name:"Option",    type:"ENUM",   description:"blank=current states only, User=user changed settings only, All=refresh all settings", constraints: [" ","User","All"]]]
 		
-		command "remoteControl",	   [[name: "Option*", type: "ENUM",   description: "change the setting of Remote Protection (P257)", constraints: [" ","Enabled","Disabled"]]]
+		command "remoteControl",	   [[name:"Option*",   type:"ENUM",   description:"change the setting of Remote Protection (P257)", constraints: [" ","Enabled","Disabled"]]]
 
-		//Fan does not support power/energy reporting but Dimmer does
-        command "resetEnergyMeter"
+        command "resetEnergyMeter"		//Fan does not support power/energy reporting but Dimmer does
 
-        command "setParameter",        [[name: "Parameter*",type:"NUMBER", description: "Parameter number"],
-                                        [name: "Raw Value", type:"NUMBER", description: "Value for the parameter (leave blank to get current value)"],
-										[name: "Enter the internal raw value. Percentages and Color Hues are entered as 0-255. Leave blank to get current value"]]
+        command "setParameter",        [[name:"Parameter*",type:"NUMBER", description:"Parameter number"],
+                                        [name:"Raw Value", type:"NUMBER", description:"Value for the parameter (leave blank to get current value)"],
+										[name:"Enter the internal raw value. Percentages and Color Hues are entered as 0-255. Leave blank to get current value"]]
 
 		//uncomment this command if you need it for backward compatibility
-        //command "setPrivateCluster",   [[name: "Number*",type:"NUMBER", description: "setPrivateCluster is DEPRECIATED. Use setParameter instead"], 
-        //                                [name: "Value*", type:"NUMBER", description: "setPrivateCluster is DEPRECIATED. Use setParameter instead"], 
-        //                                [name: "Size*",  type:"ENUM",   description: "setPrivateCluster is DEPRECIATED. Use setParameter instead", constraints: ["8", "16","1"]],
-        //                                [name: "DEPRECIATED",           description: "This command is depreciated.  Use setParameter instead"]]
+        //command "setPrivateCluster",   [[name:"Number*", type:"NUMBER",   description:"setPrivateCluster is DEPRECIATED. Use setParameter instead"], 
+        //                                [name:"Value*",  type:"NUMBER",   description:"setPrivateCluster is DEPRECIATED. Use setParameter instead"], 
+        //                                [name:"Size*",   type:"ENUM",     description:"setPrivateCluster is DEPRECIATED. Use setParameter instead", constraints: ["8", "16","1"]],
+        //                                [name:"DEPRECIATED",              description:"This command is depreciated.  Use setParameter instead"]]
 
         //Dimmer does not support setSpeed commands but Fan does
-        //command "setSpeed",            [[name: "FanSpeed*", type: "ENUM", constraints: ["off","low","medium-low","medium","medium-high","high","up","down"]]]
+        //command "setSpeed",            [[name:"FanSpeed*", type:"ENUM",   constraints:["off","low","medium-low","medium","medium-high","high","up","down"]]]
 		
-        command "setZigbeeAttribute",  [[name: "Cluster*",  type:"NUMBER", description: "Cluster (in decimal) ex. Inovelli Private Cluster=0xFC31 input 64561"], 
-                                        [name: "Attribute*",type:"NUMBER", description: "Attribute (in decimal) ex. 0x0100 input 256"], 
-                                        [name: "Value",     type:"NUMBER", description: "Enter the value (in decimal, ex. 0x0F input 15) Leave blank to get current value without changing it"], 
-                                        [name: "Size",      type:"ENUM",   description: "8=uint8, 16=uint16, 32=unint32, 1=bool",constraints: ["8", "16","32","1"]]]
+        command "setZigbeeAttribute",  [[name:"Cluster*",  type:"NUMBER", description:"Cluster (in decimal) ex. Inovelli Private Cluster=0xFC31 input 64561"], 
+                                        [name:"Attribute*",type:"NUMBER", description:"Attribute (in decimal) ex. 0x0100 input 256"], 
+                                        [name:"Value",     type:"NUMBER", description:"Enter the value (in decimal, ex. 0x0F input 15) Leave blank to get current value without changing it"], 
+                                        [name:"Size",      type:"ENUM",   description:"8=uint8, 16=uint16, 32=unint32, 1=bool",constraints: ["8", "16","32","1"]]]
         
-        command "startLevelChange",    [[name: "Direction*",type:"ENUM",   description: "Direction for level change", constraints: ["up","down"]],
-                                        [name: "Duration",  type:"NUMBER", description: "Transition duration in seconds"]]
+        command "startLevelChange",    [[name:"Direction*",type:"ENUM",   description:"Direction for level change", constraints: ["up","down"]],
+                                        [name:"Duration",  type:"NUMBER", description:"Transition duration in seconds"]]
         
         command "toggle"
         
-        command "updateFirmware",	   [[name: "Firmware in this channel may be \"beta\" quality. Double-click \"Update Firmware\" to proceed"]]
+        command "updateFirmware",	   [[name:"Firmware in this channel may be \"beta\" quality"]]
 
         fingerprint profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,0702,0B04,0B05,FC57,FC31", outClusters:"0003,0019",           model:"VZM31-SN", manufacturer:"Inovelli"
-//      fingerprint profileId:"0104", endpointId:"02", inClusters:"0000,0003",                                              outClusters:"0003,0019,0006,0008", model:"VZM31-SN", manufacturer:"Inovelli"
+        fingerprint profileId:"0104", endpointId:"02", inClusters:"0000,0003",                                              outClusters:"0003,0019,0006,0008", model:"VZM31-SN", manufacturer:"Inovelli"
 //      fingerprint profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,0702,0B04,FC31",           outClusters:"0003,0019",           model:"VZM31-SN", manufacturer:"Inovelli"
     }
-	
+
     preferences {
         getParameterNumbers().each{ i ->
             switch(configParams["parameter${i.toString().padLeft(3,"0")}"].type){
@@ -299,7 +309,7 @@ metadata {
                             break
                         case 51:    //Device Bind Number
                             input "parameter${i}", "number",
-                                title: "${i}. " + green(bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name)),
+                                title: "${i}. " + darkGreen(bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name)),
                                 description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description +
                                      "<br>Range=" + configParams["parameter${i.toString().padLeft(3,"0")}"].range),
                                 //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
@@ -322,20 +332,20 @@ metadata {
 							//special case for Quick Start is below
                             break
                         case 21:    //Power Source
-						case 157:	//Remote Protection
-						case 257:	//Remote Protection
+						case 157:	//Remote Protection Zwave
+						case 257:	//Remote Protection Zigbee
                             input "parameter${i}", "enum",
-                                title: "${i}. " + green(bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name)),
+                                title: "${i}. " + darkGreen(bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name)),
                                 description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description),
                                 //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
                                 options: configParams["parameter${i.toString().padLeft(3,"0")}"].range
                             break
                         case 22:    //Aux Type
                         case 52:    //Smart Bulb Mode
-                        case 158:   //Switch Mode
-                        case 258:   //Switch Mode
+                        case 158:   //Switch Mode Zwave
+                        case 258:   //Switch Mode Zigbee
                             input "parameter${i}", "enum",
-                                title: "${i}. " + crimson(bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name)),
+                                title: "${i}. " + indianRed(bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name)),
                                 description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description),
                                 //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
                                 options: configParams["parameter${i.toString().padLeft(3,"0")}"].range
@@ -354,8 +364,8 @@ metadata {
 					}
                     break
             }
-            
-            if (i==23) {  //quickStart is implemented in firmware for the fan, emulated in this driver for 2-in-1 Dimmer
+
+            if (i==23) {  //quickStart is implemented in firmware for the fan, emulated in this driver for 2-in-1 Dimmer (experimental)
                 if (state.model?.substring(0,5)!="VZM35") {
                     input "parameter${i}", "number",
                         title: "${i}. " + orangeRed(bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name + " Level")),
@@ -365,14 +375,16 @@ metadata {
                         //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
                         range: configParams["parameter${i.toString().padLeft(3,"0")}"].range
                 } else {
-					input "parameter${i}", "enum",
+					input "parameter${i}", "number",
 						title: "${i}. " + darkSlateBlue(bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name + " Duration")),
-						description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description),
-						//defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
-						options: configParams["parameter${i.toString().padLeft(3,"0")}"].range
+                        description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description +
+                            "<br>Range=" + configParams["parameter${i.toString().padLeft(3,"0")}"].range +
+				    	    " Default=" +  configParams["parameter${i.toString().padLeft(3,"0")}"].default),
+                        //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
+                        range: configParams["parameter${i.toString().padLeft(3,"0")}"].range
 				}
             }
-                
+
             if (i==95 || i==96) {
                 if ((i==95 && parameter95custom==null)||(i==96 && parameter96custom==null)){
                     input "parameter${i}", "enum",
@@ -381,8 +393,7 @@ metadata {
                         description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description),
                         //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
                         options: configParams["parameter${i.toString().padLeft(3,"0")}"].range
-                }
-                else {
+                } else {
                     input "parameter${i}", "enum",
                         title: "${i}. " + hue((settings?."parameter${i}"!=null?settings?."parameter${i}":configParams["parameter${i.toString().padLeft(3,"0")}"].default)?.toInteger(),
                             strike(configParams["parameter${i.toString().padLeft(3,"0")}"].name)) +
@@ -397,17 +408,17 @@ metadata {
                         (hue((settings."parameter${i}custom"/360*255)?.toInteger(),
                             bold("Custom " + configParams["parameter${i.toString().padLeft(3,"0")}"].name))):
 						(	bold("Custom " + configParams["parameter${i.toString().padLeft(3,"0")}"].name)),
-                    description: italic("Hue value to override " + configParams["parameter${i.toString().padLeft(3,"0")}"].name+".<br>Range: 0-360 chosen from a"+
+                    description: italic("Hue value to override " + configParams["parameter${i.toString().padLeft(3,"0")}"].name+".<br>Range: 0-360 chosen from a "+
                         underline(''' <a href="https://community-assets.home-assistant.io/original/3X/6/c/6c0d1ea7c96b382087b6a34dee6578ac4324edeb.png" target="_blank">'''+
-                        hue(0," h")+hue(20,"u")+hue(40,"e")+hue(60," c")+hue(80,"o")+hue(100,"l")+hue(120,"o")+hue(140,"r")+hue(160," w")+hue(180,"h")+hue(200,"e")+hue(220,"e")+hue(240,"l")+"</a>")),
+                        hue(0,"h")+hue(15,"u")+hue(30,"e")+hue(70," c")+hue(85,"o")+hue(100,"l")+hue(120,"o")+hue(140,"r")+hue(160," w")+hue(180,"h")+hue(200,"e")+hue(220,"e")+hue(240,"l")+"</a>")),
                     required: false,
                     range: "0..360"
             }
         }
 		
-        input name: "groupbinding1", type: "number", title: bold("Group Bind # 1"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind"), defaultValue: null, range: "1..65527"
-        input name: "groupbinding2", type: "number", title: bold("Group Bind # 2"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind"), defaultValue: null, range: "1..65527"
-        input name: "groupbinding3", type: "number", title: bold("Group Bind # 3"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind"), defaultValue: null, range: "1..65527"
+        input name: "groupBinding1", type: "number", title: bold("Group Bind #1"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind"), defaultValue: null, range: "1..65527"
+        input name: "groupBinding2", type: "number", title: bold("Group Bind #2"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind"), defaultValue: null, range: "1..65527"
+        input name: "groupBinding3", type: "number", title: bold("Group Bind #3"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind"), defaultValue: null, range: "1..65527"
 
         input name: "infoEnable",          type: "bool",   title: bold("Enable Info Logging"),   defaultValue: true
         input name: "traceEnable",         type: "bool",   title: bold("Enable Trace Logging"),  defaultValue: false
@@ -419,10 +430,8 @@ metadata {
 }
 
 def getParameterNumbers() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
-    if (parameter258 == "1")  //on/off mode
-        return [258,22,52,10,11,12,15,17,18,19,20,21,25,50,51,95,96,97,98,100,125,256,257,259,260,261,262]
-    else                      //dimmer mode
-        return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,25,50,51,53,54,55,56,95,96,97,98,100,125,256,257,260,262]
+    if (parameter258 == "1") return [258,22,52,                  10,11,12,      15,17,18,19,20,21,25,50,51,            95,96,97,98,100,125,256,257,259,260,261,262]  //on/off mode
+    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,25,50,51,53,54,55,56,95,96,97,98,100,125,256,257,    260,    262]  //dimmer mode
 }
 
 @Field static Integer defaultDelay = 333   //default delay to use for zigbee commands (in milliseconds)
@@ -433,7 +442,7 @@ def getParameterNumbers() {   //controls which options are available depending o
     parameter001 : [
         number: 1,
         name: "Dimming Speed - Up (Remote)",
-        description: "This changes the speed that the light dims up when controlled from the hub. A setting of 'instant' turns the light immediately on. Increasing the value slows down the transition speed.<br>Default=2.5s",
+        description: "Sets the rate that the light dims up when controlled from the hub. A setting of 'instant' turns the light immediately on.<br>Default=2.5s",
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s (default)","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s"],
         default: 25,
         size: 8,
@@ -443,7 +452,7 @@ def getParameterNumbers() {   //controls which options are available depending o
     parameter002 : [
         number: 2,
         name: "Dimming Speed - Up (Local)",
-        description: "This changes the speed that the light dims up when controlled at the switch. A setting of 'instant' turns the light immediately on. Increasing the value slows down the transition speed.<br>Default=Sync with parameter1",
+        description: "Sets the rate that the light dims up when controlled at the switch. A setting of 'instant' turns the light immediately on.<br>Default=Sync with parameter1",
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s","127":"Sync with parameter1"],
         default: 127,
         size: 8,
@@ -453,7 +462,7 @@ def getParameterNumbers() {   //controls which options are available depending o
     parameter003 : [
         number: 3,
         name: "Ramp Rate - Off to On (Remote)",
-        description: "This changes the speed that the light turns on when controlled from the hub. A setting of 'instant' turns the light immediately on. Increasing the value slows down the transition speed.<br>Default=Sync with parameter1",
+        description: "Sets the rate that the light turns on when controlled from the hub. A setting of 'instant' turns the light immediately on.<br>Default=Sync with parameter1",
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s","127":"Sync with parameter1"],
         default: 127,
         size: 8,
@@ -463,7 +472,7 @@ def getParameterNumbers() {   //controls which options are available depending o
     parameter004 : [
         number: 4,
         name: "Ramp Rate - Off to On (Local)",
-        description: "This changes the speed that the light turns on when controlled at the switch. A setting of 'instant' turns the light immediately on. Increasing the value slows down the transition speed.<br>Default=Sync with parameter3",
+        description: "Sets the rate that the light turns on when controlled at the switch. A setting of 'instant' turns the light immediately on.<br>Default=Sync with parameter3",
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s","127":"Sync with parameter3"],
         default: 127,
         size: 8,
@@ -473,7 +482,7 @@ def getParameterNumbers() {   //controls which options are available depending o
     parameter005 : [
         number: 5,
         name: "Dimming Speed - Down (Remote)",
-        description: "This changes the speed that the light dims down when controlled from the hub. A setting of 'instant' turns the light immediately off. Increasing the value slows down the transition speed.<br>Default=Sync with parameter1",
+        description: "Sets the rate that the light dims down when controlled from the hub. A setting of 'instant' turns the light immediately off.<br>Default=Sync with parameter1",
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s","127":"Sync with parameter1"],
         default: 127,
         size: 8,
@@ -483,7 +492,7 @@ def getParameterNumbers() {   //controls which options are available depending o
     parameter006 : [
         number: 6,
         name: "Dimming Speed - Down (Local)",
-        description: "This changes the speed that the light dims down when controlled at the switch. A setting of 'instant' turns the light immediately off. Increasing the value slows down the transition speed.<br>Default=Sync with parameter2",
+        description: "Sets the rate that the light dims down when controlled at the switch. A setting of 'instant' turns the light immediately off.<br>Default=Sync with parameter2",
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s","127":"Sync with parameter2"],
         default: 127,
         size: 8,
@@ -493,7 +502,7 @@ def getParameterNumbers() {   //controls which options are available depending o
     parameter007 : [
         number: 7,
         name: "Ramp Rate - On to Off (Remote)",
-        description: "This changes the speed that the light turns off when controlled from the hub. A setting of 'instant' turns the light immediately off. Increasing the value slows down the transition speed.<br>Default=Sync with parameter3",
+        description: "Sets the rate that the light turns off when controlled from the hub. A setting of 'instant' turns the light immediately off.<br>Default=Sync with parameter3",
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s","127":"Sync with parameter3"],
         default: 127,
         size: 8,
@@ -503,7 +512,7 @@ def getParameterNumbers() {   //controls which options are available depending o
     parameter008 : [
         number: 8,
         name: "Ramp Rate - On to Off (Local)",
-        description: "This changes the speed that the light turns off when controlled at the switch. A setting of 'instant' turns the light immediately off. Increasing the value slows down the transition speed.<br>Default=Sync with parameter4",
+        description: "Sets the rate that the light turns off when controlled at the switch. A setting of 'instant' turns the light immediately off.<br>Default=Sync with parameter4",
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s","127":"Sync with parameter4"],
         default: 127,
         size: 8,
@@ -513,7 +522,7 @@ def getParameterNumbers() {   //controls which options are available depending o
     parameter009 : [
         number: 9,
         name: "Minimum Level",
-        description: "The minimum percent level that the light can be dimmed. Useful when the user has a light that does not turn on or flickers at a lower level.",
+        description: "The minimum level that the light can be dimmed. Useful when the user has a light that does not turn on or flickers at a lower level.",
         range: "1..99",
         default: 1,
         size: 8,
@@ -523,7 +532,7 @@ def getParameterNumbers() {   //controls which options are available depending o
     parameter010 : [
         number: 10,
         name: "Maximum Level",
-        description: "The maximum percent level that the light can be dimmed. Useful when the user wants to limit the maximum brighness.",
+        description: "The maximum level that the light can be dimmed. Useful when the user wants to limit the maximum brighness.",
         range: "2..100",
         default: 100,
         size: 8,
@@ -573,7 +582,7 @@ def getParameterNumbers() {   //controls which options are available depending o
     parameter015 : [
         number: 15,
         name: "Level After Power Restored",
-        description: "Level the switch will return to when power is restored after power failure (if Switch is in On/Off Mode any level 1-100 will convert to 100).<br>0=Off<br>1-100=Set Level<br>101=Use previous level.",
+        description: "Level the dimmer will return to when power is restored after power failure (if Switch is in On/Off Mode any level 1-100 will convert to 100).<br>0=Off<br>1-100=Set Level<br>101=Use previous level.",
         range: "0..101",
         default: 101,
         size: 8,
@@ -684,7 +693,7 @@ def getParameterNumbers() {   //controls which options are available depending o
         number: 52,
         name: "Smart Bulb Mode",
         description: "For use with Smart Bulbs that need constant power and are controlled via commands rather than power.",
-        range: ["0":"Disabled (default)", "1":"Smart Bulb Mode Enabled"],
+        range: ["0":"Disabled (default)", "1":"Enabled"],
         default: 0,
         size: 1,
         type: "enum",
@@ -714,7 +723,7 @@ def getParameterNumbers() {   //controls which options are available depending o
         number: 55,
         name: "Brightness level for Double-Tap UP",
         description: "Set this level on double-tap UP (if enabled by P53)",
-        range: "0..100",
+        range: "1..100",
         default: 100,
         size: 8,
         type: "number",
@@ -824,7 +833,7 @@ def getParameterNumbers() {   //controls which options are available depending o
         number: 95,
         name: "LED Bar Color (when On)",
         description: "Set the color of the LED Bar when the load is on.",
-        range: ["0":"Red","7":"Orange","28":"Lemon","57":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
+        range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
         default: 170,
         size: 8,
         type: "enum",
@@ -834,7 +843,7 @@ def getParameterNumbers() {   //controls which options are available depending o
         number: 96,
         name: "LED Bar Color (when Off)",
         description: "Set the color of the LED Bar when the load is off.",
-        range: ["0":"Red","7":"Orange","28":"Lemon","57":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
+        range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
         default: 170,
         size: 8,
         type: "enum",
@@ -950,7 +959,7 @@ def getParameterNumbers() {   //controls which options are available depending o
         type: "enum",
         value: null
         ],
-    parameter261 : [
+    parameter261 : [	//not valid for fan switch
         number: 261,
         name: "Relay Click",
         description: "Audible Click in On/Off mode",
@@ -970,7 +979,7 @@ def getParameterNumbers() {   //controls which options are available depending o
         type: "enum",
         value: null
         ],
-    parameter263 : [
+    parameter263 : [	//not valid for dimmer
         number: 263,
         name: "LED bar display levels",
         description: "Levels of the LED bar in Smart Bulb Mode<br>0=full range",
@@ -983,45 +992,63 @@ def getParameterNumbers() {   //controls which options are available depending o
 ]
 
 def infoLogsOff() {
-    log.warn "${device.displayName}: "+fireBrick("Disabling Info logging after timeout")
+    log.warn "${device.displayName} " + fireBrick("Disabling Info logging after timeout")
     device.updateSetting("infoEnable",[value:"false",type:"bool"])
     //device.updateSetting("disableInfoLogging",[value:"",type:"number"])
 }
 
 def traceLogsOff() {
-    log.warn "${device.displayName}: "+fireBrick("Disabling Trace logging after timeout")
+    log.warn "${device.displayName} " + fireBrick("Disabling Trace logging after timeout")
     device.updateSetting("traceEnable",[value:"false",type:"bool"])
     //device.updateSetting("disableTraceLogging",[value:"",type:"number"])
 }
 
 def debugLogsOff() {
-    log.warn "${device.displayName}: "+fireBrick("Disabling Debug logging after timeout")
+    log.warn "${device.displayName} " + fireBrick("Disabling Debug logging after timeout")
     device.updateSetting("debugEnable",[value:"false",type:"bool"])
     //device.updateSetting("disableDebugLogging",[value:"",type:"number"])
 }
 
 def bind(cmds=[]) {
-    if (infoEnable||traceEnable) log.info "${device.displayName}: bind(${cmds})"
+    if (infoEnable||traceEnable) log.info "${device.displayName} bind(${cmds})"
     state.lastCommandSent =                         			 "bind(${cmds})"
     state.lastCommandTime = nowFormatted()
     return cmds
 }
 
-def bindSlave() {
-    if (infoEnable) log.info "${device.displayName}: bindSlave()"
-    state.lastCommandSent =             			"bindSlave()"
+def bindGroup(action="", group=0) {
+    if (infoEnable) log.info "${device.displayName} bindGroup($action, $group))"
+    state.lastCommandSent =                        "bindGroup($action, $group))"
     state.lastCommandTime = nowFormatted()
-    def cmds = zigbee.command(0x0003, 0x00, [:], defaultDelay, "20 00")
-    if (traceEnable) log.trace "${device.displayName}: bindSlave $cmds"
+	def cmds = []
+	if (action=="bind" || action=="unbind") {
+		cmds += ["zdo $action 0x${device.deviceNetworkId} 0x02 0x01 0x0006 {${device.zigbeeId}} {${zigbee.convertToHexString(group.toInteger(),4)}}"]
+		cmds += ["zdo $action 0x${device.deviceNetworkId} 0x02 0x01 0x0008 {${device.zigbeeId}} {${zigbee.convertToHexString(group.toInteger(),4)}}"]
+		cmds += "delay 60000"		//binding can take up to 60 seconds 
+		cmds += getParameter(51)	//update number of bindings counter
+		sendHubCommand(new hubitat.device.HubMultiAction(cmds, hubitat.device.Protocol.ZIGBEE))
+	} else {
+		if (infoEnable) log.warn "${device.displayName} " + fireBrick("Invalid Bind action: '$action'")
+		}
+    if (traceEnable) log.trace "${device.displayName} bindGroup $cmds"
+    return
+}
+
+def bindInitiator() {
+    if (infoEnable) log.info "${device.displayName} bindInitiator()" 
+    state.lastCommandSent =            			   "bindInitiator()" 
+    state.lastCommandTime = nowFormatted()
+    def cmds = zigbee.command(0xfc31,0x04,["mfgCode":"0x122F"],defaultDelay,"0")
+    if (traceEnable) log.trace "${device.displayName} bindInitiator $cmds"
     return cmds
 }
 
-def bindSource() {
-    if (infoEnable) log.info "${device.displayName}: bindSource()" 
-    state.lastCommandSent =            			    "bindSource()" 
+def bindTarget() {
+    if (infoEnable) log.info "${device.displayName} bindTarget()"
+    state.lastCommandSent =             		   "bindTarget()"
     state.lastCommandTime = nowFormatted()
-    def cmds = zigbee.command(0xfc31,0x04,["mfgCode":"0x122F"],defaultDelay,"0")
-    if (traceEnable) log.trace "${device.displayName}: bindSource $cmds"
+    def cmds = setZigbeeAttribute(3,0,30,16)
+    if (traceEnable) log.trace "${device.displayName} bindTarget $cmds"
     return cmds
 }
 
@@ -1050,11 +1077,10 @@ def calculateParameter(number) {
             //360-hue values need to be converted to byte values before sending to the device
             if (settings."parameter${number}custom" =~ /^([0-9]{1}|[0-9]{2}|[0-9]{3})$/) {
                 value = Math.round((settings."parameter${number}custom").toInteger()/360*255)
-            }
-            else {   //else custom hue is invalid format or not selected
+            } else {   //else custom hue is invalid format or not selected
                 if(settings."parameter${number}custom"!=null) {
                     device.clearSetting("parameter${number}custom")
-                    if (infoEnable) log.warn "${device.displayName}: "+fireBrick("Cleared invalid custom hue: ${settings."parameter${number}custom"}")
+                    if (infoEnable) log.warn "${device.displayName} " + fireBrick("Cleared invalid custom hue: ${settings."parameter${number}custom"}")
                 }
             }
             break
@@ -1066,8 +1092,9 @@ def calculateParameter(number) {
     return value
 }
 
-def calculateSize(size=8) {
-    //if (debugEnable) log.debug "${device.displayName}: calculateSize(${size})"
+def calculateSize(size) {
+    //if (debugEnable) log.debug "${device.displayName} calculateSize(${size})"
+	if (size==null || size==" ") size = configParams["parameter${number.toString().padLeft(3,'0')}"]?.size?:8
     if      (size.toInteger() == 1)  return 0x10    //1-bit boolean
     else if (size.toInteger() == 8)  return 0x20    //1-byte unsigned integer
     else if (size.toInteger() == 16) return 0x21    //2-byte unsigned integer
@@ -1088,21 +1115,24 @@ def clusterLookup(cluster) {
 										   "Cluster:0x${zigbee.convertToHexString(cluster,4)}"
 }
 
-def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS DISCOVERED OR WHEN CONFIGURE BUTTON SELECTED ON DEVICE PAGE
+def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS ADDED OR WHEN CONFIGURE BUTTON SELECTED ON DEVICE PAGE
     option = (option==null||option==" ")?"":option
-    if (infoEnable) log.info "${device.displayName}: configure($option)"
-    state.lastCommandSent =                         "configure($option)"
+    if (infoEnable) log.info "${device.displayName} configure($option)"
+    state.lastCommandSent =                        "configure($option)"
     state.lastCommandTime = nowFormatted()
     state.driverDate = getDriverDate()
 	state.model = device.getDataValue('model')
-    if (infoEnable||traceEnable||debugEnable) log.info "${device.displayName}: Driver Date $state.driverDate"
+    if (infoEnable||traceEnable||debugEnable) log.info "${device.displayName} Driver Date $state.driverDate"
     sendEvent(name: "numberOfButtons", value: 14)
     def cmds = []
 //  cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0000 {${device.zigbeeId}} {}", "delay ${defaultDelay}"] //Basic Cluster
+//  cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0x0000 {${device.zigbeeId}} {}", "delay ${defaultDelay}"] //Basic Cluster ep2
 //  cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0003 {${device.zigbeeId}} {}", "delay ${defaultDelay}"] //Identify Cluster
 //  cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0x0003 {${device.zigbeeId}} {}", "delay ${defaultDelay}"] //Identify Cluster ep2
 //  cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0004 {${device.zigbeeId}} {}", "delay ${defaultDelay}"] //Group Cluster
+//  cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0x0004 {${device.zigbeeId}} {}", "delay ${defaultDelay}"] //Group Cluster ep2
 //  cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0005 {${device.zigbeeId}} {}", "delay ${defaultDelay}"] //Scenes Cluster
+//  cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0x0005 {${device.zigbeeId}} {}", "delay ${defaultDelay}"] //Scenes Cluster ep2
     cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0006 {${device.zigbeeId}} {}", "delay ${defaultDelay}"] //On/Off Cluster
 //  cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0x0006 {${device.zigbeeId}} {}", "delay ${defaultDelay}"] //On/Off Cluster ep2
     cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0008 {${device.zigbeeId}} {}", "delay ${defaultDelay}"] //Level Control Cluster
@@ -1112,8 +1142,8 @@ def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS D
         cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0702 {${device.zigbeeId}} {}", "delay ${defaultDelay}"] //Simple Metering - to get energy reports
         cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0B04 {${device.zigbeeId}} {}", "delay ${defaultDelay}"] //Electrical Measurement - to get power reports
     }
-//  cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x8021 {${device.zigbeeId}} {}", "delay ${defaultDelay}"] //Binding Cluster - to get binding reports
-//  cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x8022 {${device.zigbeeId}} {}", "delay ${defaultDelay}"] //UnBinding Cluster - to get Unbinding reports
+//  cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x8021 {${device.zigbeeId}} {}", "delay ${defaultDelay}"] //Binding Cluster 
+//  cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x8022 {${device.zigbeeId}} {}", "delay ${defaultDelay}"] //UnBinding Cluster
     cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0xFC31 {${device.zigbeeId}} {}", "delay ${defaultDelay}"] //Private Cluster
     cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0xFC31 {${device.zigbeeId}} {}", "delay ${defaultDelay}"] //Private Cluster ep2
     //read back some key attributes
@@ -1133,8 +1163,8 @@ def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS D
     cmds += ["he rattr ${device.deviceNetworkId} 0x01 0x0008 0x0000                    {}", "delay ${defaultDelay}"] //get current level
     if (state.model?.substring(0,5)!="VZM35")  //Fan does not support on_off transition time
         cmds += ["he rattr ${device.deviceNetworkId} 0x01 0x0008 0x0010                    {}", "delay ${defaultDelay}"] //get OnOff Transition Time
-    cmds += ["he rattr ${device.deviceNetworkId} 0x01 0x0008 0x0011                    {}", "delay ${defaultDelay}"] //get Default Remote On Level
-    cmds += ["he rattr ${device.deviceNetworkId} 0x01 0x0008 0x4000                    {}", "delay ${defaultDelay}"] //get Startup Level
+    cmds += ["he rattr ${device.deviceNetworkId} 0x01 0x0008 0x0011                    {}", "delay ${defaultDelay}"] //get Default On Level
+    cmds += ["he rattr ${device.deviceNetworkId} 0x01 0x0008 0x4000                    {}", "delay ${defaultDelay}"] //get Power-On Level
     if (option!="All" && option!="Default") { //if we didn't pick option "All" or "Default" (so we don't read them twice) then preload the dimming/ramp rates and key parameters so they are not null in calculations
         for(int i = 1;i<=8;i++) if (state."parameter${i}value"==null) cmds += getParameter(i)
         cmds += getParameter(258)       //switch mode
@@ -1145,12 +1175,12 @@ def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS D
         cmds += getParameter(257)       //remote protection (read-only)
     }
     if (option!="") cmds += updated(option) //if option was selected on Configure button, pass it on to update settings.
-    if (traceEnable) log.trace "${device.displayName}: configure $cmds"
+    if (traceEnable) log.trace "${device.displayName} configure $cmds"
     return cmds
 }
 
 def convertByteToPercent(int value=0) {                  //convert a 0-254 range where 254=100%.  255 is reserved for special meaning.
-    //if (debugEnable) log.debug "${device.displayName}: convertByteToPercent(${value})"
+    //if (debugEnable) log.debug "${device.displayName} convertByteToPercent(${value})"
     value = value==null?0:value                          //default to 0 if null
     value = Math.min(Math.max(value.toInteger(),0),255)  //make sure input byte value is in the 0-255 range
     value = value>=255?256:value                         //this ensures that byte values of 255 get rounded up to 101%
@@ -1159,7 +1189,7 @@ def convertByteToPercent(int value=0) {                  //convert a 0-254 range
 }
 
 def convertPercentToByte(int value=0) {                  //convert a 0-100 range where 100%=254.  255 is reserved for special meaning.
-    //if (debugEnable) log.debug "${device.displayName}: convertPercentToByte(${value})"
+    //if (debugEnable) log.debug "${device.displayName} convertPercentToByte(${value})"
     value = value==null?0:value                          //default to 0 if null
     value = Math.min(Math.max(value.toInteger(),0),101)  //make sure input percent value is in the 0-101 range
     value = Math.floor(value/100*255)                    //convert to 0-255 where 100%=254 and 101 becomes 255 for special meaning
@@ -1170,7 +1200,7 @@ def convertPercentToByte(int value=0) {                  //convert a 0-100 range
 
 def cycleSpeed() {    // FOR FAN ONLY
     def cmds =[]
-    if (parameter258=="1") cmds += toggle()    //if we are in on/off mode then do a toggle instead of cycle
+    if (parameter158=="1" || parameter258=="1") cmds += toggle()    //if we are in on/off mode then do a toggle instead of cycle
     else {
         def currentLevel = device.currentValue("level")==null?0:device.currentValue("level").toInteger()
         if (device.currentValue("switch")=="off") currentLevel = 0
@@ -1183,45 +1213,53 @@ def cycleSpeed() {    // FOR FAN ONLY
 		else if (currentLevel<=60) {newLevel=smartMode?80:100; newSpeed=smartMode?"medium-high":"high"}
 		else if (currentLevel<=80) {newLevel=100;              newSpeed="high"}
         else                       {newLevel=0;                newSpeed="off"}
-        if (infoEnable) log.info "${device.displayName}: cycleSpeed(${device.currentValue("speed")}->${newSpeed})"
-        state.lastCommandSent =                         "cycleSpeed(${device.currentValue("speed")}->${newSpeed})"
+        if (infoEnable) log.info "${device.displayName} cycleSpeed(${device.currentValue("speed")}->${newSpeed})"
+        state.lastCommandSent =                        "cycleSpeed(${device.currentValue("speed")}->${newSpeed})"
         state.lastCommandTime = nowFormatted()
         cmds += zigbee.setLevel(newLevel)
-        if (traceEnable) log.trace "${device.displayName}: cycleSpeed $cmds"
+        if (traceEnable) log.trace "${device.displayName} cycleSpeed $cmds"
     }
     return cmds
 }
 
 def identify(seconds) {
-    if (infoEnable) log.info "${device.displayName}: identify(${seconds==null?"":seconds})"
-    state.lastCommandSent =                         "identify(${seconds==null?"":seconds})"
+    if (infoEnable) log.info "${device.displayName} identify(${seconds==null?"":seconds})"
+    state.lastCommandSent =                        "identify(${seconds==null?"":seconds})"
     state.lastCommandTime = nowFormatted()
 	setZigbeeAttribute(3,0,seconds,16)
 }
 
 def initialize() {    //CALLED DURING HUB BOOTUP IF "INITIALIZE" CAPABILITY IS DECLARED IN METADATA SECTION
-    //Typically used for things that need refreshing or re-connecting at bootup (e.g. LAN integrations but not zigbee bindings)
+    //save the group IDs before clearing all the state variables and reset them after
+	if (state?.groupBinding1) saveBinding1 = state.groupBinding1
+	if (state?.groupBinding2) saveBinding2 = state.groupBinding2
+	if (state?.groupBinding3) saveBinding3 = state.groupBinding3
     state.clear()
-    if (infoEnable) log.info "${device.displayName}: initialize()"
-    state.lastCommandSent =                         "initialize()"
+	if (saveBinding1) state.groupBinding1 = saveBinding1
+	if (saveBinding2) state.groupBinding2 = saveBinding2
+	if (saveBinding3) state.groupBinding3 = saveBinding3
+    if (infoEnable) log.info "${device.displayName} initialize()"
+    state.lastCommandSent =                        "initialize()"
     state.lastCommandTime = nowFormatted()
     state.driverDate = getDriverDate()
 	state.model = device.getDataValue('model')
+	if (settings?.groupbinding1){device.updateSetting("groupBinding1",[value:settings.groupbinding1,type:"number"]); device.removeSetting("groupbinding1")} 	//temporary fix to change groupbinding variables to camelCase
+	if (settings?.groupbinding2){device.updateSetting("groupBinding2",[value:settings.groupbinding2,type:"number"]); device.removeSetting("groupbinding2")} 	//temporary fix to change groupbinding variables to camelCase
+	if (settings?.groupbinding3){device.updateSetting("groupBinding3",[value:settings.groupbinding3,type:"number"]); device.removeSetting("groupbinding3")} 	//temporary fix to change groupbinding variables to camelCase
     device.clearSetting("parameter23level") 
     device.clearSetting("parameter95custom") 
     device.clearSetting("parameter96custom") 
-	ledEffectOne(1234567,255,0,0,0)	//clear any outstanding oneLED Effects
-	ledEffectAll(255,0,0,0)			//clear any outstanding allLED Effects
-    //if (infoEnable||traceEnable||debugEnable) log.info "${device.displayName}: Driver Date $state.driverDate"	//this is also done in refresh()
     def cmds = []
+	cmds += ledEffectOne(1234567,255,0,0,0)	//clear any outstanding oneLED Effects
+	cmds += ledEffectAll(255,0,0,0)			//clear any outstanding allLED Effects
     cmds += refresh()
-    if (traceEnable) log.trace "${device.displayName}: initialize $cmds"
+    if (traceEnable) log.trace "${device.displayName} initialize $cmds"
     return cmds
 }
 
 def installed() {    //THIS IS CALLED WHEN A DEVICE IS INSTALLED
-    log.info "${device.displayName}: installed()"
-    state.lastCommandSent =         "installed()"
+    log.info "${device.displayName} installed()"
+    state.lastCommandSent =        "installed()"
     state.lastCommandTime = nowFormatted()
     state.driverDate = getDriverDate()
 	state.model = device.getDataValue('model')
@@ -1269,8 +1307,8 @@ def ledEffectAll(effect=255, color=0, level=100, duration=60) {
         case "0":	effectName = "LEDs Off"; break
 	}
     sendEvent(name:"ledEffect", value: "$effectName All")
-    if (infoEnable) log.info "${device.displayName}: ledEffectAll(${effect},${color},${level},${duration})"
-    state.lastCommandSent =                         "ledEffectAll(${effect},${color},${level},${duration})"
+    if (infoEnable) log.info "${device.displayName} ledEffectAll(${effect},${color},${level},${duration})"
+    state.lastCommandSent =                        "ledEffectAll(${effect},${color},${level},${duration})"
     state.lastCommandTime = nowFormatted()
     effect   = Math.min(Math.max((effect!=null?effect:255).toInteger(),0),255)
     color    = Math.min(Math.max((color!=null?color:0).toInteger(),0),255)
@@ -1282,7 +1320,7 @@ def ledEffectAll(effect=255, color=0, level=100, duration=60) {
     Integer cmdLevel = level.toInteger()
     Integer cmdDuration = duration.toInteger()
     cmds += zigbee.command(0xfc31,0x01,["mfgCode":"0x122F"],defaultDelay,"${intTo8bitUnsignedHex(cmdEffect)} ${intTo8bitUnsignedHex(cmdColor)} ${intTo8bitUnsignedHex(cmdLevel)} ${intTo8bitUnsignedHex(cmdDuration)}")
-    if (traceEnable) log.trace "${device.displayName}: ledEffectAll $cmds"
+    if (traceEnable) log.trace "${device.displayName} ledEffectAll $cmds"
     return cmds
 }
                                         
@@ -1303,8 +1341,8 @@ def ledEffectOne(lednum, effect=255, color=0, level=100, duration=60) {
         case "0":	effectName = "LEDs Off"; break
 	}
 	sendEvent(name:"ledEffect", value: "$effectName LED${lednum.toString().split(/ /)[0]}")
-    if (infoEnable) log.info "${device.displayName}: ledEffectOne(${lednum},${effect},${color},${level},${duration})"
-    state.lastCommandSent =                         "ledEffectOne(${lednum},${effect},${color},${level},${duration})"
+    if (infoEnable) log.info "${device.displayName} ledEffectOne(${lednum},${effect},${color},${level},${duration})"
+    state.lastCommandSent =                        "ledEffectOne(${lednum},${effect},${color},${level},${duration})"
     state.lastCommandTime = nowFormatted()
     effect   = Math.min(Math.max((effect!=null?effect:255).toInteger(),0),255)
     color    = Math.min(Math.max((color!=null?color:0).toInteger(),0),255)
@@ -1320,7 +1358,7 @@ def ledEffectOne(lednum, effect=255, color=0, level=100, duration=60) {
         Integer cmdDuration = duration.toInteger()
         cmds += zigbee.command(0xfc31,0x03,["mfgCode":"0x122F"],150,"${intTo8bitUnsignedHex(cmdLedNum)} ${intTo8bitUnsignedHex(cmdEffect)} ${intTo8bitUnsignedHex(cmdColor)} ${intTo8bitUnsignedHex(cmdLevel)} ${intTo8bitUnsignedHex(cmdDuration)}")
     }
-    if (traceEnable) log.trace "${device.displayName}: ledEffectOne $cmds"
+    if (traceEnable) log.trace "${device.displayName} ledEffectOne $cmds"
     return cmds
 }
 
@@ -1330,34 +1368,34 @@ def nowFormatted() {
 }
 
 def off() {
-	if (infoEnable) log.info "${device.displayName}: off()"
-    state.lastCommandSent =                         "off()"
+	if (infoEnable) log.info "${device.displayName} off()"
+    state.lastCommandSent =                        "off()"
     state.lastCommandTime = nowFormatted()
     def cmds = []
     cmds += zigbee.off(defaultDelay)
-    if (traceEnable) log.trace "${device.displayName}: off $cmds"
+    if (traceEnable) log.trace "${device.displayName} off $cmds"
     return cmds
 }
 
 def on() {
-    if (infoEnable) log.info "${device.displayName}: on()"
-    state.lastCommandSent =                         "on()"
+    if (infoEnable) log.info "${device.displayName} on()"
+    state.lastCommandSent =                        "on()"
     state.lastCommandTime = nowFormatted()
     def cmds = []
     if (settings.parameter23?.toInteger()>0) cmds += quickStart() //do quickStart if enabled
 	else cmds += zigbee.on(defaultDelay)						  //ELSE just turn On
-    if (traceEnable) log.trace "${device.displayName}: on $cmds"
+    if (traceEnable) log.trace "${device.displayName} on $cmds"
     return cmds
 }
 
 def parse(String description) {
-    if (debugEnable) log.debug "${device.displayName}: parse($description)"
+    if (debugEnable) log.debug "${device.displayName} parse($description)"
     Map descMap = zigbee.parseDescriptionAsMap(description)
-    if (debugEnable) log.debug "${device.displayName}: $descMap"
+    if (debugEnable) log.debug "${device.displayName} $descMap"
     try {
-        if (debugEnable && (zigbee.getEvent(description)!=[:])) log.debug "${device.displayName}: zigbee.getEvent ${zigbee.getEvent(description)}"
+        if (debugEnable && (zigbee.getEvent(description)!=[:])) log.debug "${device.displayName} zigbee.getEvent ${zigbee.getEvent(description)}"
     } catch (e) {
-        if (debugEnable) log.debug "${device.displayName}: "+magenta(bold("There was an error while calling zigbee.getEvent: $description"))   
+        if (debugEnable) log.debug "${device.displayName} "+magenta(bold("There was an error while calling zigbee.getEvent: $description"))   
     }
     def attrHex =    descMap.attrInt==null?null:"0x${zigbee.convertToHexString(descMap.attrInt,4)}"
     def attrInt =    descMap.attrInt==null?null:descMap.attrInt.toInteger()
@@ -1367,7 +1405,7 @@ def parse(String description) {
     def valueStr =   descMap.value ?: "unknown"
     switch (clusterInt){
         case 0x0000:    //BASIC CLUSTER
-            if (traceEnable) log.trace "${device.displayName}: ${clusterName} (" +
+            if (traceEnable) log.trace "${device.displayName} ${clusterName} (" +
                                        "clusterId:${descMap.cluster?:descMap.clusterId}" +
                                        (descMap.attrId==null?"":" attrId:${descMap.attrId}") +
                                        (descMap.value==null?"":" value:${descMap.value}") +
@@ -1375,44 +1413,62 @@ def parse(String description) {
                                        ")"
             switch (attrInt) {
                 case 0x0000:
-                    if (infoEnable) log.info "${device.displayName}: Report received ZCLVersion: $valueStr"
+                    if (infoEnable) log.info "${device.displayName} Report received: ZCLVersion=$valueStr"
                     state.zclVersion = valueStr
                     break
                 case 0x0001:
-                    if (infoEnable) log.info "${device.displayName}: Report received ApplicationVersion: $valueStr"
+                    if (infoEnable) log.info "${device.displayName} Report received: ApplicationVersion=$valueStr"
                     state.applicationVersion = valueStr
                     break
                 case 0x0004:
-                    if (infoEnable) log.info "${device.displayName}: Report received Mfg: $valueStr"
+                    if (infoEnable) log.info "${device.displayName} Report received: Mfg=$valueStr"
                     state.manufacturer = valueStr
                     break
                 case 0x0005:
-                    if (infoEnable) log.info "${device.displayName}: Report received Model: $valueStr"
+                    if (infoEnable) log.info "${device.displayName} Report received: Model=$valueStr"
                     state.model = valueStr
                     break
                 case 0x0006:
-                    if (infoEnable) log.info "${device.displayName}: Report received FW Date: $valueStr"
+                    if (infoEnable) log.info "${device.displayName} Report received: FW Date=$valueStr"
 					state.fwDate = valueStr
                     break
                 case 0x0007:
                     def valueInt = Integer.parseInt(descMap['value'],16)
                     valueStr = valueInt==0?"Non-Neutral":"Neutral"
-                    if (infoEnable) log.info "${device.displayName}: " + green("Report received Power Source: $valueInt ($valueStr)")
+                    if (infoEnable) log.info "${device.displayName} " + darkGreen("Report received Power Source=$valueInt ($valueStr)")
                     state.powerSource = valueStr
                     state.parameter21value = valueInt
                     device.updateSetting("parameter21",[value:"${valueInt}",type:"enum"]) 
                     break
                 case 0x4000:
-                    if (infoEnable) log.info "${device.displayName}: Report received FW Version: $valueStr"
+                    if (infoEnable) log.info "${device.displayName} Report received: FW Version=$valueStr"
 					state.fwVersion = valueStr
                     break
                 default:
-                    if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN ATTRIBUTE:$attrInt DESCMAP:$descMap")
+                    log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Attribute ") + descMap
                     break
             }
             break
+        case 0x0001:    //Power configuration
+            if (infoEnable||debugEnable) log.info "${device.displayName} " + darkOrange("Power configuration ") + (debugEnable?descMap:"")
+            if (infoEnable||traceEnable||debugEnable) log.trace "${device.displayName} ${clusterName} (" +
+                                       "clusterId:${descMap.cluster?:descMap.clusterId}" +
+                                       (descMap.attrId==null?"":" attrId:${descMap.attrId}") +
+                                       (descMap.value==null?"":" value:${descMap.value}") +
+                                       (zigbee.getEvent(description)==[:]?(descMap.data==null?"":" data:${descMap.data}"):(" ${zigbee.getEvent(description)}")) + 
+                                       ")"
+            break
+        case 0x0002:    //Device temperature configuration
+            if (infoEnable||debugEnable) log.info "${device.displayName} " + darkOrange("Device temperature configuration ") + (debugEnable?descMap:"")
+            if (infoEnable||traceEnable||debugEnable) log.trace "${device.displayName} ${clusterName} (" +
+                                       "clusterId:${descMap.cluster?:descMap.clusterId}" +
+                                       (descMap.attrId==null?"":" attrId:${descMap.attrId}") +
+                                       (descMap.value==null?"":" value:${descMap.value}") +
+                                       (zigbee.getEvent(description)==[:]?(descMap.data==null?"":" data:${descMap.data}"):(" ${zigbee.getEvent(description)}")) + 
+                                       ")"
+            break
         case 0x0003:    //IDENTIFY CLUSTER
-            if (traceEnable) log.trace "${device.displayName}: ${clusterName} (" +
+            if (traceEnable) log.trace "${device.displayName} ${clusterName} (" +
                                        "clusterId:${descMap.cluster?:descMap.clusterId}" +
                                        (descMap.attrId==null?"":" attrId:${descMap.attrId}") +
                                        (descMap.value==null?"":" value:${descMap.value}") +
@@ -1420,15 +1476,15 @@ def parse(String description) {
                                        ")"
             switch (attrInt) {
                 case 0x0000:
-                    if (infoEnable) log.info "${device.displayName}: Report received IdentifyTime: ${zigbee.convertHexToInt(valueStr)}"
+                    if (infoEnable) log.info "${device.displayName} Report received: Remaining Identify Time=${zigbee.convertHexToInt(valueStr)}s"
                     break
                 default:
-                    if ((infoEnable && attrInt!=null)||traceEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN ATTRIBUTE:$attrInt DESCMAP:$descMap")
+                    if ((infoEnable && attrInt!=null)||traceEnable||debugEnable) log.warn "${device.displayName} "+fireBrick("${clusterName} Unknown Attribute:$attrInt ")+descMap
                     break
             }
             break
         case 0x0004:    //GROUP CLUSTER
-            if (traceEnable) log.trace "${device.displayName}: ${clusterName} (" +
+            if (traceEnable) log.trace "${device.displayName} ${clusterName} (" +
                                        "clusterId:${descMap.cluster?:descMap.clusterId}" +
                                        (descMap.attrId==null?"":" attrId:${descMap.attrId}") +
                                        (descMap.value==null?"":" value:${descMap.value}") +
@@ -1436,42 +1492,70 @@ def parse(String description) {
                                        ")"
             switch (attrInt) {
                 case 0x0000:
-                    if (infoEnable) log.info "${device.displayName}: Report received Group Name Support: $valueStr"
+                    if (infoEnable) log.info "${device.displayName} Report received: Group Name Support=$valueStr"
                     break
                 default:
                     if (attrInt==null && descMap.messageType=="00" && descMap.direction=="01") {
-						def groupNum = zigbee.convertHexToInt(descMap.data[2]+descMap.data[1])
+						def groupNumHex = descMap.data[2]+descMap.data[1]
+						def groupNumInt = zigbee.convertHexToInt(groupNumHex)
 						switch (descMap.command) {
 							case "00":
-								if (infoEnable) log.info "${device.displayName}: Add Group $groupNum"
+								if (infoEnable) log.info "${device.displayName} Report received: Add Group $groupNumInt (0x$groupNumHex)"
+								bindGroup("bind",groupNumInt)
+								if (settings.groupBinding1==null || settings.groupBinding1?.toInteger()==groupNumInt || state.groupBinding1?.toInteger()==groupNumInt) {
+									device.updateSetting("groupBinding1",[value:groupNumInt,type:"number"])
+									state.groupBinding1=groupNumInt
+								} else if (settings.groupBinding2==null || settings.groupBinding2?.toInteger()==groupNumInt || state.groupBinding2?.toInteger()==groupNumInt) {
+									device.updateSetting("groupBinding2",[value:groupNumInt,type:"number"])
+									state.groupBinding2=groupNumInt
+								} else if (settings.groupBinding3==null || settings.groupBinding3?.toInteger()==groupNumInt || state.groupBinding3?.toInteger()==groupNumInt) {
+									device.updateSetting("groupBinding3",[value:groupNumInt,type:"number"])
+									state.groupBinding3=groupNumInt
+								}
 								break
 							case "01":
-								if (infoEnable) log.info "${device.displayName}: View Group $groupNum"
+								if (infoEnable) log.info "${device.displayName} Report received: View Group $groupNumInt (0x$groupNumHex)"
 								break
 							case "02":
-								if (infoEnable) log.info "${device.displayName}: Get Group $groupNum"
+								if (infoEnable) log.info "${device.displayName} Report received: Get Group $groupNumInt (0x$groupNumHex)"
 								break
 							case "03":
-								if (infoEnable) log.info "${device.displayName}: Remove Group $groupNum"
+								if (infoEnable) log.info "${device.displayName} Report received: Remove Group $groupNumInt (0x$groupNumHex)"
+								bindGroup("unbind",groupNumInt)
+								if (settings.groupBinding1?.toInteger()==groupNumInt || state.groupBinding1?.toInteger()==groupNumInt) {
+									device.clearSetting("groupBinding1")
+									state.groupBinding1=null
+								} else if (settings.groupBinding2?.toInteger()==groupNumInt || state.groupBinding2?.toInteger()==groupNumInt) {
+									device.clearSetting("groupBinding2")
+									state.groupBinding2=null
+								} else if (settings.groupBinding3?.toInteger()==groupNumInt || state.groupBinding3?.toInteger()==groupNumInt) {
+									device.clearSetting("groupBinding3")
+									state.groupBinding3=null
+								}
 								break
 							case "04":
-								if (infoEnable) log.info "${device.displayName}: Remove all groups"
+								if (infoEnable) log.info "${device.displayName} Report received: Remove All Groups"
+								//device.clearSetting("groupBinding1"); state.groupBinding1=null
+								//device.clearSetting("groupBinding2"); state.groupBinding2=null
+								//device.clearSetting("groupBinding3"); state.groupBinding3=null
 								break
 							case "05":
-								if (infoEnable) log.info "${device.displayName}: Add group if Identifying"
+								if (infoEnable) log.info "${device.displayName} Add group if Identifying"
 								break
 							default:
-								if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN COMMAND:$descMap.command DESCMAP:$descMap")
+								log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command ") + descMap
 								break
 						}
-					} else {
-						if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN ATTRIBUTE:$attrInt DESCMAP:$descMap")
-						}
+						// remove duplicate groups
+						if (settings.groupBinding3!=null && settings.groupBinding3==settings.groupBinding2) {device.clearSetting("groupBinding3"); state.groupBinding3 = null; log.info "${device.displayName} Removed duplicate Group Bind #3"}
+						if (settings.groupBinding2!=null && settings.groupBinding2==settings.groupBinding1) {device.clearSetting("groupBinding2"); state.groupBinding2 = null; log.info "${device.displayName} Removed duplicate Group Bind #2"}
+						if (settings.groupBinding1!=null && settings.groupBinding1==settings.groupBinding3) {device.clearSetting("groupBinding3"); state.groupBinding3 = null; log.info "${device.displayName} Removed duplicate Group Bind #3"}
+					} else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Attribute ") + descMap
                     break
             }
             break
         case 0x0005:    //SCENES CLUSTER
-            if (traceEnable) log.trace "${device.displayName}: ${clusterName} (" +
+            if (traceEnable) log.trace "${device.displayName} ${clusterName} (" +
                                        "clusterId:${descMap.cluster?:descMap.clusterId}" +
                                        (descMap.attrId==null?"":" attrId:${descMap.attrId}") +
                                        (descMap.value==null?"":" value:${descMap.value}") +
@@ -1479,27 +1563,27 @@ def parse(String description) {
                                        ")"
             switch (attrInt) {
                 case 0x0000:
-                    if (infoEnable) log.info "${device.displayName}: Report received Scene Count: $valueStr"
+                    if (infoEnable) log.info "${device.displayName} Report received: Scene Count=$valueStr"
                     break
                 case 0x0001:
-                    if (infoEnable) log.info "${device.displayName}: Report received Current Scene: $valueStr"
+                    if (infoEnable) log.info "${device.displayName} Report received: Current Scene=$valueStr"
                     break
                 case 0x0002:
-                    if (infoEnable) log.info "${device.displayName}: Report received Current Group: $valueStr"
+                    if (infoEnable) log.info "${device.displayName} Report received: Current Group=$valueStr"
                     break
                 case 0x0003:
-                    if (infoEnable) log.info "${device.displayName}: Report received Scene Valid: $valueStr"
+                    if (infoEnable) log.info "${device.displayName} Report received: Scene Valid=$valueStr"
                     break
                 case 0x0004:
-                    if (infoEnable) log.info "${device.displayName}: Report received Scene Name Support: $valueStr"
+                    if (infoEnable) log.info "${device.displayName} Report received: Scene Name Support=$valueStr"
                     break
                 default:
-                    if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN ATTRIBUTE:$attrInt DESCMAP:$descMap")
+                    log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Attribute ") + descMap
                     break
             }
             break
         case 0x0006:    //ON_OFF CLUSTER
-            if (traceEnable) log.trace "${device.displayName}: ${clusterName} (" +
+            if (traceEnable) log.trace "${device.displayName} ${clusterName} (" +
                                        "clusterId:${descMap.cluster?:descMap.clusterId}" +
                                        (descMap.attrId==null?"":" attrId:${descMap.attrId}") +
                                        (descMap.value==null?"":" value:${descMap.value}") +
@@ -1510,7 +1594,7 @@ def parse(String description) {
                     if (descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
                         def valueInt = Integer.parseInt(descMap['value'],16)
                         valueStr = valueInt == 0? "off": "on"
-                        if (infoEnable) log.info "${device.displayName}: Report received Switch: $valueInt ($valueStr)"
+                        if (infoEnable) log.info "${device.displayName} Report received: Switch=$valueInt ($valueStr)"
                         sendEvent(name:"switch", value: valueStr)
 						def currentLevel = device.currentValue("level")==null?0:device.currentValue("level").toInteger()
                         if (state.model?.substring(0,5)=="VZM35") { //FOR FAN ONLY 
@@ -1520,47 +1604,60 @@ def parse(String description) {
 								else if (currentLevel<=60)  newSpeed="medium"
 								else if (currentLevel<=80)  newSpeed="medium-high"
 								else if (currentLevel<=100) newSpeed="high"
-								}
-							else {
+							} else {
 								if      (currentLevel<=33)  newSpeed = "low"
 								else if (currentLevel<=66)  newSpeed = "medium"
 								else if (currentLevel<=100) newSpeed = "high"
 								}
                             if      (valueStr=="off")       newSpeed = "off"
                             else if (parameter258=="1")     newSpeed = "high"
-                            if (infoEnable) log.info "${device.displayName}: Report received Speed: ${newSpeed}"
+                            if (traceEnable||debugEnable) log.trace "${device.displayName} Report received: Speed=${newSpeed}"
                             sendEvent(name:"speed", value: "${newSpeed}")   
                         }
-                    }
-                    else if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN COMMAND(${descMap.command})")
+                    } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command ") + descMap
+                    break
+                case 0x4000:
+                    if (descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
+                        if (infoEnable) log.info "${device.displayName} Report received: Global Scene Control " + descMap
+                    } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command ") + descMap																									  
+                    break
+                case 0x4001:
+                    if (descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
+                        def valueInt = Integer.parseInt(descMap['value'],16)
+                        if (infoEnable) log.info "${device.displayName} Report received: On Time=${valueInt/10}s"
+                    } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command ") + descMap																									  
+                    break
+                case 0x4002:
+                    if (descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
+                        def valueInt = Integer.parseInt(descMap['value'],16)/10
+                        if (infoEnable) log.info "${device.displayName} Report received: Off Wait Time=${valueInt/10}s"
+                        state.powerOnState = valueStr
+                    } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command ") + descMap																									  
                     break
                 case 0x4003:
                     if (descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
                         def valueInt = Integer.parseInt(descMap['value'],16)
-                        valueStr = (valueInt==0?"Off":(valueInt==255?"Previous":"On")) 
-                        if (infoEnable) log.info "${device.displayName}: Report received Power-On State: $valueInt ($valueStr)"
+                        valueStr = (valueInt==0?"Off":(valueInt==1?"On":(valueInt==2?"Toggle":(valueInt==255?"Previous":"undefined"))))
+                        if (infoEnable) log.info "${device.displayName} Report received: Power-On State=$valueInt ($valueStr)"
                         state.powerOnState = valueStr
-                    }
-                    else if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN COMMAND(${descMap.command})")																										  
+                    } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command ") + descMap																									  
                     break
                 default:
                     if (descMap.profileId=="0000" && descMap.command=="00" && descMap.direction=="00") {
-                        if (traceEnable||debugEnable) log.info "${device.displayName}: " + 
+                        if (traceEnable||debugEnable) log.info "${device.displayName} " + 
 							fireBrick("MATCH DESCRIPTOR REQUEST Device:${descMap.data[2]}${descMap.data[1]} Profile:${descMap.data[4]}${descMap.data[3]} Cluster:${descMap.data[7]}${descMap.data[6]}")
-                    }
-                    else if (attrInt==null && descMap.command=="0B" && descMap.direction=="01") {
-                        if (parameter51.toInteger()>0) {    //not sure why the firmware sends these when there are no bindings
-                            if (descMap.data[0]=="00" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Switch OFF"
-                            if (descMap.data[0]=="01" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Switch ON"
-                            if (descMap.data[0]=="02" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Toggle"
+                    } else if (attrInt==null && descMap.command=="0B" && descMap.direction=="01") {
+                        if (settings?.parameter51) {    //not sure why the firmware sends these when there are no bindings
+                            if (descMap.data[0]=="00" && infoEnable) log.info "${device.displayName} Bind Command Sent: Switch OFF"
+                            if (descMap.data[0]=="01" && infoEnable) log.info "${device.displayName} Bind Command Sent: Switch ON"
+                            if (descMap.data[0]=="02" && infoEnable) log.info "${device.displayName} Bind Command Sent: Toggle"
                         }
-                    } 
-                    else if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN ATTRIBUTE:$attrInt DESCMAP:$descMap")
+                    } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Attribute ") + descMap
                     break
             }
             break
         case 0x0008:    //LEVEL CONTROL CLUSTER
-            if (traceEnable) log.trace "${device.displayName}: ${clusterName} (" +
+            if (traceEnable) log.trace "${device.displayName} ${clusterName} (" +
                                        "clusterId:${descMap.cluster?:descMap.clusterId}" +
                                        (descMap.attrId==null?"":" attrId:${descMap.attrId}") +
                                        (descMap.value==null?"":" value:${descMap.value}") +
@@ -1573,7 +1670,7 @@ def parse(String description) {
                         valueInt=Math.min(Math.max(valueInt.toInteger(),0),254)
                         def percentValue = convertByteToPercent(valueInt)
                         valueStr = percentValue.toString()+"%"
-                        if (infoEnable) log.info "${device.displayName}: Report received Level: $valueInt ($valueStr)"
+                        if (infoEnable) log.info "${device.displayName} Report received: Level=$valueInt ($valueStr)"
                         sendEvent(name:"level", value: percentValue, unit: "%")
 		                def newSpeed =""
                         if (state.model?.substring(0,5)=="VZM35") { //FOR FAN ONLY
@@ -1583,83 +1680,104 @@ def parse(String description) {
 								else if (percentValue<=60)  newSpeed="medium"
 								else if (percentValue<=80)  newSpeed="medium-high"
 								else if (percentValue<=100) newSpeed="high"
-								}
-							else {
+							} else {
 								if      (percentValue<=33)  newSpeed = "low"
 								else if (percentValue<=66)  newSpeed = "medium"
 								else if (percentValue<=100) newSpeed = "high"
 								}
                             if (device.currentValue("switch")=="off") newSpeed="off"
                             else if (parameter258=="1")               newSpeed="high"
-                            if (infoEnable) log.info "${device.displayName}: Report received Speed: ${newSpeed}"
+                            if (infoEnable) log.info "${device.displayName} Report received: Speed=${newSpeed}"
                             sendEvent(name:"speed", value: "${newSpeed}")   
                         }
-                    }
-                    else if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN COMMAND(${descMap.command})")
+                    } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command ") + descMap
 					break
                 case 0x0001:
                     if(descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
                         def valueInt = Integer.parseInt(descMap['value'],16)
-						if (infoEnable) log.info "${device.displayName}: Report received Remaining Time: ${valueInt/10}s"
-                    }
-                    else 
-                        if (infoEnable || debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN COMMAND(${descMap.command})")
+						if (infoEnable) log.info "${device.displayName} Report received: Remaining Time=${valueInt/10}s"
+                    } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command ") + descMap
+                    break
+                case 0x0002:
+                    if(descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
+                        def valueInt = Integer.parseInt(descMap['value'],16)
+						if (infoEnable) log.info "${device.displayName} Report received: Min Level=${valueInt}s"
+                    } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command ") + descMap
+                    break
+                case 0x0003:
+                    if(descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
+                        def valueInt = Integer.parseInt(descMap['value'],16)
+						if (infoEnable) log.info "${device.displayName} Report received: Max Level=${valueInt/10}s"
+                    } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command ") + descMap
                     break
 				case 0x000F:
                     if(descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
-                        def valueInt = Integer.parseInt(descMap['value'],8)
-                        if (infoEnable) log.info "${device.displayName}: Report received Level Control Options: 0x${zigbee.convertToHexString(valueInt,2)}"
-                    }
-                    else 
-                        if (infoEnable || debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN COMMAND(${descMap.command})")
+                        def valueInt = Integer.parseInt(descMap['value'],16)
+                        if (infoEnable) log.info "${device.displayName} Report received: Level Control Options: 0x${zigbee.convertToHexString(valueInt,2)}"
+                    } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command ") + descMap
                     break
                 case 0x0010:
                     if(descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
                         def valueInt = Integer.parseInt(descMap['value'],16)
-                        if (infoEnable) log.info "${device.displayName}: Report received On/Off Transition: ${valueInt/10}s"
+                        if (infoEnable) log.info "${device.displayName} Report received: On/Off Transition=${valueInt/10}s"
                         state.parameter3value = valueInt
                         device.updateSetting("parameter3",[value:"${valueInt}",type:configParams["parameter003"].type?.toString()])
-                    }
-                    else 
-                        if (infoEnable || debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN COMMAND(${descMap.command})")
+                    } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command ") + descMap
                     break
                 case 0x0011:
                     if (descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
                         def valueInt = Integer.parseInt(descMap['value'],16)
                         valueStr = (valueInt==255?"Previous":convertByteToPercent(valueInt).toString()+"%")
-                        if (infoEnable) log.info "${device.displayName}: Report received Remote-On Level: $valueInt ($valueStr)"
-                    }
-                    else if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN COMMAND(${descMap.command})")
+                        if (infoEnable) log.info "${device.displayName} Report received: Default On Level=$valueInt ($valueStr)"
+                    } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command ") + descMap
+                    break
+                case 0x0012:
+                    if(descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
+                        def valueInt = Integer.parseInt(descMap['value'],16)
+                        if (infoEnable) log.info "${device.displayName} Report received: On Transition=${valueInt/10}s"
+                        state.parameter3value = valueInt
+                        state.parameter4value = valueInt
+                        device.updateSetting("parameter3",[value:"${valueInt}",type:configParams["parameter003"].type?.toString()])
+                        device.updateSetting("parameter4",[value:"${valueInt}",type:configParams["parameter004"].type?.toString()])
+                    } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command ") + descMap
+                    break
+                case 0x0013:
+                    if(descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
+                        def valueInt = Integer.parseInt(descMap['value'],16)
+                        if (infoEnable) log.info "${device.displayName} Report received: Off Transition=${valueInt/10}s"
+                        state.parameter7value = valueInt
+                        state.parameter8value = valueInt
+                        device.updateSetting("parameter7",[value:"${valueInt}",type:configParams["parameter007"].type?.toString()])
+                        device.updateSetting("parameter8",[value:"${valueInt}",type:configParams["parameter008"].type?.toString()])
+                    } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command ") + descMap
                     break
                 case 0x4000:
                     if (descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
                         def valueInt = Integer.parseInt(descMap['value'],16)
                         valueStr = (valueInt==255?"Previous":convertByteToPercent(valueInt).toString()+"%")
-                        if (infoEnable) log.info "${device.displayName}: Report received Power-On Level: $valueInt ($valueStr)"
+                        if (infoEnable) log.info "${device.displayName} Report received: Power-On Level=$valueInt ($valueStr)"
                         state.parameter15value = convertByteToPercent(valueInt)
                         device.updateSetting("parameter15",[value:"${convertByteToPercent(valueInt)}",type:configParams["parameter015"].type?.toString()])
-                    }
-                    else if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN COMMAND(${descMap.command})")
+                    } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command ") + descMap
 					break
 				default:
                     if (attrInt==null && descMap.command=="0B" && descMap.direction=="01") {
-                        if (parameter51.toInteger()>0) {    //not sure why the firmware sends these when there are no bindings
-                            if (descMap.data[0]=="00" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Move To Level ${descMap.data}"
-                            if (descMap.data[0]=="01" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Move Up/Down ${descMap.data}"
-                            if (descMap.data[0]=="02" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Step ${descMap.data}"
-                            if (descMap.data[0]=="03" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Stop Level Change ${descMap.data}"
-                            if (descMap.data[0]=="04" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Move To Level (with On/Off) ${descMap.data}"
-                            if (descMap.data[0]=="05" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Move Up/Down (with On/Off) ${descMap.data}"
-                            if (descMap.data[0]=="06" && infoEnable) log.info "${device.displayName}: Bind Command Sent: Step (with On/Off) ${descMap.data}"
+                        if (parameter51) {    //not sure why the firmware sends these when there are no bindings
+                            if (descMap.data[0]=="00" && infoEnable) log.info "${device.displayName} Bind Command Sent: Move To Level"
+                            if (descMap.data[0]=="01" && infoEnable) log.info "${device.displayName} Bind Command Sent: Move Up/Down"
+                            if (descMap.data[0]=="02" && infoEnable) log.info "${device.displayName} Bind Command Sent: Step"
+                            if (descMap.data[0]=="03" && infoEnable) log.info "${device.displayName} Bind Command Sent: Stop Level Change"
+                            if (descMap.data[0]=="04" && infoEnable) log.info "${device.displayName} Bind Command Sent: Move To Level (with On/Off)"
+                            if (descMap.data[0]=="05" && infoEnable) log.info "${device.displayName} Bind Command Sent: Move Up/Down (with On/Off)"
+                            if (descMap.data[0]=="06" && infoEnable) log.info "${device.displayName} Bind Command Sent: Step (with On/Off)"
                         }
-                    }
-                    else if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN ATTRIBUTE:$attrInt DESCMAP:$descMap")
+                    } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Attribute ") + descMap
 					break
 			}
 			break
         case 0x0013:    //ALEXA CLUSTER
-            if (infoEnable||debugEnable) log.info "${device.displayName}: "+darkOrange("Alexa Heartbeat")
-            if (traceEnable) log.trace "${device.displayName}: ${clusterName} (" +
+            if (infoEnable||debugEnable) log.info "${device.displayName} " + darkOrange("Alexa Heartbeat ") + (debugEnable?descMap:"")
+            if (infoEnable||traceEnable||debugEnable) log.trace "${device.displayName} ${clusterName} (" +
                                        "clusterId:${descMap.cluster?:descMap.clusterId}" +
                                        (descMap.attrId==null?"":" attrId:${descMap.attrId}") +
                                        (descMap.value==null?"":" value:${descMap.value}") +
@@ -1667,8 +1785,8 @@ def parse(String description) {
                                        ")"
             break
         case 0x0019:    //OTA CLUSTER
-            if (infoEnable||debugEnable) log.info "${device.displayName}: "+darkOrange("OTA CLUSTER")
-            if (traceEnable) log.trace "${device.displayName}: ${clusterName} (" +
+            if (infoEnable||debugEnable) log.info "${device.displayName} "+darkOrange("OTA Cluster ") + (debugEnable?descMap:"")
+            if (infoEnable||traceEnable||debugEnable) log.trace "${device.displayName} ${clusterName} (" +
                                        "clusterId:${descMap.cluster?:descMap.clusterId}" +
                                        (descMap.attrId==null?"":" attrId:${descMap.attrId}") +
                                        (descMap.value==null?"":" value:${descMap.value}") +
@@ -1676,21 +1794,30 @@ def parse(String description) {
                                        ")"
             switch (attrInt) {
                 case 0x0000:
-                    if (infoEnable) log.info "${device.displayName}: Report received Server ID: $valueStr"
+                    if (infoEnable) log.info "${device.displayName} Report received: Server ID=$valueStr"
                     break
                 case 0x0001:
-                    if (infoEnable) log.info "${device.displayName}: Report received File Offset: $valueStr"
+                    if (infoEnable) log.info "${device.displayName} Report received: File Offset=$valueStr"
                     break
                 case 0x0006:
-                    if (infoEnable) log.info "${device.displayName}: Report received Upgrade Status: $valueStr"
+                    if (infoEnable) log.info "${device.displayName} Report received: Upgrade Status=$valueStr"
                     break
                 default:
-                    if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN ATTRIBUTE:$attrInt DESCMAP:$descMap")
+                    log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Attribute ") + descMap
                     break
             }
             break
+        case 0x0300:    //COLOR CONTROL CLUSTER
+            if (infoEnable||debugEnable) log.info "${device.displayName} " + darkOrange("Color Control Cluster ") + (debugEnable?descMap:"")
+            if (infoEnable||traceEnable||debugEnable) log.trace "${device.displayName} ${clusterName} (" +
+                                       "clusterId:${descMap.cluster?:descMap.clusterId}" +
+                                       (descMap.attrId==null?"":" attrId:${descMap.attrId}") +
+                                       (descMap.value==null?"":" value:${descMap.value}") +
+                                       (zigbee.getEvent(description)==[:]?(descMap.data==null?"":" data:${descMap.data}"):(" ${zigbee.getEvent(description)}")) + 
+                                       ")"
+            break
         case 0x0702:    //SIMPLE METERING CLUSTER
-            if (traceEnable) log.trace "${device.displayName}: ${clusterName} (" +
+            if (traceEnable) log.trace "${device.displayName} ${clusterName} (" +
                                        "clusterId:${descMap.cluster?:descMap.clusterId}" +
                                        (descMap.attrId==null?"":" attrId:${descMap.attrId}") +
                                        (descMap.value==null?"":" value:${descMap.value}") +
@@ -1702,18 +1829,17 @@ def parse(String description) {
                         def valueInt = Integer.parseInt(descMap['value'],16)
                         float energy
                         energy = valueInt/100
-                        if (infoEnable) log.info "${device.displayName}: Report received Energy: ${energy}kWh"
+                        if (infoEnable) log.info "${device.displayName} Report received: Energy=${energy}kWh"
                         sendEvent(name:"energy",value:energy ,unit: "kWh")
-                    }
-                    else if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN COMMAND(${descMap.command})")		  													  
+                    } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command ") + descMap		  													  
                     break
                 default:
-                    if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN ATTRIBUTE:$attrInt DESCMAP:$descMap")
+                    log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Attribute ") + descMap
                     break
             }
             break
         case 0x0B04:    //ELECTRICAL MEASUREMENT CLUSTER
-            if (traceEnable) log.trace "${device.displayName}: ${clusterName} (" +
+            if (traceEnable) log.trace "${device.displayName} ${clusterName} (" +
                                        "clusterId:${descMap.cluster?:descMap.clusterId}" +
                                        (descMap.attrId==null?"":" attrId:${descMap.attrId}") +
                                        (descMap.value==null?"":" value:${descMap.value}") +
@@ -1725,29 +1851,27 @@ def parse(String description) {
                         def valueInt = Integer.parseInt(descMap['value'],16)
                         float amps
                         amps = valueInt/100
-                        if (infoEnable) log.info "${device.displayName}: Report received Amps: ${amps}A"
+                        if (infoEnable) log.info "${device.displayName} Report received: Amps=${amps}A"
                         sendEvent(name:"amps",value:amps ,unit: "A")
-                    }
-                    else if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN COMMAND(${descMap.command})")
+                    } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command ") + descMap
                     break
                 case 0x050b:
                     if (descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
                         def valueInt = Integer.parseInt(descMap['value'],16)
                         float power 
                         power = valueInt/10
-                        if (infoEnable) log.info "${device.displayName}: Report received Power: ${power}W"
+                        if (infoEnable) log.info "${device.displayName} Report received: Power=${power}W"
                         sendEvent(name: "power", value: power, unit: "W")
-                    }
-                    else if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN COMMAND(${descMap.command})")				  																																	  
+                    } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command ") + descMap				  																																	  
                     break
                 default:
-                    if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN ATTRIBUTE:$attrInt DESCMAP:$descMap")
+                    log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Attribute ") + descMap
                     break
             }
             break
         case 0x8021:    //BINDING CLUSTER
-            if (infoEnable||debugEnable) log.info "${device.displayName}: "+darkOrange("Binding Cluster")
-            if (traceEnable) log.trace "${device.displayName}: ${clusterName} (" +
+            if (infoEnable||debugEnable) log.info "${device.displayName} " + darkOrange("Binding Cluster ") + (debugEnable?descMap:"")
+            if (traceEnable) log.trace "${device.displayName} ${clusterName} (" +
                                        "clusterId:${descMap.cluster?:descMap.clusterId}" +
                                        (descMap.attrId==null?"":" attrId:${descMap.attrId}") +
                                        (descMap.value==null?"":" value:${descMap.value}") +
@@ -1755,8 +1879,8 @@ def parse(String description) {
                                        ")"
             break
         case 0x8022:    //UNBINDING CLUSTER
-            if (infoEnable||debugEnable) log.info "${device.displayName}: "+darkOrange("UNBinding Cluster")
-            if (traceEnable) log.trace "${device.displayName}: ${clusterName} (" +
+            if (infoEnable||debugEnable) log.info "${device.displayName} "+darkOrange("UNBinding Cluster ") + (debugEnable?descMap:"")
+            if (traceEnable) log.trace "${device.displayName} ${clusterName} (" +
                                        "clusterId:${descMap.cluster?:descMap.clusterId}" +
                                        (descMap.attrId==null?"":" attrId:${descMap.attrId}") +
                                        (descMap.value==null?"":" value:${descMap.value}") +
@@ -1764,8 +1888,8 @@ def parse(String description) {
                                        ")"
             break
         case 0x8032:    //ROUTING TABLE CLUSTER
-            if (infoEnable||debugEnable) log.info "${device.displayName}: "+darkOrange("Routing Table Cluster")
-            if (traceEnable) log.trace "${device.displayName}: ${clusterName} (" +
+            if (infoEnable||debugEnable) log.info "${device.displayName} "+darkOrange("Routing Table Cluster ") + (debugEnable?descMap:"")
+            if (infoEnable||traceEnable||debugEnable) log.trace "${device.displayName} ${clusterName} (" +
                                        "clusterId:${descMap.cluster?:descMap.clusterId}" +
                                        (descMap.attrId==null?"":" attrId:${descMap.attrId}") +
                                        (descMap.value==null?"":" value:${descMap.value}") +
@@ -1773,8 +1897,8 @@ def parse(String description) {
                                        ")"
             break
         case 0xfc31:    //PRIVATE CLUSTER
-            if (traceEnable) log.trace "${device.displayName}: ${clusterName} (" +
-                                       //"clusterId:${descMap.cluster?:descMap.clusterId}" +
+            if (traceEnable) log.trace "${device.displayName} ${clusterName} (" +
+                                       "clusterId:${descMap.cluster?:descMap.clusterId}" +
                                        (descMap.attrId==null?"":" attrId:${descMap.attrId}") +
                                        (descMap.value==null?"":" value:${descMap.value}") +
                                        (zigbee.getEvent(description)==[:]?(descMap.data==null?"":" data:${descMap.data}"):(" ${zigbee.getEvent(description)}")) + 
@@ -1782,17 +1906,19 @@ def parse(String description) {
             if (attrInt == null) {
                 if (descMap.isClusterSpecific) {
                     if (descMap.command == "00") ZigbeePrivateCommandEvent(descMap.data)        //Button Events
-                    if (descMap.command == "04") BindSource()                                	//Start Binding
+                    if (descMap.command == "04") bindInitiator()                                //Start Binding
                     if (descMap.command == "24") ZigbeePrivateLEDeffectStopEvent(descMap.data)  //LED start/stop events
                 }
-            } 
-            else if (descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
+            } else if (descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
                 def valueInt = Integer.parseInt(descMap['value'],16)
 				def valueHex = intTo32bitUnsignedHex(valueInt)
-				def infoDev = "${device.displayName}: "
+				def infoDev = "${device.displayName} "
 				def infoTxt = "Receive parameter ${attrInt} value ${valueInt}"
 				def infoMsg = infoDev + infoTxt
                 switch (attrInt){
+                    case 0:
+                        infoMsg += " (temporarily saved current level ${convertByteToPercent(valueInt)}%)"
+                        break
                     case 1:
                         infoMsg += " (Remote Dim Rate Up: " + (valueInt<127?((valueInt/10).toString()+"s)"):"default)")
                         break
@@ -1852,22 +1978,22 @@ def parse(String description) {
                         infoMsg += " (Active Energy Report " + (valueInt==0?red(" disabled"):" ${valueInt/100}kWh change") + ")"
                         break
                     case 21:    //Power Source
-                        infoMsg = infoDev + green(infoTxt + (valueInt==0?" (Non-Neutral)":" (Neutral)"))
+                        infoMsg = infoDev + darkGreen(infoTxt) + (valueInt==0?red(" (Non-Neutral)"):limeGreen(" (Neutral)"))
 						state.powerSource = valueInt==0?"Non-Neutral":"Neutral"
                         break
                     case 22:    //Aux Type
                         switch (state.model?.substring(0,5)){
 							case "VZM31":    //Blue 2-in-1 Dimmer
                             case "VZW31":    //Red  2-in-1 Dimmer
-                                infoMsg = infoDev + crimson(infoTxt + " " + (valueInt==0?"(No Aux)":(valueInt==1?"(Dumb 3-way)":(valueInt==2?"(Smart Aux)":(valueInt==3?"(No Aux Full Wave)":"(unknown type)")))))
-								state.auxType =                         (valueInt==0? "No Aux": (valueInt==1? "Dumb 3-way": (valueInt==2? "Smart Aux": (valueInt==3? "No Aux Full Wave":  "unknown type $valueInt"))))
+                                infoMsg = infoDev + indianRed(infoTxt + " " + (valueInt==0?"(No Aux)":(valueInt==1?"(Dumb 3-way)":(valueInt==2?"(Smart Aux)":(valueInt==3?"(No Aux Full Wave)":"(unknown type)")))))
+								state.auxType =                         	  (valueInt==0? "No Aux": (valueInt==1? "Dumb 3-way": (valueInt==2? "Smart Aux": (valueInt==3? "No Aux Full Wave":  "unknown type $valueInt"))))
                                 break
                             case "VZM35":    //Fan Switch
-                                infoMsg = infoDev + crimson(infoTxt + " " + (valueInt==0?"(No Aux)":"(Smart Aux)"))
+                                infoMsg = infoDev + indianRed(infoTxt + " " + (valueInt==0?"(No Aux)":"(Smart Aux)"))
                                 state.auxType =                          valueInt==0? "No Aux":  "Smart Aux"
                                 break
                             default:
-                                infoMsg = infoDev + crimson(infoTxt + " unknown model $state.model")
+                                infoMsg = infoDev + indianRed(infoTxt + " unknown model $state.model")
                                 state.auxType = "unknown model ${state.model}"
                                 break
                         }
@@ -1879,29 +2005,29 @@ def parse(String description) {
                             infoMsg += " (Quick Start " + (valueInt==0?red("disabled"):"${valueInt} seconds") + ")"
                         break
                     case 25:    //Higher Output in non-Neutral
-                        infoMsg += " (non-Neutral High Output " + (valueInt==0?red("disabled"):green("enabled")) + ")"
+                        infoMsg += " (non-Neutral High Output " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
                         break
                     case 50:    //Button Press Delay
                         infoMsg += " (${valueInt*100}ms Button Delay)"
                         break
                     case 51:    //Device Bind Number
-                        infoMsg = infoDev + green(infoTxt + " (Bindings)")
+                        infoMsg = infoDev + darkGreen(infoTxt + " (Bindings)")
                         sendEvent(name:"numberOfBindings", value:valueInt)
                         break
                     case 52:    //Smart Bulb/Fan Mode
-                        if (state.model?.substring(0,5)=="VZM35") { //FOR FAN ONLY 
-                            infoMsg = infoDev + crimson(infoTxt) + (valueInt==0?red(" (SFM disabled)"):green(" (SFM enabled)"))
+                        if (state.model?.substring(0,5)=="VZM35") { //FOR FAN ONLY
+                            infoMsg = infoDev + indianRed(infoTxt) + (valueInt==0?red(" (SFM disabled)"):limeGreen(" (SFM enabled)"))
                             sendEvent(name:"smartFan", value:valueInt==0?"Disabled":"Enabled")
 						} else { 
-                            infoMsg = infoDev + crimson(infoTxt) + (valueInt==0?red(" (SBM disabled)"):green(" (SBM enabled)"))
+                            infoMsg = infoDev + indianRed(infoTxt) + (valueInt==0?red(" (SBM disabled)"):limeGreen(" (SBM enabled)"))
                             sendEvent(name:"smartBulb", value:valueInt==0?"Disabled":"Enabled")
 						}
                         break
                     case 53:  //Double-Tap UP
-                        infoMsg += " (Double-Tap Up " + (valueInt==0?red("disabled"):green("enabled")) + ")"
+                        infoMsg += " (Double-Tap Up " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
                         break
                     case 54:  //Double-Tap DOWN
-                        infoMsg += " (Double-Tap Down " + (valueInt==0?red("disabled"):green("enabled")) + ")"
+                        infoMsg += " (Double-Tap Down " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
                         break
                     case 55:  //Double-Tap UP level
                         infoMsg += " (Double-Tap Up level ${convertByteToPercent(valueInt)}%)"
@@ -1939,33 +2065,33 @@ def parse(String description) {
                         infoMsg += " (LED Scaling " + (valueInt==0?blue("VZM-style"):red("LZW-style")) + ")"
 						break
 					case 123:	//Aux Switch Scenes
-                        infoMsg += " (Aux Scenes " + (valueInt==0?red("disabled"):green("enabled")) + ")"
+                        infoMsg += " (Aux Scenes " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
 						break
 					case 125:	//Binding Off-to-On Sync Level
-                        infoMsg += " (Send Level with Binding Off/On " + (valueInt==0?red("disabled"):green("enabled")) + ")"
+                        infoMsg += " (Send Level with Binding Off/On " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
 						break
                     case 156:    //Local Protection
 					case 256:
-                        infoMsg += " (Local Control " + (valueInt==0?green("enabled"):red("disabled")) + ")"
+                        infoMsg += " (Local Control " + (valueInt==0?limeGreen("enabled"):red("disabled")) + ")"
                         break
                     case 157:    //Remote Protection
 					case 257:
-                        infoMsg = infoDev + green(infoTxt) + green(" (Remote Control ") + (valueInt==0?green("enabled"):red("disabled")) + ")"
+                        infoMsg = infoDev + darkGreen("$infoTxt (Remote Control ") + (valueInt==0?limeGreen("enabled"):red("disabled")) + darkGreen(")")
                         break
                     case 158:    //Switch Mode
 					case 258:
                         switch (state.model?.substring(0,5)){
                             case "VZM31":    //Blue 2-in-1 Dimmer
                             case "VZW31":    //Red  2-in-1 Dimmer
-                                infoMsg = infoDev + crimson(infoTxt + " " + (valueInt==0?"(Dimmer mode)":"(On/Off mode)"))
+                                infoMsg = infoDev + indianRed(infoTxt + " " + (valueInt==0?"(Dimmer mode)":"(On/Off mode)"))
                                 sendEvent(name:"switchMode", value:valueInt==0?"Dimmer":"On/Off")
                                 break
                             case "VZM35":    //Fan Switch
-								infoMsg = infoDev + crimson(infoTxt + " " + (valueInt==0?"(Multi-Speed mode)":"(On/Off mode)"))
+								infoMsg = infoDev + indianRed(infoTxt + " " + (valueInt==0?"(Multi-Speed mode)":"(On/Off mode)"))
 								sendEvent(name:"switchMode", value:valueInt==0?"Multi-Speed":"On/Off")
 								break
                             default:
-                                infoMsg = infoDev + crimson(infoTxt + " unknown model $state.model")
+                                infoMsg = infoDev + indianRed(infoTxt + " unknown model $state.model")
                                 sendEvent(name:"switchMode", value:"unknown model")
                                 break
                         }
@@ -1976,15 +2102,15 @@ def parse(String description) {
                         break
 					case 160:    //Firmware Update Indicator
                     case 260:
-                        infoMsg += " (Firmware Update Indicator " + (valueInt==0?red("disabled"):green("enabled")) + ")"
+                        infoMsg += " (Firmware Update Indicator " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
                         break
 					case 161:    //Relay Click
                     case 261:
-                        infoMsg += " (Relay Click " + (valueInt==0?green("enabled"):red("disabled")) + ")"
+                        infoMsg += " (Relay Click " + (valueInt==0?limeGreen("enabled"):red("disabled")) + ")"
                         break
 					case 162:    //Double-Tap config button to clear notification
                     case 262:
-                        infoMsg += " (Double-Tap config button " + (valueInt==0?green("enabled"):red("disabled")) + ")"
+                        infoMsg += " (Double-Tap config button " + (valueInt==0?limeGreen("enabled"):red("disabled")) + ")"
                         break
 					case 163:    //LED bar display levels
                     case 263:
@@ -1995,14 +2121,14 @@ def parse(String description) {
                         break
                 }
                 if (infoEnable) log.info infoMsg
-                state."parameter${attrInt}value" = valueInt  //update state variable with value received from device
                 if ((attrInt==9)
 				|| (attrInt==10)
 				|| (attrInt==13)
 				|| (attrInt==14)
 				|| (attrInt==15)
 				|| (attrInt==55)
-				|| (attrInt==56)) valueInt = convertByteToPercent(valueInt)    //these attributes are stored as bytes but presented as percentages
+				|| (attrInt==56)) valueInt = convertByteToPercent(valueInt) //these attributes are stored as bytes but presented as percentages
+                state."parameter${attrInt}value" = valueInt                 //update state variable with value received from device
                 if (attrInt>0) device.updateSetting("parameter${attrInt}",[value:"${valueInt}",type:configParams["parameter${attrInt.toString().padLeft(3,"0")}"].type?.toString()]) //update local setting with value received from device  
                 if ((attrInt==95 && parameter95custom!=null)||(attrInt==96 && parameter96custom!=null)) {   //if custom hue was set, update the custom state variable also
                     device.updateSetting("parameter${attrInt}custom",[value:"${Math.round(valueInt/255*360)}",type:configParams["parameter${attrInt.toString().padLeft(3,"0")}"].type?.toString()])
@@ -2024,44 +2150,46 @@ def parse(String description) {
 							}
 						}
 					}
-					if (traceEnable||debugEnable) log.trace "${device.displayName}: Dimming Method = ${state.dimmingMethod}"
+					if (traceEnable||debugEnable) log.trace "${device.displayName} Dimming Method = ${state.dimmingMethod}"
 				}
-                if ((valueInt==configParams["parameter${attrInt.toString()?.padLeft(3,"0")}"]?.default?.toInteger())             //IF  setting is the default
-                && (attrInt!=21)&&(attrInt!=22)&&(attrInt!=51)&&(attrInt!=52)&&(attrInt!=257)&&(attrInt!=158)&&(attrInt!=258)) { //AND not read-only or primary config params
-                    device.clearSetting("parameter${attrInt}")                                                                   //THEN clear the setting (so only changed settings are displayed)
-                    if (traceEnable||debugEnable) log.trace "${device.displayName}: parse() cleared parameter${attrInt} since it is the default"
+                if ((valueInt==configParams["parameter${attrInt.toString()?.padLeft(3,"0")}"]?.default?.toInteger())             				 //IF  setting is the default
+                && (attrInt!=21)&&(attrInt!=22)&&(attrInt!=51)&&(attrInt!=52)&&(attrInt!=157&&(attrInt!=257)&&(attrInt!=158)&&(attrInt!=258))) { //AND not read-only or primary config params
+                    device.clearSetting("parameter${attrInt}")                                                                   				 //THEN clear the setting (so only changed settings are displayed)
+                    if (traceEnable||debugEnable) log.trace "${device.displayName} parse() cleared parameter${attrInt} since it is the default"
                 }
             }
-            else if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("${clusterName} UNKNOWN COMMAND(${descMap.command})" + (debugEnable?" ${zigbee.getEvent(description)}":""))
+            else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command ") + descMap
             break
         default:
-            if (infoEnable||debugEnable) log.warn "${device.displayName}: "+fireBrick("UNKNOWN CLUSTER($clusterHex)  $descMap ${zigbee.getEvent(description)}")
+            log.warn "${device.displayName} " + fireBrick("Unknown Cluster($clusterName)  ") + descMap
 			break
     }
     state.lastEventReceived =  clusterName
     state.lastEventTime =      nowFormatted()
     state.lastEventAttribute = attrInt
     state.lastEventValue =     descMap.value
+    return
 }
-
-def ping() {
-    if (infoEnable) log.info "${device.displayName}: ping()"
-    refresh()
-}
-
-def poll() {
-    if (infoEnable) log.info "${device.displayName}: poll()"
-    refresh()
-}
+// pretty sure these are not used.  comment out for now, to be removed later if no issues
+//def ping() {
+//    if (infoEnable) log.info "${device.displayName} ping()"
+//    refresh()
+//}
+//
+//def poll() {
+//    if (infoEnable) log.info "${device.displayName} poll()"
+//    refresh()
+//}
 
 def presetLevel(value) {
-    if (infoEnable) log.info "${device.displayName}: presetLevel(${value})"
-    state.lastCommandSent =                         "presetLevel(${value})"
+    if (infoEnable) log.info "${device.displayName} presetLevel(${value})"
+    state.lastCommandSent =                        "presetLevel(${value})"
     state.lastCommandTime = nowFormatted()
     def cmds = []
     Integer scaledValue = value==null?null:Math.min(Math.max(convertPercentToByte(value.toInteger()),1),255)  //ZigBee levels range from 0x01-0xfe with 00 and ff = 'use previous'
     cmds += setParameter(13, scaledValue)
-    if (traceEnable) log.trace "${device.displayName}: preset $cmds"
+    cmds += setParameter(14, scaledValue)
+    if (traceEnable) log.trace "${device.displayName} preset $cmds"
     return cmds
 }
 
@@ -2070,11 +2198,11 @@ def quickStart() {
 	def startLevel = device.currentValue("level").toInteger()
 	def cmds= []
 	if (settings.parameter23?.toInteger()>0 ) {          //only do quickStart if enabled
-		if (infoEnable) log.info "${device.displayName}: quickStart(" + (state.model?.substring(0,5)!="VZM35"?"${settings.parameter23}%)":"${settings.parameter23}s)")
+		if (infoEnable) log.info "${device.displayName} quickStart(" + (state.model?.substring(0,5)!="VZM35"?"${settings.parameter23}%)":"${settings.parameter23}s)")
 		if (state.model?.substring(0,5)!="VZM35") {      //IF not the Fan switch THEN emulate quickStart 
 			if (startLevel<state.parameter23value) cmds += zigbee.setLevel(state.parameter23value?.toInteger(),0,34)  //only do quickStart if currentLevel is < Quick Start Level (34ms is two sinewave cycles)
 			cmds += zigbee.setLevel(startLevel.toInteger(),0,longDelay) 
-			if (traceEnable) log.trace "${device.displayName}: quickStart $cmds"
+			if (traceEnable) log.trace "${device.displayName} quickStart $cmds"
 		}
 	}
     return cmds
@@ -2087,29 +2215,37 @@ def quickStartVariables() {
         //state.parameter23level = Math.round((settings.parameter23level?:defaultQuickLevel).toFloat())
     }
 }
-  
+
 def refresh(option) {
     option = (option==null||option==" ")?"":option
-    if (infoEnable) log.info "${device.displayName}: refresh(${option})"
-    state.lastCommandSent =                         "refresh(${option})"
+    if (infoEnable) log.info "${device.displayName} refresh(${option})"
+    state.lastCommandSent =                        "refresh(${option})"
     state.lastCommandTime = nowFormatted()
     state.driverDate = getDriverDate()
 	state.model = device.getDataValue('model')
-    if (infoEnable||traceEnable||debugEnable) log.info "${device.displayName}: Driver Date $state.driverDate"
+    if (infoEnable||traceEnable||debugEnable) log.info "${device.displayName} Driver Date $state.driverDate"
     def cmds = []
 //  cmds += zigbee.readAttribute(0x0000, 0x0000, [:], defaultDelay)    //CLUSTER_BASIC ZCL Version
 //  cmds += zigbee.readAttribute(0x0000, 0x0001, [:], defaultDelay)    //CLUSTER_BASIC Application Version
-//  cmds += zigbee.readAttribute(0x0000, 0x0002, [:], defaultDelay)    //CLUSTER_BASIC 
-//  cmds += zigbee.readAttribute(0x0000, 0x0003, [:], defaultDelay)    //CLUSTER_BASIC 
-//  cmds += zigbee.readAttribute(0x0000, 0x0004, [:], defaultDelay)    //CLUSTER_BASIC Mfg
+//  cmds += zigbee.readAttribute(0x0000, 0x0002, [:], defaultDelay)    //CLUSTER_BASIC Stack Version
+//  cmds += zigbee.readAttribute(0x0000, 0x0003, [:], defaultDelay)    //CLUSTER_BASIC HW Version
+//  cmds += zigbee.readAttribute(0x0000, 0x0004, [:], defaultDelay)    //CLUSTER_BASIC Manufacturer Name
     cmds += zigbee.readAttribute(0x0000, 0x0005, [:], defaultDelay)    //CLUSTER_BASIC Model
     cmds += zigbee.readAttribute(0x0000, 0x0006, [:], defaultDelay)    //CLUSTER_BASIC SW Date Code
     cmds += zigbee.readAttribute(0x0000, 0x0007, [:], defaultDelay)    //CLUSTER_BASIC Power Source
-//  cmds += zigbee.readAttribute(0x0000, 0x0008, [:], defaultDelay)    //CLUSTER_BASIC dev class
-//  cmds += zigbee.readAttribute(0x0000, 0x0009, [:], defaultDelay)    //CLUSTER_BASIC dev type
-//  cmds += zigbee.readAttribute(0x0000, 0x000A, [:], defaultDelay)    //CLUSTER_BASIC prod code
-//  cmds += zigbee.readAttribute(0x0000, 0x000B, [:], defaultDelay)    //CLUSTER_BASIC prod url
-    cmds += zigbee.readAttribute(0x0000, 0x4000, [:], defaultDelay)    //CLUSTER_BASIC SW Build ID
+//  cmds += zigbee.readAttribute(0x0000, 0x0008, [:], defaultDelay)    //CLUSTER_BASIC GenericDevice-Class
+//  cmds += zigbee.readAttribute(0x0000, 0x0009, [:], defaultDelay)    //CLUSTER_BASIC GenericDevice-Type
+//  cmds += zigbee.readAttribute(0x0000, 0x000A, [:], defaultDelay)    //CLUSTER_BASIC ProductCode
+//  cmds += zigbee.readAttribute(0x0000, 0x000B, [:], defaultDelay)    //CLUSTER_BASIC ProductURL
+//  cmds += zigbee.readAttribute(0x0000, 0x000C, [:], defaultDelay)    //CLUSTER_BASIC ManufacturerVersionDetails
+//  cmds += zigbee.readAttribute(0x0000, 0x000D, [:], defaultDelay)    //CLUSTER_BASIC SerialNumber
+//  cmds += zigbee.readAttribute(0x0000, 0x000E, [:], defaultDelay)    //CLUSTER_BASIC ProductLabel
+//  cmds += zigbee.readAttribute(0x0000, 0x0010, [:], defaultDelay)    //CLUSTER_BASIC LocationDescription
+//  cmds += zigbee.readAttribute(0x0000, 0x0011, [:], defaultDelay)    //CLUSTER_BASIC PhysicalEnvironment
+//  cmds += zigbee.readAttribute(0x0000, 0x0012, [:], defaultDelay)    //CLUSTER_BASIC DeviceEnabled
+//  cmds += zigbee.readAttribute(0x0000, 0x0013, [:], defaultDelay)    //CLUSTER_BASIC AlarmMask
+//  cmds += zigbee.readAttribute(0x0000, 0x0014, [:], defaultDelay)    //CLUSTER_BASIC DisableLocalConfig
+    cmds += zigbee.readAttribute(0x0000, 0x4000, [:], defaultDelay)    //CLUSTER_BASIC SWBuildID
 //  cmds += zigbee.readAttribute(0x0003, 0x0000, [:], defaultDelay)    //CLUSTER_IDENTIFY Identify Time
 //  cmds += zigbee.readAttribute(0x0004, 0x0000, [:], defaultDelay)    //CLUSTER_GROUP Name Support
 //  cmds += zigbee.readAttribute(0x0005, 0x0000, [:], defaultDelay)    //CLUSTER_SCENES Scene Count
@@ -2117,18 +2253,40 @@ def refresh(option) {
 //  cmds += zigbee.readAttribute(0x0005, 0x0002, [:], defaultDelay)    //CLUSTER_SCENES Current Group
 //  cmds += zigbee.readAttribute(0x0005, 0x0003, [:], defaultDelay)    //CLUSTER_SCENES Scene Valid
 //  cmds += zigbee.readAttribute(0x0005, 0x0004, [:], defaultDelay)    //CLUSTER_SCENES Name Support
+//  cmds += zigbee.readAttribute(0x0005, 0x0005, [:], defaultDelay)    //CLUSTER_SCENES LastConfiguredBy
     cmds += zigbee.readAttribute(0x0006, 0x0000, [:], defaultDelay)    //CLUSTER_ON_OFF Current OnOff state
+//  cmds += zigbee.readAttribute(0x0006, 0x4000, [:], defaultDelay)    //CLUSTER_ON_OFF GlobalSceneControl
+//  cmds += zigbee.readAttribute(0x0006, 0x4001, [:], defaultDelay)    //CLUSTER_ON_OFF OnTime
+//  cmds += zigbee.readAttribute(0x0006, 0x4002, [:], defaultDelay)    //CLUSTER_ON_OFF OffWaitTime
     cmds += zigbee.readAttribute(0x0006, 0x4003, [:], defaultDelay)    //CLUSTER_ON_OFF Startup OnOff state
-    cmds += zigbee.readAttribute(0x0008, 0x0000, [:], defaultDelay)    //CLUSTER_LEVEL_CONTROL Current Level
-//  cmds += zigbee.readAttribute(0x0008, 0x0001, [:], defaultDelay)    //CLUSTER_LEVEL_CONTROL Remaining Time
+    cmds += zigbee.readAttribute(0x0008, 0x0000, [:], defaultDelay)    //CLUSTER_LEVEL_CONTROL CurrentLevel
+//  cmds += zigbee.readAttribute(0x0008, 0x0001, [:], defaultDelay)    //CLUSTER_LEVEL_CONTROL RemainingTime
+//  cmds += zigbee.readAttribute(0x0008, 0x0002, [:], defaultDelay)    //CLUSTER_LEVEL_CONTROL MinLevel
+//  cmds += zigbee.readAttribute(0x0008, 0x0003, [:], defaultDelay)    //CLUSTER_LEVEL_CONTROL MaxLevel
+//  cmds += zigbee.readAttribute(0x0008, 0x0004, [:], defaultDelay)    //CLUSTER_LEVEL_CONTROL CurrentFrequency
+//  cmds += zigbee.readAttribute(0x0008, 0x0005, [:], defaultDelay)    //CLUSTER_LEVEL_CONTROL MinFrequency
+//  cmds += zigbee.readAttribute(0x0008, 0x0006, [:], defaultDelay)    //CLUSTER_LEVEL_CONTROL MaxFrequency
 //  cmds += zigbee.readAttribute(0x0008, 0x000F, [:], defaultDelay)    //CLUSTER_LEVEL_CONTROL Options
     if (state.model?.substring(0,5)!="VZM35")  //Fan does not support on_off transition time
       cmds += zigbee.readAttribute(0x0008, 0x0010, [:], defaultDelay)    //CLUSTER_LEVEL_CONTROL OnOff Transition Time
-    cmds += zigbee.readAttribute(0x0008, 0x0011, [:], defaultDelay)    //CLUSTER_LEVEL_CONTROL Default Remote On Level
-    cmds += zigbee.readAttribute(0x0008, 0x4000, [:], defaultDelay)    //CLUSTER_LEVEL_CONTROL Startup Level
+    cmds += zigbee.readAttribute(0x0008, 0x0011, [:], defaultDelay)    //CLUSTER_LEVEL_CONTROL OnLevel
+//  cmds += zigbee.readAttribute(0x0008, 0x0012, [:], defaultDelay)    //CLUSTER_LEVEL_CONTROL OnTransitionTime
+//  cmds += zigbee.readAttribute(0x0008, 0x0013, [:], defaultDelay)    //CLUSTER_LEVEL_CONTROL OffTransitionTime
+//  cmds += zigbee.readAttribute(0x0008, 0x0014, [:], defaultDelay)    //CLUSTER_LEVEL_CONTROL DefaultMoveRate
+    cmds += zigbee.readAttribute(0x0008, 0x4000, [:], defaultDelay)    //CLUSTER_LEVEL_CONTROL StartUpCurrentLevel
 //  cmds += zigbee.readAttribute(0x0019, 0x0000, [:], defaultDelay)    //CLUSTER_OTA Upgrade Server ID
 //  cmds += zigbee.readAttribute(0x0019, 0x0001, [:], defaultDelay)    //CLUSTER_OTA File Offset
+//  cmds += zigbee.readAttribute(0x0019, 0x0002, [:], defaultDelay)    //CLUSTER_OTA CurrentFileVersion
+//  cmds += zigbee.readAttribute(0x0019, 0x0003, [:], defaultDelay)    //CLUSTER_OTA CurrentZigBeeStackVersion
+//  cmds += zigbee.readAttribute(0x0019, 0x0004, [:], defaultDelay)    //CLUSTER_OTA DownloadedFileVersion
+//  cmds += zigbee.readAttribute(0x0019, 0x0005, [:], defaultDelay)    //CLUSTER_OTA DownloadedZigBeeStackVersion
 //  cmds += zigbee.readAttribute(0x0019, 0x0006, [:], defaultDelay)    //CLUSTER_OTA Image Upgrade Status
+//  cmds += zigbee.readAttribute(0x0019, 0x0007, [:], defaultDelay)    //CLUSTER_OTA ManufacturerID 
+//  cmds += zigbee.readAttribute(0x0019, 0x0008, [:], defaultDelay)    //CLUSTER_OTA Image TypeID 
+//  cmds += zigbee.readAttribute(0x0019, 0x0009, [:], defaultDelay)    //CLUSTER_OTA MinimumBlockPeriod
+//  cmds += zigbee.readAttribute(0x0019, 0x000A, [:], defaultDelay)    //CLUSTER_OTA Image Stamp
+//  cmds += zigbee.readAttribute(0x0019, 0x000B, [:], defaultDelay)    //CLUSTER_OTA UpgradeActivationPolicy
+//  cmds += zigbee.readAttribute(0x0019, 0x000C, [:], defaultDelay)    //CLUSTER_OTA UpgradeTimeoutPolicy 
     if (state.model?.substring(0,5)!="VZM35")  //Fan does not support power/energy reports
       cmds += zigbee.readAttribute(0x0702, 0x0000, [:], defaultDelay)    //CLUSTER_SIMPLE_METERING Energy Report
 //  cmds += zigbee.readAttribute(0x0702, 0x0200, [:], defaultDelay)    //CLUSTER_SIMPLE_METERING Status
@@ -2174,7 +2332,7 @@ def refresh(option) {
 				cmds += getParameter(i) //if option is All then refresh all settings
 				break
 			default: 
-				if (infoEnable||traceEnable||debugEnable) log.warn "${device.displayName}: Unknonwn refresh option '${option}'"
+				if (infoEnable||traceEnable||debugEnable) log.warn "${device.displayName} Unknonwn refresh option '${option}'"
 				break
 		}
     }
@@ -2182,24 +2340,24 @@ def refresh(option) {
 }
 
 def remoteControl(option) {
-    if (infoEnable) log.info "${device.displayName}: remoteControl($option)"
-    state.lastCommandSent =                         "remoteControl($option)"
+    if (infoEnable) log.info "${device.displayName} remoteControl($option)"
+    state.lastCommandSent =                        "remoteControl($option)"
     state.lastCommandTime = nowFormatted()
     def cmds = []
     cmds += zigbee.command(0xfc31,0x10,["mfgCode":"0x122F"],defaultDelay,"${option=="Disabled"?"01":"00"}")
     //if (state.model?.substring(0,5)!="VZM35") cmds += zigbee.readAttribute(CLUSTER_PRIVATE, 0x0101,["mfgCode":"0x122F"],defaultDelay )  //Fan sends this automatically, but Dimmer does not
-    if (traceEnable) log.trace "${device.displayName}: remoteControl $cmds"
+    if (traceEnable) log.trace "${device.displayName} remoteControl $cmds"
 	return cmds 
 }
 
 def resetEnergyMeter() {
-    if (infoEnable) log.info "${device.displayName}: resetEnergyMeter(" + device.currentValue("energy") + "kWh)"
-    state.lastCommandSent =                         "resetEnergyMeter(" + device.currentValue("energy") + "kWh)"
+    if (infoEnable) log.info "${device.displayName} resetEnergyMeter(" + device.currentValue("energy") + "kWh)"
+    state.lastCommandSent =                        "resetEnergyMeter(" + device.currentValue("energy") + "kWh)"
     state.lastCommandTime = nowFormatted()
     def cmds = []
     cmds += zigbee.command(0xfc31,0x02,["mfgCode":"0x122F"],defaultDelay,"0")
     cmds += zigbee.readAttribute(CLUSTER_SIMPLE_METERING, 0x0000)
-    if (traceEnable) log.trace "${device.displayName}: resetEnergyMeter $cmds"
+    if (traceEnable) log.trace "${device.displayName} resetEnergyMeter $cmds"
     return cmds 
 }
         
@@ -2211,15 +2369,17 @@ def setAttribute(Integer cluster, Integer attrInt, Integer dataType, Integer val
                              "0x${zigbee.convertToHexString(attrInt,4)}, " +
                              "0x${zigbee.convertToHexString(dataType,2)}, " +
                                "${value}, ${additionalParams}, ${delay})"
-    def infoMsg = "${device.displayName}: "
+    def infoMsg = "${device.displayName} "
     if (cluster==0xfc31) {
-        infoMsg += " Parameter ${attrInt} value "
+        infoMsg += " parameter ${attrInt} value "
         switch (attrInt) {
-            case 9:     //min level
-            case 10:    //max level
-            case 13:    //default local level
-            case 14:    //default remote level
-            case 15:    //level after power restored
+			case 9:     //Min Level
+			case 10:    //Max Level
+			case 13:    //Default Level (local)
+			case 14:    //Default Level (remote)
+			case 15:    //Level after power restored
+			case 55:	//Double-Tap UP Level
+			case 56:	//Double-Tap DOWN Level
                 infoMsg += "${value} = ${convertByteToPercent(value)}% on 255 scale"
                 break
             case 23:
@@ -2234,54 +2394,50 @@ def setAttribute(Integer cluster, Integer attrInt, Integer dataType, Integer val
                 infoMsg = ""
                 break 
         }
-    } 
-    else {
-        infoMsg += "" + (cluster==0xfc31?"":clusterLookup(cluster)) + " parameter 0x${zigbee.convertToHexString(attrInt,4)} value ${value}"
+    } else {
+        infoMsg += "" + clusterLookup(cluster) + " attribute 0x${zigbee.convertToHexString(attrInt,4)} value ${value}"
     }
-    if (infoEnable && infoMsg) log.info infoMsg + (delay==defaultDelay?"":" [delay ${delay}]")
+    if ((infoEnable && infoMsg && cluster==0xfc31) || traceEnable) log.trace infoMsg + (delay==defaultDelay?"":" [delay ${delay}]")
     def cmds = zigbee.writeAttribute(cluster, attrInt, dataType, value, additionalParams, delay)
-    if (traceEnable) log.trace "${device.displayName}: setAttribute $cmds"
+    if (traceEnable) log.trace "${device.displayName} setAttribute $cmds"
     return cmds
 }
 
 def getAttribute(Integer cluster, Integer attrInt=0, Map additionalParams = [:], Integer delay=defaultDelay) {
     if (cluster==0xfc31) additionalParams = ["mfgCode":"0x122F"]
     if (delay==null||delay==0) delay = defaultDelay
-    if (traceEnable) log.trace  "${device.displayName}: Get "+(cluster==0xfc31?"":clusterLookup(cluster))+" parameter ${attrInt}"+(delay==defaultDelay?"":" [delay ${delay}]")
+    if (traceEnable) log.trace  "${device.displayName} Get "+clusterLookup(cluster)+" parameter ${attrInt}"+(delay==defaultDelay?"":" [delay ${delay}]")
     if (debugEnable) log.debug  "${device.displayName} getAttribute(0x${zigbee.convertToHexString(cluster,4)}, " + (attrInt==null?null:"0x${zigbee.convertToHexString(attrInt,4)}") + ", ${additionalParams}, ${delay})"
     if (cluster==0xfc31 && attrInt==23 && state.model?.substring(0,5)!="VZM35") {  //if not Fan, get the quickStart values from state variables since dimmer does not store these
-		if (infoEnable) log.info "${device.displayName}: Receive parameter ${attrInt} value ${state?.parameter23value} (QuickStart " + (state.parameter23value?.toInteger()==0?red("disabled"):"${state.parameter23value?.toInteger()}" + state.model?.substring(0,5)!="VZM35"?"${settings.parameter23}%":"${settings.parameter23}s") + ")"
-		if (infoEnable) log.info "${device.displayName}: Receive parameter ${attrInt} level ${state?.parameter23level} (QuickStart startup level)"
+		if (infoEnable) log.info "${device.displayName} Receive parameter ${attrInt} value ${state?.parameter23value} (QuickStart " + (state.parameter23value?.toInteger()==0?red("disabled"):"${state.parameter23value?.toInteger()}" + state.model?.substring(0,5)!="VZM35"?"${settings.parameter23}%":"${settings.parameter23}s") + ")"
+		if (infoEnable) log.info "${device.displayName} Receive parameter ${attrInt} level ${state?.parameter23level} (QuickStart startup level)"
 		if (settings.parameter23level?.toInteger()==defaultQuickLevel) device.clearSetting("parameter23level") 
     }
 	def cmds = []
-    //String mfgCode = "{}"
-    //if(additionalParams.containsKey("mfgCode")) mfgCode = "{${additionalParams.get("mfgCode")}}"
-    //String rattrArgs = "0x${device.deviceNetworkId} 0x01 0x${zigbee.convertToHexString(cluster,4)} " + 
-    //                   "0x${zigbee.convertToHexString(attrInt,4)} " + 
-    //                   "$mfgCode"
-    //cmds += ["he rattr $rattrArgs", "delay $delay"] 
     cmds += zigbee.readAttribute(cluster, attrInt, additionalParams, delay)
-	if (traceEnable) log.trace "${device.displayName}: getAttribute $cmds"
+	if (traceEnable) log.trace "${device.displayName} getAttribute $cmds"
     return cmds
 }
 
 def setLevel(value, duration=0xFFFF) {
-    if (infoEnable) log.info "${device.displayName}: setLevel($value" + (duration==0xFFFF?")":", ${duration}s)")
-    state.lastCommandSent =                         "setLevel($value" + (duration==0xFFFF?")":", ${duration}s)")
+    if (infoEnable) log.info "${device.displayName} setLevel($value" + (duration==0xFFFF?")":", ${duration}s)")
+    state.lastCommandSent =                        "setLevel($value" + (duration==0xFFFF?")":", ${duration}s)")
     state.lastCommandTime = nowFormatted()
     if (duration!=0xFFFF) duration = duration.toInteger()*10  //firmware duration in 10ths
     def cmds = []
-    if (device.currentValue("switch")=="off" && value!=0) cmds += zigbee.setLevel(1,0,0) //if device is off then turn on at 1  //hack for firmware bug.  should be fixed in v2.11
+    //if (device.currentValue("switch")=="off" && value!=0) cmds += zigbee.setLevel(1,0,0) //if device is off then turn on at 1  //hack for firmware bug.  should be fixed in v2.11
     cmds += zigbee.setLevel(value.toInteger(),duration,defaultDelay)
-    if (traceEnable) log.trace "${device.displayName}: setLevel $cmds"
+    if (traceEnable) log.trace "${device.displayName} setLevel $cmds"
 	return cmds
 }
 
-def setParameter(number, value=null, size=null) {
+def setParameter(number=0, value=null, size=null) {
+	number = number?.toInteger()
+	value  = value?.toInteger()
+	size   = size?.toInteger()
 	if (size==null || size==" ") size = configParams["parameter${number.toString().padLeft(3,'0')}"]?.size?:8
-	if (infoEnable) log.info value!=null?"${device.displayName}: setParameter($number, $value, $size)":"${device.displayName}: getParameter($number)"
-    state.lastCommandSent =  value!=null?                       "setParameter($number, $value, $size)":                       "getParameter($number)"
+	if (infoEnable) log.info value!=null?"${device.displayName} setParameter($number, $value, $size)":"${device.displayName} getParameter($number)"
+    state.lastCommandSent =  value!=null?                      "setParameter($number, $value, $size)":                      "getParameter($number)"
     state.lastCommandTime = nowFormatted()
     def cmds = []
     Integer paramId = number.toInteger()
@@ -2290,28 +2446,29 @@ def setParameter(number, value=null, size=null) {
     if (value!=null) cmds += setAttribute(0xfc31,paramId,paramSize,paramValue)
 	if (number==52 || number==158 || number==258) cmds += "delay $longDelay"	//allow extra time when changing modes
     cmds += getParameter(paramId)
-    if (traceEnable) log.trace value!=null?"${device.displayName}: setParameter $cmds":"${device.displayName}: getParameter $cmds"
+    if (traceEnable) log.trace value!=null?"${device.displayName} setParameter $cmds":"${device.displayName} getParameter $cmds"
     return cmds
 }
 
-def getParameter(number=null) {
-    //if (infoEnable) log.info "${device.displayName}: getParameter($number)"
-    //state.lastCommandSent =                         "getParameter($number)"
+def getParameter(number=0) {
+	number = number?.toInteger()
+    //if (infoEnable) log.info "${device.displayName} getParameter($number)"
+    //state.lastCommandSent =                        "getParameter($number)"
     //state.lastCommandTime = nowFormatted() //this is not a custom command.  Only use state variable for commands on the device details page
     def cmds = []
     cmds += getAttribute(0xfc31, number)
-    if (traceEnable) log.trace "${device.displayName}: getParameter $cmds"
+    if (traceEnable) log.trace "${device.displayName} getParameter $cmds"
     return cmds
 }
 
-def setPrivateCluster(attributeId, value=null, size=8) {	//for backward compatibility
-	log.warn "${device.displayName}: setPrivateCluster(${red(italic(bold('command is depreciated. Use setParameter instead')))})"
+def setPrivateCluster(attributeId, value, size=8) {	//for backward compatibility
+	log.warn "${device.displayName} setPrivateCluster(${red(italic(bold('command is depreciated. Use setParameter instead')))})"
     return setParameter(attributeId, value, size.toInteger())
 }
 
 def setSpeed(value) {  // FOR FAN ONLY
-    if (infoEnable) log.info "${device.displayName}: setSpeed(${value})"
-    state.lastCommandSent =                         "setSpeed(${value})"
+    if (infoEnable) log.info "${device.displayName} setSpeed(${value})"
+    state.lastCommandSent =                        "setSpeed(${value})"
     state.lastCommandTime = nowFormatted()
 	def currentLevel = device.currentValue("level")==null?0:device.currentValue("level").toInteger()
 	if (device.currentValue("switch")=="off") currentLevel = 0
@@ -2357,13 +2514,13 @@ def setSpeed(value) {  // FOR FAN ONLY
             cmds += zigbee.setLevel(newLevel)
 			break
     }
-    if (traceEnable) log.trace "${device.displayName}: setSpeed $cmds"
+    if (traceEnable) log.trace "${device.displayName} setSpeed $cmds"
     return cmds
 }
 
-def setZigbeeAttribute(cluster, attributeId, value=null, size=8) {
-    if (infoEnable) log.info value!=null?"${device.displayName}: setZigbeeAttribute(${cluster}, ${attributeId}, ${value}, ${size})":"${device.displayName}: getZigbeeAttribute(${cluster}, ${attributeId})"
-    state.lastCommandSent =                        value!=null? "setZigbeeAttribute(${cluster}, ${attributeId}, ${value}, ${size})":                       "getZigbeeAttribute(${cluster}, ${attributeId})"
+def setZigbeeAttribute(cluster, attributeId, value, size) {
+    if (debugEnable) log.debug value!=null?"${device.displayName} setZigbeeAttribute(${cluster}, ${attributeId}, ${value}, ${size})":"${device.displayName} getZigbeeAttribute(${cluster}, ${attributeId})"
+    state.lastCommandSent =                         value!=null? "setZigbeeAttribute(${cluster}, ${attributeId}, ${value}, ${size})":                      "getZigbeeAttribute(${cluster}, ${attributeId})"
     state.lastCommandTime = nowFormatted()
     def cmds = []
     Integer setCluster = cluster.toInteger()
@@ -2372,55 +2529,57 @@ def setZigbeeAttribute(cluster, attributeId, value=null, size=8) {
     Integer attSize = calculateSize(size).toInteger()
     if (value!=null) cmds += setAttribute(setCluster,attId,attSize,attValue,[:],attId==258?longDelay:defaultDelay)
     cmds += getAttribute(setCluster, attId)
-    //if (traceEnable) log.trace "${device.displayName}: setZigbeeAttribute $cmds"
+    if (traceEnable) log.trace "${device.displayName} setZigbeeAttribute $cmds"
     return cmds
 }
 
 def startLevelChange(direction, duration=null) {
     def newLevel = direction=="up"?100:device.currentValue("switch")=="off"?0:1
-    if (infoEnable) log.info "${device.displayName}: startLevelChange(${direction}" + (duration==null?")":", ${duration}s)")
-    state.lastCommandSent =                         "startLevelChange(${direction}" + (duration==null?")":", ${duration}s)")
+	duration = duration!=null?duration:(calculateParameter(1)/10)
+    if (infoEnable) log.info "${device.displayName} startLevelChange(${direction}" + (duration==null?")":", ${duration}s)")
+    state.lastCommandSent =                        "startLevelChange(${direction}" + (duration==null?")":", ${duration}s)")
     state.lastCommandTime = nowFormatted()
 	def cmds = []
-    cmds += duration==null?zigbee.setLevel(newLevel):zigbee.setLevel(newLevel, duration)
-    if (traceEnable) log.trace "${device.displayName}: startLevelChange $cmds"
+    cmds += duration==null?zigbee.setLevel(newLevel):zigbee.setLevel(newLevel, duration.toInteger()*10)
+    if (traceEnable) log.trace "${device.displayName} startLevelChange $cmds"
 	return cmds
 }
 
 def stopLevelChange() {
-    if (infoEnable) log.info "${device.displayName}: stopLevelChange()" // at level " + device.currentValue("level")
-    state.lastCommandSent =                         "stopLevelChange()"
+    if (infoEnable) log.info "${device.displayName} stopLevelChange()" // at level " + device.currentValue("level")
+    state.lastCommandSent =                        "stopLevelChange()"
     state.lastCommandTime = nowFormatted()
     def cmds = []
     cmds += ["he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} ${CLUSTER_LEVEL_CONTROL} ${COMMAND_STOP} {}","delay $defaultDelay"]
-    if (traceEnable) log.trace "${device.displayName}: stopLevelChange $cmds"
+    if (traceEnable) log.trace "${device.displayName} stopLevelChange $cmds"
     return cmds
 }
 
 def toggle() {	
     def toggleDirection = device.currentValue("switch")=="off"?"off->on":"on->off"
-    if (infoEnable) log.info "${device.displayName}: toggle(${toggleDirection})"
-    state.lastCommandSent =                         "toggle(${toggleDirection})"
+    if (infoEnable) log.info "${device.displayName} toggle(${toggleDirection})"
+    state.lastCommandSent =                        "toggle(${toggleDirection})"
     state.lastCommandTime = nowFormatted()
     def cmds = []
     //cmds += zigbee.command(CLUSTER_ON_OFF, COMMAND_TOGGLE)  //toggle is inconsistent with quickStart, so we emulate toggle with on/off instead
     //if having trouble keeping multiple bulbs in sync, use the below code to emulate toggle
     if (device.currentValue("switch")=="off") {
-		if (settings.parameter23?.toInteger()>0) cmds += quickStart()  //IF quickStart is enabled THEN quickStart
-		else {
+		if (settings.parameter23?.toInteger()>0) {
+			cmds += quickStart()  //IF quickStart is enabled THEN quickStart
+		} else {
 			cmds += zigbee.on(defaultDelay)
 		}
 	} else {
 		cmds += zigbee.off(defaultDelay)
 	}
-    if (traceEnable) log.trace "${device.displayName}: toggle $cmds"
+    if (traceEnable) log.trace "${device.displayName} toggle $cmds"
     return cmds
 }
 
 def updated(option) { // called when "Save Preferences" is requested
     option = (option==null||option==" ")?"":option
-    if (infoEnable) log.info "${device.displayName}: updated(${option})"
-    state.lastCommandSent =                         "updated(${option})"
+    if (infoEnable) log.info "${device.displayName} updated(${option})"
+    state.lastCommandSent =                        "updated(${option})"
     state.lastCommandTime = nowFormatted()
     state.driverDate = getDriverDate()
 	state.model = device.getDataValue('model')
@@ -2443,14 +2602,14 @@ def updated(option) { // called when "Save Preferences" is requested
         if ((i==95 && parameter95custom!=null)||(i==96 && parameter96custom!=null)) {                                         //IF  a custom hue value is set
             if ((Math.round(settings?."parameter${i}custom"?.toInteger()/360*255)==settings?."parameter${i}"?.toInteger())) { //AND custom setting is same as normal setting
                 device.clearSetting("parameter${i}custom")                                                                    //THEN clear custom hue and use normal color 
-                if (infoEnable) log.info "${device.displayName}: Cleared Custom Hue setting since it equals standard color setting"
+                if (infoEnable) log.info "${device.displayName} Cleared Custom Hue setting since it equals standard color setting"
             }
             oldvalue=state."parameter${i}custom"!=null?state."parameter${i}custom".toInteger():oldValue
         }
         newValue = calculateParameter(i)
         if ((option == "Default")&&(i!=21)&&(i!=22)&&(i!=51)&&(i!=52)&&(i!=157)&&(i!=158)&&(i!=257)&&(i!=258)){    //if DEFAULT option was selected then use the default value (but don't change switch modes)
             newValue = defaultValue
-            if (traceEnable||debugEnable) log.trace "${device.displayName}: updated() has cleared parameter${attrInt}"
+            if (traceEnable||debugEnable) log.trace "${device.displayName} updated() has cleared parameter${i}"
             device.clearSetting("parameter${i}")  //and clear the local settings so they go back to default values
             if (i==23)          device.clearSetting("parameter${i}level")    //clear the custom quickstart level
             if (i==95 || i==96) device.clearSetting("parameter${i}custom")   //clear the custom custom hue values
@@ -2470,103 +2629,91 @@ def updated(option) { // called when "Save Preferences" is requested
             quickStartVariables()
 		}
     }
+    if (settings?.groupBinding1 && !state?.groupBinding1) {
+        bindGroup("bind",settings.groupBinding1?.toInteger())
+		//device.updateSetting("groupBinding1",[value:settings.groupBinding1?.toInteger(),type:"number"])
+		state.groupBinding1=settings.groupBinding1?.toInteger()
+        nothingChanged = false
+    } else {
+        if (!settings?.groupBinding1 && state?.groupBinding1) {
+            bindGroup("unbind",state.groupBinding1?.toInteger())
+			device.clearSetting("groupBinding1")
+			state.groupBinding1=null
+            nothingChanged = false
+        }
+    }
+    if (settings?.groupBinding2 && !state?.groupBinding2) {
+        bindGroup("bind",settings.groupBinding2?.toInteger())
+		//device.updateSetting("groupBinding2",[value:settings.groupBinding2?.toInteger(),type:"number"])
+		state.groupBinding2=settings.groupBinding2?.toInteger()
+        nothingChanged = false
+    } else {
+        if (!settings?.groupBinding2 && state?.groupBinding2) {
+            bindGroup("unbind",state.groupBinding2?.toInteger())
+			device.clearSetting("groupBinding2")
+			state.groupBinding2=null
+            nothingChanged = false
+        }
+    }
+    if (settings?.groupBinding3 && !state?.groupBinding3) {
+        bindGroup("bind",settings.groupBinding3?.toInteger())
+		//device.updateSetting("groupBinding3",[value:state.groupBinding3?.toInteger(),type:"number"])
+		state.groupBinding3=state.groupBinding3?.toInteger()
+        nothingChanged = false
+    } else {
+        if (!settings?.groupBinding3 && state?.groupBinding3) {
+            bindGroup("unbind",state.groupBinding3?.toInteger())
+			device.clearSetting("groupBinding3")
+			state.groupBinding3=null
+            nothingChanged = false
+        }
+    }
+	// remove duplicate groups
+	if (settings.groupBinding3!=null && settings.groupBinding3==settings.groupBinding2) {device.clearSetting("groupBinding3"); state.groupBinding3 = null; if (infoEnable) log.info "${device.displayName} Removed duplicate Group Bind #3"}
+	if (settings.groupBinding2!=null && settings.groupBinding2==settings.groupBinding1) {device.clearSetting("groupBinding2"); state.groupBinding2 = null; if (infoEnable) log.info "${device.displayName} Removed duplicate Group Bind #2"}
+	if (settings.groupBinding1!=null && settings.groupBinding1==settings.groupBinding3) {device.clearSetting("groupBinding3"); state.groupBinding3 = null; if (infoEnable) log.info "${device.displayName} Removed duplicate Group Bind #3"}
 	
-    if (groupbinding1 && !state?.groupbinding1) {
-        cmds += bind(["zdo bind 0x${device.deviceNetworkId} 0x02 0x01 0x0006 {${device.zigbeeId}} {${zigbee.convertToHexString(groupbinding1?.toInteger(), 4)}}"])
-        cmds += bind(["zdo bind 0x${device.deviceNetworkId} 0x02 0x01 0x0008 {${device.zigbeeId}} {${zigbee.convertToHexString(groupbinding1?.toInteger(), 4)}}"])
-        state.groupbinding1 = groupbinding1
-		cmds += "delay 60000"		//binding seems to take up to 60 seconds 
-		cmds += getParameter(51)	//update number of bindings counter
-        nothingChanged = false
-    } else {
-        if (!groupbinding1 && state?.groupbinding1) {
-            cmds += bind(["zdo unbind 0x${device.deviceNetworkId} 0x02 0x01 0x0006 {${device.zigbeeId}} {${zigbee.convertToHexString(state.groupbinding1?.toInteger(), 4)}}"])
-            cmds += bind(["zdo unbind 0x${device.deviceNetworkId} 0x02 0x01 0x0008 {${device.zigbeeId}} {${zigbee.convertToHexString(state.groupbinding1?.toInteger(), 4)}}"])
-            state.groupbinding1 = null
-			cmds += "delay 60000"		//binding seems to take up to 60 seconds 
-			cmds += getParameter(51)	//update number of bindings counter
-            nothingChanged = false
-        }
-    }
-    if (groupbinding2 && !state?.groupbinding2) {
-        cmds += bind(["zdo bind 0x${device.deviceNetworkId} 0x02 0x01 0x0006 {${device.zigbeeId}} {${zigbee.convertToHexString(groupbinding2?.toInteger(), 4)}}"])
-        cmds += bind(["zdo bind 0x${device.deviceNetworkId} 0x02 0x01 0x0008 {${device.zigbeeId}} {${zigbee.convertToHexString(groupbinding2?.toInteger(), 4)}}"])
-        state.groupbinding2 = groupbinding2
-		cmds += "delay 60000"		//binding seems to take up to 60 seconds 
-		cmds += getParameter(51)	//update number of bindings counter
-        nothingChanged = false
-    } else {
-        if (!groupbinding2 && state?.groupbinding2) {
-            cmds += bind(["zdo unbind 0x${device.deviceNetworkId} 0x02 0x01 0x0006 {${device.zigbeeId}} {${zigbee.convertToHexString(state.groupbinding2?.toInteger(), 4)}}"])
-            cmds += bind(["zdo unbind 0x${device.deviceNetworkId} 0x02 0x01 0x0008 {${device.zigbeeId}} {${zigbee.convertToHexString(state.groupbinding2?.toInteger(), 4)}}"])
-            state.groupbinding2 = null
-			cmds += "delay 60000"		//binding seems to take up to 60 seconds 
-			cmds += getParameter(51)	//update number of bindings counter
-            nothingChanged = false
-        }
-    }
-    if (groupbinding3 && !state?.groupbinding3) {
-        cmds += bind(["zdo bind 0x${device.deviceNetworkId} 0x02 0x01 0x0006 {${device.zigbeeId}} {${zigbee.convertToHexString(groupbinding3?.toInteger(), 4)}}"])
-        cmds += bind(["zdo bind 0x${device.deviceNetworkId} 0x02 0x01 0x0008 {${device.zigbeeId}} {${zigbee.convertToHexString(groupbinding3?.toInteger(), 4)}}"])
-        state.groupbinding3 = groupbinding3
-		cmds += "delay 60000"		//binding seems to take up to 60 seconds 
-		cmds += getParameter(51)	//update number of bindings counter
-        nothingChanged = false
-    } else {
-        if (!groupbinding3 && state?.groupbinding3) {
-            cmds += bind(["zdo unbind 0x${device.deviceNetworkId} 0x02 0x01 0x0006 {${device.zigbeeId}} {${zigbee.convertToHexString(state.groupbinding3?.toInteger(), 4)}}"])
-            cmds += bind(["zdo unbind 0x${device.deviceNetworkId} 0x02 0x01 0x0008 {${device.zigbeeId}} {${zigbee.convertToHexString(state.groupbinding3?.toInteger(), 4)}}"])
-            state.groupbinding3 = null
-			cmds += "delay 60000"		//binding seems to take up to 60 seconds 
-			cmds += getParameter(51)	//update number of bindings counter
-            nothingChanged = false
-        }
-    }
-    if ((infoEnable||traceEnable||debugEnable)) {
-        if (nothingChanged) {
-			log.info  "${device.displayName}: No DEVICE settings were changed"
-			log.info  "${device.displayName}: Info logging    " + (infoEnable?green("Enabled"):red("Disabled"))
-			log.trace "${device.displayName}: Trace logging  "  + (traceEnable?green("Enabled"):red("Disabled"))
-			log.debug "${device.displayName}: Debug logging "   + (debugEnable?green("Enabled"):red("Disabled"))
-		}
+    if (nothingChanged)&&(infoEnable||traceEnable||debugEnable)) {
+	    log.info  "${device.displayName} No DEVICE settings were changed"
+		log.info  "${device.displayName} Info logging  " + (infoEnable?limeGreen("Enabled"):red("Disabled"))
+		log.trace "${device.displayName} Trace logging " + (traceEnable?limeGreen("Enabled"):red("Disabled"))
+		log.debug "${device.displayName} Debug logging " + (debugEnable?limeGreen("Enabled"):red("Disabled"))
     }
     if (infoEnable && disableInfoLogging) {
-		log.info "${device.displayName}: Info Logging will be disabled in $disableInfoLogging minutes"
+		log.info "${device.displayName} Info Logging will be disabled in $disableInfoLogging minutes"
 		runIn(disableInfoLogging*60,infoLogsOff)
 	}
     if (traceEnable && disableTraceLogging) {
-		log.trace "${device.displayName}: Trace Logging will be disabled in $disableTraceLogging minutes"
+		log.trace "${device.displayName} Trace Logging will be disabled in $disableTraceLogging minutes"
 		runIn(disableTraceLogging*60,traceLogsOff)
 	}
     if (debugEnable && disableDebugLogging) {
-		log.debug "${device.displayName}: Debug Logging will be disabled in $disableDebugLogging minutes"
+		log.debug "${device.displayName} Debug Logging will be disabled in $disableDebugLogging minutes"
 		runIn(disableDebugLogging*60,debugLogsOff) 
 	}
     return cmds
 }
 
 List updateFirmware() {
-    if (infoEnable) log.info "${device.displayName}: updateFirmware(switch's fwDate: ${state.fwDate}, switch's fwVersion: ${state.fwVersion})"
-    state.lastCommandSent =                         "updateFirmware()"
+    if (infoEnable) log.info "${device.displayName} updateFirmware(switch's fwDate: ${state.fwDate}, switch's fwVersion: ${state.fwVersion})"
+    state.lastCommandSent =                        "updateFirmware()"
     state.lastCommandTime = nowFormatted()
     def cmds = []
-    if (state?.lastUpdateFw && now() - state.lastUpdateFw < 2000) {
-		state.remove("lastUpdateFw")
+    //if (state?.lastUpdateFw && now() - state.lastUpdateFw < 2000) {
+	//	state.remove("lastUpdateFw")
         cmds += zigbee.updateFirmware()
-        if (traceEnable) log.trace "${device.displayName}: updateFirmware $cmds"
-				   
-    } else {
-        log.warn "Firmware in this channel may be \"beta\" quality. Please check https://community.inovelli.com/t/blue-series-2-1-firmware-changelog-vzm31-sn/12326 before proceeding. Double-click \"Update Firmware\" to proceed"
-		state.lastUpdateFw = now()
-		runIn(2,lastUpdateFwRemove)
-    }
+        if (traceEnable) log.trace "${device.displayName} updateFirmware $cmds"
+    //} else {
+    //    log.warn "Firmware in this channel may be \"beta\" quality. Please check https://community.inovelli.com/t/blue-series-2-1-firmware-changelog-vzm31-sn/12326 before proceeding. Double-click \"Update Firmware\" to proceed"
+	//	state.lastUpdateFw = now()
+	//	runIn(2,lastUpdateFwRemove)
+    //}
     return cmds
-			 
 }
-def lastUpdateFwRemove() {if (state?.lastUpdateFw) state.remove("lastUpdateFw")}
+//def lastUpdateFwRemove() {if (state?.lastUpdateFw) state.remove("lastUpdateFw")}
 
 void ZigbeePrivateCommandEvent(data) {
-    if (infoEnable) log.info "${device.displayName}: SceneButton: ${data[0]} ButtonAttributes: ${data[1]}"
+    if (infoEnable) log.info "${device.displayName} SceneButton=${data[0]} ButtonAttributes=${data[1]}"
     Integer ButtonNumber = Integer.parseInt(data[0],16)
     Integer ButtonAttributes = Integer.parseInt(data[1],16)
     switch(zigbee.convertToHexString(ButtonNumber,2) + zigbee.convertToHexString(ButtonAttributes,2)) {
@@ -2635,7 +2782,7 @@ void ZigbeePrivateCommandEvent(data) {
             buttonEvent(14, "pushed", "physical")
             break
         default:       //undefined button function
-            log.warn "${device.displayName}: "+fireBrick("Undefined button function Scene: ${data[0]} Attributes: ${data[1]}")
+            log.warn "${device.displayName} " + fireBrick("Undefined button function Scene=${data[0]} Attributes=${data[1]}")
             break
     }
 }
@@ -2643,7 +2790,7 @@ void ZigbeePrivateCommandEvent(data) {
 void ZigbeePrivateLEDeffectStopEvent(data) {
     Integer ledNumber = Integer.parseInt(data[0],16)+1 //internal LED number is 0-based
     String  ledStatus = ledNumber==17?"Stop All":ledNumber==256?"User Cleared":"Stop LED${ledNumber}"
-    if (infoEnable) log.info "${device.displayName}: ledEffectStopEvent: ${ledStatus}"
+    if (infoEnable) log.info "${device.displayName} ledEffectStopEvent=${ledStatus}"
 	switch(ledNumber){
         case 1:
         case 2:
@@ -2657,13 +2804,13 @@ void ZigbeePrivateLEDeffectStopEvent(data) {
 			sendEvent(name:"ledEffect", value: "${ledStatus}")
             break
         default:  
-			log.warn "${device.displayName}: "+fireBrick("Undefined LEDeffectStopEvent: ${data[0]}")
+			log.warn "${device.displayName} " + fireBrick("Undefined LEDeffectStopEvent=${data[0]}")
             break
     }
 }
 
 void buttonEvent(button, action, type = "digital") {
-    if (infoEnable) log.info "${device.displayName}: ${type} Button ${button} was ${action}"
+    if (infoEnable) log.info "${device.displayName} ${type} Button ${button} was ${action}"
     sendEvent(name: action, value: button, isStateChange: true, type: type)
     switch (button) {
         case 1:
@@ -2695,109 +2842,36 @@ void buttonEvent(button, action, type = "digital") {
     }
 }
 
-void hold(button) {
-    buttonEvent(button, "held", "digital")
-}
+void hold(button)    {buttonEvent(button, "held", "digital")}
+void push(button)    {buttonEvent(button, "pushed", "digital")}
+void release(button) {buttonEvent(button, "released", "digital")}
 
-void push(button) {
-    buttonEvent(button, "pushed", "digital")
-}
-
-void release(button) {
-    buttonEvent(button, "released", "digital")
-}
-
-def pressUpX1() {
-    buttonEvent(1, "pushed", "digital")
-}
-
-def pressDownX1() {
-    buttonEvent(1, "held", "digital")
-}
-
-def pressUpX2() {
-    buttonEvent(2, "pushed", "digital")
-}
-
-def pressDownX2() {
-    buttonEvent(2, "held", "digital")
-}
-
-def pressUpX3() {
-    buttonEvent(3, "pushed", "digital")
-}
-
-def pressDownX3() {
-    buttonEvent(3, "held", "digital")
-}
-
-def pressUpX4() {
-    buttonEvent(4, "pushed", "digital")
-}
-
-def pressDownX4() {
-    buttonEvent(4, "held", "digital")
-}
-
-def pressUpX5() {
-    buttonEvent(5, "pushed", "digital")
-}
-
-def pressDownX5() {
-    buttonEvent(5, "held", "digital")
-}
-
-def holdUp() {
-    buttonEvent(6, "pushed", "digital")
-}
-
-def holdDown() {
-    buttonEvent(6, "held", "digital")
-}
-
-def releaseUp() {
-    buttonEvent(7, "pushed", "digital")
-}
-
-def releaseDown() {
-    buttonEvent(7, "held", "digital")
-}
-
-def pressConfigX1() {
-    buttonEvent(8, "pushed", "digital")
-}
-
-def pressConfigX2() {
-    buttonEvent(9, "pushed", "digital")
-}
-
-def pressConfigX3() {
-    buttonEvent(10, "pushed", "digital")
-}
-
-def pressConfigX4() {
-    buttonEvent(11, "pushed", "digital")
-}
-
-def pressConfigX5() {
-    buttonEvent(12, "pushed", "digital")
-}
-
-def holdConfig() {
-    buttonEvent(13, "held", "digital")
-}
-
-def releaseConfig() {
-    buttonEvent(14, "released", "digital")
-}
+def pressUpX1()      {buttonEvent(1, "pushed", "digital")}
+def pressDownX1()    {buttonEvent(1, "held", "digital")}
+def pressUpX2()      {buttonEvent(2, "pushed", "digital")}
+def pressDownX2()    {buttonEvent(2, "held", "digital")}
+def pressUpX3()      {buttonEvent(3, "pushed", "digital")}
+def pressDownX3()    {buttonEvent(3, "held", "digital")}
+def pressUpX4()      {buttonEvent(4, "pushed", "digital")}
+def pressDownX4()    {buttonEvent(4, "held", "digital")}
+def pressUpX5()      {buttonEvent(5, "pushed", "digital")}
+def pressDownX5()    {buttonEvent(5, "held", "digital")}
+def holdUp()         {buttonEvent(6, "pushed", "digital")}
+def holdDown()       {buttonEvent(6, "held", "digital")}
+def releaseUp()      {buttonEvent(7, "pushed", "digital")}
+def releaseDown()    {buttonEvent(7, "held", "digital")}
+def pressConfigX1()  {buttonEvent(8, "pushed", "digital")}
+def pressConfigX2()  {buttonEvent(9, "pushed", "digital")}
+def pressConfigX3()  {buttonEvent(10, "pushed", "digital")}
+def pressConfigX4()  {buttonEvent(11, "pushed", "digital")}
+def pressConfigX5()  {buttonEvent(12, "pushed", "digital")}
+def holdConfig()     {buttonEvent(13, "held", "digital")}
+def releaseConfig()  {buttonEvent(14, "released", "digital")}
 
 /**
  *  -----------------------------------------------------------------------------
  *  Everything below here are LIBRARY includes and should NOT be edited manually!
  *  -----------------------------------------------------------------------------
- *  --- Nothings to edit here, move along! --------------------------------------
- *  -----------------------------------------------------------------------------
- *  --- user by xiaomi ----------------------------------------------------------
  */
 
 private getCLUSTER_BASIC()           { 0x0000 }
@@ -2842,70 +2916,74 @@ String strike(s)    { return "<s>$s</s>" }
 String underline(s) { return "<u>$s</u>" }
 String hue(h,s) {
     h = Math.min(Math.max((h!=null?h:170),1),255)    //170 is Inovelli factory default blue
-    if (h==255) s = '<font style="background-color:lightGray;color:White;"> ' + s + ' </font>'
-    else        s = '<font color="' + hubitat.helper.ColorUtils.rgbToHEX(hubitat.helper.ColorUtils.hsvToRGB([(h/255*100), 100, 100])) + '">' + s + '</font>'
-    return s
+	def result =  '<font '
+	if (h==255 
+	|| (h>40&&h<60)) result += 'style="background-color:lightGray" '
+    if (h==255)      result += 'color="White"'
+	else             result += 'color="' + hubitat.helper.ColorUtils.rgbToHEX(hubitat.helper.ColorUtils.hsvToRGB([(h/255*100), 100, 100])) + '"' 
+	result += ">$s</font>"
+    return result
 }
 
 //Reds
-String indianRed(s) { return '<font color = "IndianRed">' + s + '</font>'}
+String indianRed(s)  { return '<font color = "IndianRed">' + s + '</font>'}
 String lightCoral(s) { return '<font color = "LightCoral">' + s + '</font>'}
-String crimson(s) { return '<font color = "Crimson">' + s + '</font>'}
-String red(s) { return '<font color = "Red">' + s + '</font>'}
-String fireBrick(s) { return '<font color = "FireBrick">' + s + '</font>'}
-String coral(s) { return '<font color = "Coral">' + s + '</font>'}
+String crimson(s)    { return '<font color = "Crimson">' + s + '</font>'}
+String red(s)        { return '<font color = "Red">' + s + '</font>'}
+String fireBrick(s)  { return '<font color = "FireBrick">' + s + '</font>'}
+String coral(s)      { return '<font color = "Coral">' + s + '</font>'}
 
 //Oranges
-String orangeRed(s) { return '<font color = "OrangeRed">' + s + '</font>'}
+String orangeRed(s)  { return '<font color = "OrangeRed">' + s + '</font>'}
 String darkOrange(s) { return '<font color = "DarkOrange">' + s + '</font>'}
-String orange(s) { return '<font color = "Orange">' + s + '</font>'}
+String orange(s)     { return '<font color = "Orange">' + s + '</font>'}
 
 //Yellows
-String gold(s) { return '<font color = "Gold">' + s + '</font>'}
-String yellow(s) { return '<font color = "yellow">' + s + '</font>'}
+String gold(s)          { return '<font color = "Gold">' + s + '</font>'}
+String yellow(s)        { return '<font color = "yellow">' + s + '</font>'}
 String paleGoldenRod(s) { return '<font color = "PaleGoldenRod">' + s + '</font>'}
-String peachPuff(s) { return '<font color = "PeachPuff">' + s + '</font>'}
-String darkKhaki(s) { return '<font color = "DarkKhaki">' + s + '</font>'}
+String peachPuff(s)     { return '<font color = "PeachPuff">' + s + '</font>'}
+String darkKhaki(s)     { return '<font color = "DarkKhaki">' + s + '</font>'}
 
 //Greens
-String limeGreen(s) { return '<font color = "LimeGreen">' + s + '</font>'}
-String green(s) { return '<font color = "green">' + s + '</font>'}
-String darkGreen(s) { return '<font color = "DarkGreen">' + s + '</font>'}
-String olive(s) { return '<font color = "Olive">' + s + '</font>'}
+String limeGreen(s)      { return '<font color = "LimeGreen">' + s + '</font>'}
+String green(s)          { return '<font color = "green">' + s + '</font>'}
+String darkGreen(s)      { return '<font color = "DarkGreen">' + s + '</font>'}
+String olive(s)          { return '<font color = "Olive">' + s + '</font>'}
 String darkOliveGreen(s) { return '<font color = "DarkOliveGreen">' + s + '</font>'}
-String lightSeaGreen(s) { return '<font color = "LightSeaGreen">' + s + '</font>'}
-String darkCyan(s) { return '<font color = "DarkCyan">' + s + '</font>'}
-String teal(s) { return '<font color = "Teal">' + s + '</font>'}
+String lightSeaGreen(s)  { return '<font color = "LightSeaGreen">' + s + '</font>'}
+String darkCyan(s)       { return '<font color = "DarkCyan">' + s + '</font>'}
+String teal(s)           { return '<font color = "Teal">' + s + '</font>'}
 
 //Blues
-String cyan(s) { return '<font color = "Cyan">' + s + '</font>'}
+String cyan(s)           { return '<font color = "Cyan">' + s + '</font>'}
 String lightSteelBlue(s) { return '<font color = "LightSteelBlue">' + s + '</font>'}
-String steelBlue(s) { return '<font color = "SteelBlue">' + s + '</font>'}
-String lightSkyBlue(s) { return '<font color = "LightSkyBlue">' + s + '</font>'}
-String deepSkyBlue(s) { return '<font color = "DeepSkyBlue">' + s + '</font>'}
-String dodgerBlue(s) { return '<font color = "DodgerBlue">' + s + '</font>'}
-String blue(s) { return '<font color = "blue">' + s + '</font>'}
-String midnightBlue(s) { return '<font color = "midnightBlue">' + s + '</font>'}
+String steelBlue(s)      { return '<font color = "SteelBlue">' + s + '</font>'}
+String lightSkyBlue(s)   { return '<font color = "LightSkyBlue">' + s + '</font>'}
+String deepSkyBlue(s)    { return '<font color = "DeepSkyBlue">' + s + '</font>'}
+String dodgerBlue(s)     { return '<font color = "DodgerBlue">' + s + '</font>'}
+String blue(s)           { return '<font color = "blue">' + s + '</font>'}
+String midnightBlue(s)   { return '<font color = "midnightBlue">' + s + '</font>'}
 
 //Purples
-String magenta(s) { return '<font color = "Magenta">' + s + '</font>'}
+String magenta(s)       { return '<font color = "Magenta">' + s + '</font>'}
 String rebeccaPurple(s) { return '<font color = "RebeccaPurple">' + s + '</font>'}
-String blueViolet(s) { return '<font color = "BlueViolet">' + s + '</font>'}
-String slateBlue(s) { return '<font color = "SlateBlue">' + s + '</font>'}
+String blueViolet(s)    { return '<font color = "BlueViolet">' + s + '</font>'}
+String slateBlue(s)     { return '<font color = "SlateBlue">' + s + '</font>'}
 String darkSlateBlue(s) { return '<font color = "DarkSlateBlue">' + s + '</font>'}
 
 //Browns
-String burlywood(s) { return '<font color = "Burlywood">' + s + '</font>'}
-String goldenrod(s) { return '<font color = "Goldenrod">' + s + '</font>'}
+String burlywood(s)     { return '<font color = "Burlywood">' + s + '</font>'}
+String goldenrod(s)     { return '<font color = "Goldenrod">' + s + '</font>'}
 String darkGoldenrod(s) { return '<font color = "DarkGoldenrod">' + s + '</font>'}
-String sienna(s) { return '<font color = "Sienna">' + s + '</font>'}
+String sienna(s)        { return '<font color = "Sienna">' + s + '</font>'}
 
 //Grays
 String lightGray(s) { return '<font color = "LightGray">' + s + '</font>'}
-String gray(s) { return '<font color = "Gray">' + s + '</font>'}
-String dimGray(s) { return '<font color = "DimGray">' + s + '</font>'}
+String gray(s)      { return '<font color = "Gray">' + s + '</font>'}
+String dimGray(s)   { return '<font color = "DimGray">' + s + '</font>'}
 String slateGray(s) { return '<font color = "SlateGray">' + s + '</font>'}
-String black(s) { return '<font color = "Black">' + s + '</font>'}
+String black(s)     { return '<font color = "Black">' + s + '</font>'}
 
 //**********************************************************************************
 //****** End of HTML enhancement functions.
