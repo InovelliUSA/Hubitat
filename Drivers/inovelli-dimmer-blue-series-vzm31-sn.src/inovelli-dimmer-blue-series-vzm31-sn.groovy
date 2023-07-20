@@ -6,7 +6,7 @@ def getDriverDate() { return "2023-07-01" /** + orangeRed(" (beta)") **/ }  // *
 * Author: Eric Maycock (erocm123)
 * Contributor: Mark Amber (marka75160)
 * Platform: Hubitat
-*
+*a
 * Copyright 2023 Eric Maycock / Inovelli
 *
 * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -2673,7 +2673,7 @@ def updated(option) { // called when "Save Preferences" is requested
 	if (settings.groupBinding2!=null && settings.groupBinding2==settings.groupBinding1) {device.clearSetting("groupBinding2"); state.groupBinding2 = null; if (infoEnable) log.info "${device.displayName} Removed duplicate Group Bind #2"}
 	if (settings.groupBinding1!=null && settings.groupBinding1==settings.groupBinding3) {device.clearSetting("groupBinding3"); state.groupBinding3 = null; if (infoEnable) log.info "${device.displayName} Removed duplicate Group Bind #3"}
 	
-    if (nothingChanged)&&(infoEnable||traceEnable||debugEnable)) {
+    if (nothingChanged && (infoEnable||traceEnable||debugEnable)) {
 	    log.info  "${device.displayName} No DEVICE settings were changed"
 		log.info  "${device.displayName} Info logging  " + (infoEnable?limeGreen("Enabled"):red("Disabled"))
 		log.trace "${device.displayName} Trace logging " + (traceEnable?limeGreen("Enabled"):red("Disabled"))
