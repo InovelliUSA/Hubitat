@@ -6,7 +6,7 @@ def getDriverDate() { return "2023-07-01" /** + orangeRed(" (beta)") **/ }  // *
 * Author: Eric Maycock (erocm123)
 * Contributor: Mark Amber (marka75160)
 * Platform: Hubitat
-*a
+*
 * Copyright 2023 Eric Maycock / Inovelli
 *
 * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
