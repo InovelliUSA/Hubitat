@@ -1,4 +1,4 @@
-def getDriverDate() { return "2023-07-03" /** + orangeRed(" (beta)") **/ }  // **** DATE OF THE DEVICE DRIVER **** //
+def getDriverDate() { return "2023-08-14" /** + orangeRed(" (beta)") **/ }  // **** DATE OF THE DEVICE DRIVER **** //
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW31-SN Red Series Z-Wave 2-in-1 Dimmer
@@ -48,6 +48,7 @@ def getDriverDate() { return "2023-07-03" /** + orangeRed(" (beta)") **/ }  // *
 * 2023-06-15(MA) re-sync all models (VZM31/VZM35/VSW31) for consistent verbiage/function
 * 2023-07-01(MA) removed "beta" designation
 * 2023-07-03(EM) added URL to metadata
+* 2023-08-14(EM) add processAssociation to updated() & configure() method
 *
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 * !!                                                                 !!
@@ -966,6 +967,7 @@ def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS A
     sendEvent(name: "numberOfButtons", value: 14)
     def cmds = []
     cmds += zwave.versionV1.versionGet()
+    cmds += processAssociations()
     if (option!="All" && option!="Default") { //if we didn't pick option "All" or "Default" (so we don't read them twice) then preload the dimming/ramp rates and key parameters so they are not null in calculations
         for(int i = 1;i<=8;i++) if (state."parameter${i}value"==null) cmds += getParameter(i)
         cmds += getParameter(158)       //switch mode
@@ -1873,6 +1875,7 @@ def updated(option) { // called when "Save Preferences" is requested
 	runIn(2,lastRanRemove)
     def changedParams = []
     def cmds = []
+    cmds += processAssociations()
     def nothingChanged = true
     int defaultValue
     int newValue
