@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "VZM31-SN: Blue series 2-1 - Minor bug fixes and some formatting changes",
+   "releaseNotes": "VZW31-SN: Fix compatibility with association tool",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -109,7 +109,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-vzw31-sn.src/inovelli-dimmer-red-series-vzw31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "23.7.7",
+                "version": "23.8.15",
 		"releaseNotes": "" 
    	}
    ]
