@@ -106,7 +106,7 @@
    		"id" : "dada3ebc-3d4f-11ee-be56-0242ac120002",
    		"name": "Inovelli Fan Blue Series VZM35-SN",
                 "namespace": "InovelliUSA",
-   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-blue-series-vzm35-sn.src/inovelli-fan-blue-series-vzm31-sn.groovy",
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-blue-series-vzm35-sn.src/inovelli-fan-blue-series-vzm35-sn.groovy",
    		"required": false,
    		"oauth": false,
                 "version": "23.8.17",
