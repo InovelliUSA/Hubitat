@@ -102,6 +102,16 @@
                 "version": "23.7.18",
 		"releaseNotes": "" 
    	},
+	   {
+   		"id" : "dada3ebc-3d4f-11ee-be56-0242ac120002",
+   		"name": "Inovelli Fan Blue Series VZM35-SN",
+                "namespace": "InovelliUSA",
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-blue-series-vzm35-sn.src/inovelli-fan-blue-series-vzm31-sn.groovy",
+   		"required": false,
+   		"oauth": false,
+                "version": "23.8.17",
+		"releaseNotes": "" 
+   	},
 	{
    		"id" : "effbd34b-1d62-4fff-889b-566d70a72531",
    		"name": "Inovelli Dimmer 2-in-1 Red Series VZW31-SN",
