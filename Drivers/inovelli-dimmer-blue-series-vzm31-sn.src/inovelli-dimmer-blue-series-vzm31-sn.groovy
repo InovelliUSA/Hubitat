@@ -1,4 +1,4 @@
-def getDriverDate() { return "2023-07-01" /** + orangeRed(" (beta)") **/ }  // **** DATE OF THE DEVICE DRIVER **** //
+def getDriverDate() { return "2023-09-14" /** + orangeRed(" (beta)") **/ }  // **** DATE OF THE DEVICE DRIVER **** //
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZM31-SN Blue Series Zigbee 2-in-1 Dimmer
@@ -167,6 +167,7 @@ def getDriverDate() { return "2023-07-01" /** + orangeRed(" (beta)") **/ }  // *
 * 2023-06-01(MA) remove "double-click to update firmware" logic since new Hubitat firmware now prompts user to click OK or CANCEL 
 * 2023-06-15(MA) re-sync all models (VZM31/VZM35/VSW31) for consistent verbiage/function
 * 2023-07-01(MA) removed "beta" designation
+* 2023-09-14(EM) add config option info for smart bulb mode not working in 3-way dumb switch mode.
 *
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 * !!                                                                 !!
@@ -642,7 +643,7 @@ def getParameterNumbers() {   //controls which options are available depending o
     parameter022 : [
         number: 22,
         name: "Aux Switch Type",
-        description: "Set the Aux switch type.",
+        description: "Set the Aux switch type. Smart Bulb Mode does not work in Dumb 3-Way Switch mode.",
         range: ["0":"No Aux (default)", "1":"Dumb 3-Way Switch", "2":"Smart Aux Switch", "3":"No Aux Full Wave (On/Off only)"],
         default: 0,
         size: 8,
@@ -692,7 +693,7 @@ def getParameterNumbers() {   //controls which options are available depending o
     parameter052 : [
         number: 52,
         name: "Smart Bulb Mode",
-        description: "For use with Smart Bulbs that need constant power and are controlled via commands rather than power.",
+        description: "For use with Smart Bulbs that need constant power and are controlled via commands rather than power. Does not work in 3-way dumb mode.",
         range: ["0":"Disabled (default)", "1":"Enabled"],
         default: 0,
         size: 1,
