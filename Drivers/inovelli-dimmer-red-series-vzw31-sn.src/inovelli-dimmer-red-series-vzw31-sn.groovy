@@ -1,4 +1,4 @@
-def getDriverDate() { return "2023-08-14" /** + orangeRed(" (beta)") **/ }  // **** DATE OF THE DEVICE DRIVER **** //
+def getDriverDate() { return "2023-09-14" /** + orangeRed(" (beta)") **/ }  // **** DATE OF THE DEVICE DRIVER **** //
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW31-SN Red Series Z-Wave 2-in-1 Dimmer
@@ -49,6 +49,8 @@ def getDriverDate() { return "2023-08-14" /** + orangeRed(" (beta)") **/ }  // *
 * 2023-07-01(MA) removed "beta" designation
 * 2023-07-03(EM) added URL to metadata
 * 2023-08-14(EM) add processAssociation to updated() & configure() method
+* 2023-09-13(EM) fix null error in processAssociation
+* 2023-09-14(EM) add config option info for smart bulb mode not working in 3-way dumb switch mode. 
 *
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 * !!                                                                 !!
@@ -519,7 +521,7 @@ def getParameterNumbers() {   //controls which options are available depending o
     parameter022 : [
         number: 22,
         name: "Aux Switch Type",
-        description: "Set the Aux switch type.",
+        description: "Set the Aux switch type. Smart Bulb Mode does not work in Dumb 3-Way Switch mode.",
         range: ["0":"No Aux (default)", "1":"Dumb 3-Way Switch", "2":"Smart Aux Switch", "3":"No Aux Full Wave (On/Off only)"],
         default: 0,
         size: 1,
@@ -569,7 +571,7 @@ def getParameterNumbers() {   //controls which options are available depending o
     parameter052 : [
         number: 52,
         name: "Smart Bulb Mode",
-        description: "For use with Smart Bulbs that need constant power and are controlled via commands rather than power.",
+        description: "For use with Smart Bulbs that need constant power and are controlled via commands rather than power. Does not work in 3-way dumb mode.",
         range: ["0":"Disabled (default)", "1":"Enabled"],
         default: 0,
         size: 1,
@@ -2100,7 +2102,10 @@ def processAssociations(){
       }
    }
    if (cmds) cmds -= null	//remove nulls from list
-   return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+   if (cmds)
+       return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+   else 
+       return []
 }
 
 /****************************************************************************
