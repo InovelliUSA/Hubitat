@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "VZM35-SN: Adding fan driver",
+   "releaseNotes": "VZM35-SN: Adding some missing features to the fan driver.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -109,7 +109,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-blue-series-vzm35-sn.src/inovelli-fan-blue-series-vzm35-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "23.8.17",
+                "version": "23.10.1",
 		"releaseNotes": "" 
    	},
 	{
