@@ -1,4 +1,4 @@
-def getDriverDate() { return "2023-10-01" }// + orangeRed(" (beta)") } // **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2023-10-10" }// + orangeRed(" (beta)") } // **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZM35-SN Blue Series Zigbee Fan Switch
@@ -106,6 +106,7 @@ def getDriverDate() { return "2023-10-01" }// + orangeRed(" (beta)") } // **** D
 * 2023-09-13(MA) streamlined parsing of individual LED parameters (P60-P94)
 * 2023-09-15(MA) streamlined Config All and Refresh All
 * 2023-10-01(MA) remove "beta" designation
+* 2023-10-10(EM) add additional description information for aux switch and non-neutral settings
 *
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 * !!                                                                 !!
@@ -580,7 +581,7 @@ def getReadOnlyParams() {
     parameter022 : [
         number: 22,
         name: "Aux Switch Type",
-        description: "Set the Aux switch type",
+        description: "Set the Aux switch type. If you are selecting the, \"Smart Aux Switch\", and do not have a neutral wire, you may have to program your switch accordingly. Instructions can be found here: https://inov.li/vzm35snauxnn",
         range: ["0":"No Aux (default)", "1":"Smart Aux Switch"],
         default: 0,
         size: 8,
@@ -1190,8 +1191,8 @@ def getReadOnlyParams() {
     parameter258 : [
         number: 258,
         name: "Switch Mode",
-        description: "Multi-Speed or On/Off only",
-        range: ["0":"Multi-Speed (default)", "1":"On/Off only"],
+        description: "Multi-Speed or On/Off only. Ceiling Fan switch mode with neutral installations will have 3-Speeds, whereas if there is no neutral wire present, there will only be 2-Speeds",
+        range: ["0":"Ceiling Fan (Multi-Speed)", "1":"Exhaust Fan (On/Off) (Default)"],
         default: 0,
         size: 1,
         type: "enum",
