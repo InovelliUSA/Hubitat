@@ -1,4 +1,4 @@
-def getDriverDate() { return "2023-10-10" }// + orangeRed(" (beta)") } // **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2023-10-14" /*+ orangeRed(" (beta)")*/ }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZM35-SN Blue Series Zigbee Fan Switch
@@ -107,6 +107,7 @@ def getDriverDate() { return "2023-10-10" }// + orangeRed(" (beta)") } // **** D
 * 2023-09-15(MA) streamlined Config All and Refresh All
 * 2023-10-01(MA) remove "beta" designation
 * 2023-10-10(EM) add additional description information for aux switch and non-neutral settings
+* 2023-10-14(MA) fix "Switch Mode" not changing; warn null ClusterID; fix null setLevel
 *
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 * !!                                                                 !!
@@ -144,7 +145,7 @@ metadata {
         capability "SwitchLevel"
 
         attribute "lastButton", "String"		//last button event
-        attribute "ledEffect", "String"			//LED effect that was last requested (may have timed-out and not necessarily displaying currently)
+        attribute "ledEffect", "String"			//last LED effect requested (may have timed-out and not necessarily displaying currently)
 		attribute "internalTemp", "String"		//Internal Temperature in Celsius	(read-only P32)
         attribute "numberOfBindings", "String"	//Group bindings count as 2			(read only P51)
 		attribute "overHeat", "String"			//Overheat Indicator				(read-only P33)
@@ -283,7 +284,7 @@ metadata {
                             input "parameter${i}", "enum",
                                 title: "${i}. " + indianRed(bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name)),
                                 description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description),
-                                //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
+                                defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
                                 options: configParams["parameter${i.toString().padLeft(3,"0")}"].range
                             break
                         case 95:
@@ -374,7 +375,7 @@ def getReadOnlyParams() {
 }
 
 @Field static Integer shortDelay = 333		//default delay to use for zigbee commands (in milliseconds)
-@Field static Integer longDelay = 3000		//long delay to use for changing modes (in milliseconds)
+@Field static Integer longDelay = 1000		//long delay to use for changing modes (in milliseconds)
 @Field static Integer defaultQuickLevel=50	//default startup level for QuickStart emulation
 
 @Field static Map configParams = [
@@ -581,7 +582,7 @@ def getReadOnlyParams() {
     parameter022 : [
         number: 22,
         name: "Aux Switch Type",
-        description: "Set the Aux switch type. If you are selecting the, \"Smart Aux Switch\", and do not have a neutral wire, you may have to program your switch accordingly. Instructions can be found here: https://inov.li/vzm35snauxnn",
+        description: "Set the Aux switch type. If you are selecting the, \"Smart Aux Switch\" and do not have a neutral wire you may have to program your switch accordingly. Instructions can be found here: https://inov.li/vzm35snauxnn",
         range: ["0":"No Aux (default)", "1":"Smart Aux Switch"],
         default: 0,
         size: 8,
@@ -784,7 +785,7 @@ def getReadOnlyParams() {
         description: "4-byte encoded LED1 Notification",
         range: "0..4294967295",
         default: 0,
-        size: 32,
+        size: 4,
         type: "number",
         value: null
         ],
@@ -834,7 +835,7 @@ def getReadOnlyParams() {
         description: "4-byte encoded LED2 Notification",
         range: "0..4294967295",
         default: 0,
-        size: 32,
+        size: 4,
         type: "number",
         value: null
         ],
@@ -884,7 +885,7 @@ def getReadOnlyParams() {
         description: "4-byte encoded LED3 Notification",
         range: "0..4294967295",
         default: 0,
-        size: 32,
+        size: 4,
         type: "number",
         value: null
         ],
@@ -934,7 +935,7 @@ def getReadOnlyParams() {
         description: "4-byte encoded LED4 Notification",
         range: "0..4294967295",
         default: 0,
-        size: 32,
+        size: 4,
         type: "number",
         value: null
         ],
@@ -984,7 +985,7 @@ def getReadOnlyParams() {
         description: "4-byte encoded LED5 Notification",
         range: "0..4294967295",
         default: 0,
-        size: 32,
+        size: 4,
         type: "number",
         value: null
         ],
@@ -1034,7 +1035,7 @@ def getReadOnlyParams() {
         description: "4-byte encoded LED6 Notification",
         range: "0..4294967295",
         default: 0,
-        size: 32,
+        size: 4,
         type: "number",
         value: null
         ],
@@ -1084,7 +1085,7 @@ def getReadOnlyParams() {
         description: "4-byte encoded LED Notification",
         range: "0..4294967295",
         default: 0,
-        size: 32,
+        size: 4,
         type: "number",
         value: null
         ],
@@ -1134,7 +1135,7 @@ def getReadOnlyParams() {
         description: "4-byte encoded LED Notification",
         range: "0..4294967295",
         default: 0,
-        size: 32,
+        size: 4,
         type: "number",
         value: null
         ],
@@ -1191,9 +1192,9 @@ def getReadOnlyParams() {
     parameter258 : [
         number: 258,
         name: "Switch Mode",
-        description: "Multi-Speed or On/Off only. Ceiling Fan switch mode with neutral installations will have 3-Speeds, whereas if there is no neutral wire present, there will only be 2-Speeds",
-        range: ["0":"Ceiling Fan (Multi-Speed)", "1":"Exhaust Fan (On/Off) (Default)"],
-        default: 0,
+        description: "Ceiling Fan (Multi-Speed) or Exhaust Fan (On/Off). Ceiling Fan mode with neutral wire will have 3-Speeds. If there is no neutral wire there will only be 2-Speeds",
+        range: ["0":"Ceiling Fan (Multi-Speed)", "1":"Exhaust Fan (On/Off) (default)"],
+        default: 1,
         size: 1,
         type: "enum",
         value: null
@@ -1346,7 +1347,7 @@ def calculateParameter(paramNum) {
 }
 
 def calculateSize(size) {
-    if (debugEnable) log.debug "${device.displayName} calculateSize(${size})"
+    if (traceEnable) log.trace "${device.displayName} calculateSize(${size})"
 	if (size==null || size==" ") size = configParams["parameter${number.toString().padLeft(3,'0')}"]?.size?:8
     if      (size.toInteger() == 1)  return 0x10    //1-bit boolean
     else if (size.toInteger() == 8)  return 0x20    //1-byte unsigned integer
@@ -1366,10 +1367,10 @@ def clearSetting(i) {
 	if (settings."parameter${i}"!=null)   {cleared=true; device.removeSetting("parameter" + i)}
 	if (state."parameter${i}value"!=null) {cleared=true; state.remove("parameter" + i + "value")}
 	if (cleared && (traceEnable||debugEnable)) log.trace "${device.displayName} cleared P${i} since it is the default"
-	}
+}
 
 def clusterLookup(cluster) {
-	if (cluster==null) return "un-named cluster"
+	if (cluster==null) return "null ClusterID"
 	else {
 		//return zigbee.clusterLookup(cluster)
 		return zigbee.clusterLookup(cluster)?:cluster==0x8021?"Binding Cluster":
@@ -1479,7 +1480,6 @@ def identify(seconds) {
 
 def initialize() {    //CALLED DURING HUB BOOTUP IF "INITIALIZE" CAPABILITY IS DECLARED IN METADATA SECTION
     log.info "${device.displayName} initialize()"
-    if (infoEnable) log.info "${device.displayName} clearing state variables..."
     //save the group IDs before clearing all the state variables and reset them after
 	if (state.groupBinding1) saveBinding1 = state.groupBinding1
 	if (state.groupBinding2) saveBinding2 = state.groupBinding2
@@ -1492,8 +1492,10 @@ def initialize() {    //CALLED DURING HUB BOOTUP IF "INITIALIZE" CAPABILITY IS D
     state.lastCommandTime = nowFormatted()
     state.driverDate = getDriverDate()
 	state.model = device.getDataValue('model')
+    device.removeSetting("parameter23level")
+    device.removeSetting("parameter95custom")
+    device.removeSetting("parameter96custom")
     def cmds = []
-    if (infoEnable) log.info "${device.displayName} clearing LED notifications..."
 	cmds += ledEffectOne(1234567,255,0,0,0)	//clear any outstanding oneLED Effects
 	cmds += ledEffectAll(255,0,0,0)			//clear any outstanding allLED Effects
     cmds += refresh()
@@ -1648,7 +1650,7 @@ def traceCluster(String description) {
 }
 
 def parse(String description) {
-    if (debugEnable) log.debug "${device.displayName} parse($description)"
+    if (traceEnable) log.trace "${device.displayName} parse($description)"
     Map descMap = zigbee.parseDescriptionAsMap(description)
     try {
 		if (debugEnable && (zigbee.getEvent(description)!=[:])) log.debug "${device.displayName} zigbee.getEvent ${zigbee.getEvent(description)}"
@@ -2102,19 +2104,19 @@ def parse(String description) {
                         infoMsg += " (Remote Dim Rate Up: " + (valueInt<127?((valueInt/10).toString()+"s)"):"default)")
                         break
                     case 2:
-                        infoMsg += " (Local  Dim Rate Up: " + (valueInt<127?((valueInt/10).toString()+"s)"):"sync with 1)")
+                        infoMsg += " (Local Dim Rate Up: " + (valueInt<127?((valueInt/10).toString()+"s)"):"sync with 1)")
                         break
                     case 3:
                         infoMsg += " (Remote Ramp Rate On: " + (valueInt<127?((valueInt/10).toString()+"s)"):"sync with 1)")
                         break
                     case 4:
-                        infoMsg += " (Local  Ramp Rate On: " + (valueInt<127?((valueInt/10).toString()+"s)"):"sync with 3)")
+                        infoMsg += " (Local Ramp Rate On: " + (valueInt<127?((valueInt/10).toString()+"s)"):"sync with 3)")
                         break
                     case 5:
                         infoMsg += " (Remote Dim Rate Down: " + (valueInt<127?((valueInt/10).toString()+"s)"):"sync with 1)")
                         break
                     case 6:
-                        infoMsg += " (Local  Dim Rate Down: " + (valueInt<127?((valueInt/10).toString()+"s)"):"sync with 2)")
+                        infoMsg += " (Local Dim Rate Down: " + (valueInt<127?((valueInt/10).toString()+"s)"):"sync with 2)")
                         break
                     case 7:
                         infoMsg += " (Remote Ramp Rate Off: " + (valueInt<127?((valueInt/10).toString()+"s)"):"sync with 3)")
@@ -2387,8 +2389,8 @@ def parse(String description) {
 								state.parameter22value=0
 							}
 						}
-					} 
-					if (infoEnable||traceEnable||debugEnable) log.trace "${device.displayName} Dimming Method = ${state.dimmingMethod}"																																					   
+					}
+					if (infoEnable||traceEnable||debugEnable) log.trace "${device.displayName} Dimming Method = ${state.dimmingMethod}"
 				}
 				//Update UI setting with value received from device
 				if ((valueInt==getDefaultValue(attrInt))	//IF   value is the default
@@ -2405,7 +2407,7 @@ def parse(String description) {
 			else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command:$descMap.command ") //+ descMap
             break
         default:
-            log.warn "${device.displayName} " + fireBrick("Unknown Cluster($clusterName)  ") + descMap
+            log.warn "${device.displayName} " + fireBrick("Unknown Cluster($clusterName)  ") + description
 			break
 	}
     state.lastEventCluster =   clusterName
@@ -2435,7 +2437,7 @@ def quickStart() {
 		if (infoEnable) log.info "${device.displayName} quickStart(" + (state.model?.substring(0,5)!="VZM35"?"${settings.parameter23}%)":"${settings.parameter23}s)")
 		if (state.model?.substring(0,5)!="VZM35") {      //IF not the Fan switch THEN emulate quickStart 
 			if (startLevel<state.parameter23value) cmds += zigbee.setLevel(state.parameter23value?.toInteger(),0,34)  //only do quickStart if currentLevel is < Quick Start Level (34ms is two sinewave cycles)
-			cmds += zigbee.setLevel(startLevel.toInteger(),0,longDelay) 
+			cmds += zigbee.setLevel(startLevel,0,longDelay) 
 			if (debugEnable) log.debug "${device.displayName} quickStart $cmds"
 		}
 	}
@@ -2558,7 +2560,7 @@ def refresh(option) {
 	configParams.each {	//loop through all parameters
 		int i = it.value.number.toInteger()
 		if (i==23 && (state.model?.substring(0,5)!="VZM35")) quickStartVariables()  //quickStart is implemented in firmware for the fan, emulated in this driver for 2-in-1 Dimmer
-		
+
 		switch (option) {
 			case "":									//option is blank or null 
 				if (([22,52,158,258].contains(i))		//refresh primary settings
@@ -2666,12 +2668,12 @@ def getAttribute(Integer cluster, Integer attrInt=0, Map additionalParams = [:],
 }
 
 def setLevel(value, duration=0xFFFF) {
+	if (duration==null) duration=0xFFFF
     if (infoEnable) log.info "${device.displayName} setLevel($value" + (duration==0xFFFF?")":", ${duration}s)")
     state.lastCommandSent =                        "setLevel($value" + (duration==0xFFFF?")":", ${duration}s)")
     state.lastCommandTime = nowFormatted()
     if (duration!=0xFFFF) duration = duration.toInteger()*10  //firmware duration in 10ths
     def cmds = []
-    //if (device.currentValue("switch")=="off" && value!=0) cmds += zigbee.setLevel(1,0,0) //if device is off then turn on at 1  //hack for firmware bug.  should be fixed in v2.11
     cmds += zigbee.setLevel(value.toInteger(),duration,shortDelay)
     if (debugEnable) log.debug "${device.displayName} setLevel $cmds"
 	return cmds
@@ -2682,7 +2684,7 @@ def setParameter(paramNum=0, value=null, size=null, delay=shortDelay) {
 	value    = value?.toInteger()
 	size     = size?.toInteger()
 	if (size==null || size==" ") size = configParams["parameter${paramNum.toString().padLeft(3,'0')}"]?.size?:8
-	//if (traceEnable) log.trace "${device.displayName} setParameter($paramNum, $value, $size)"
+	if (traceEnable) log.trace "${device.displayName} setParameter($paramNum, $value, $size)"
 	state.lastCommandSent =                          "setParameter($paramNum, $value, $size)"
 	state.lastCommandTime = nowFormatted()
 	def cmds = []
@@ -2696,8 +2698,8 @@ def setParameter(paramNum=0, value=null, size=null, delay=shortDelay) {
 
 def getParameter(paramNum=0, delay=shortDelay) {
 	paramNum = paramNum?.toInteger()
-    //if (traceEnable) log.trace "${device.displayName} getParameter($paramNum,$delay)"
-    //state.lastCommandSent =                          "getParameter($paramNum,$delay)"
+    if (traceEnable) log.trace "${device.displayName} getParameter($paramNum,$delay)"
+    //state.lastCommandSent =                        "getParameter($paramNum,$delay)"
     //state.lastCommandTime = nowFormatted() //this is not a custom command.  Only use state variable for commands on the device details page
     def cmds = []
 	if (paramNum<0) {	//special case, if negative then read all params from 0-max (for debugging)
@@ -2799,7 +2801,7 @@ def stopLevelChange() {
     if (infoEnable) log.info "${device.displayName} stopLevelChange()" // at level " + device.currentValue("level")
     state.lastCommandSent =                        "stopLevelChange()"
     state.lastCommandTime = nowFormatted()
-    def cmds = []
+	def cmds = []
     cmds += ["he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} ${CLUSTER_LEVEL_CONTROL} ${COMMAND_STOP} {}","delay $shortDelay"]
     if (debugEnable) log.debug "${device.displayName} stopLevelChange $cmds"
     return cmds
@@ -2852,7 +2854,7 @@ def updated(option) { // called when "Save Preferences" is requested
 				if ((getParameterNumbers().contains(i))		//IF   this is a valid parameter for this device mode
 				&& (settings."parameter$i"!=null)			//AND  this is a non-default setting
 				&& (!getReadOnlyParams().contains(i))) {	//AND  this is not a read-only parameter
-					cmds += setParameter(i, newValue, 150)	//THEN set the new value
+					cmds += setParameter(i, newValue)		//THEN set the new value
 					nothingChanged = false
 				}
 				break
@@ -2861,14 +2863,14 @@ def updated(option) { // called when "Save Preferences" is requested
 				if (option=="Default") newValue = defaultValue	//if user selected "Default" then set the new value to the default value
 				if (((i!=158)&&(i!=258))					//IF   we are not changing Switch Mode
 				&& (!getReadOnlyParams().contains(i))) {	//AND  this is not a read-only parameter
-					cmds += setParameter(i, newValue, 150)	//THEN Set the new value
+					cmds += setParameter(i, newValue)		//THEN Set the new value
 					nothingChanged = false
 				} else {									//ELSE this is a read-only parameter or Switch Mode parameter
 					cmds += getParameter(i)					//so Get current value from device
 				}
 				break
 			default: 
-				if (traceEnable||debugEnable) log.error "${device.displayName} Unknonwn option 'updated($option)'"
+				if (traceEnable||debugEnable) log.error "${device.displayName} Unknown option 'updated($option)'"
 				break
 		}
         if ((i==23)&&(state.model?.substring(0,5)!="VZM35")) {  //IF not Fan switch THEN manually update the quickStart state variables since Dimmer does not store these
@@ -2923,7 +2925,7 @@ def updated(option) { // called when "Save Preferences" is requested
 	log.info  "${device.displayName} Info logging  " + (infoEnable?limeGreen("Enabled"):red("Disabled"))
 	log.trace "${device.displayName} Trace logging " + (traceEnable?limeGreen("Enabled"):red("Disabled"))
 	log.debug "${device.displayName} Debug logging " + (debugEnable?limeGreen("Enabled"):red("Disabled"))
-		
+
     if (infoEnable && disableInfoLogging) {
 		log.info "${device.displayName} Info Logging will be disabled in $disableInfoLogging minutes"
 		runIn(disableInfoLogging*60,infoLogsOff)
