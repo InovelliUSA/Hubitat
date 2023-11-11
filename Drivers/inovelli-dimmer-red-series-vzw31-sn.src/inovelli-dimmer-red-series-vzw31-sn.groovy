@@ -1,4 +1,4 @@
-def getDriverDate() { return "2023-09-14" /** + orangeRed(" (beta)") **/ }  // **** DATE OF THE DEVICE DRIVER **** //
+def getDriverDate() { return "2023-11-11" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW31-SN Red Series Z-Wave 2-in-1 Dimmer
@@ -18,47 +18,47 @@ def getDriverDate() { return "2023-09-14" /** + orangeRed(" (beta)") **/ }  // *
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
-* 2022-11-28(EM) Initial commit
-* 2022-12-02(EM) Added custom command ledEffectAll & ledEffectOne
-* 2022-12-06(EM) Fix led effects when integer value is too large
-* 2022-12-06(EM) Bug fixes for incorrect parameter size and workaround for unsigned integers above a certain value
-* 2022-12-12(EM) Fix default values of param 2-8
-* 2022-01-03(EM) Update things for firmware .03
-* 2023-01-06(MA) Update parameter descriptions; add color text; add descriptions to ledEffect dropdowns and dim/ramp rates;
+* 2023-11-11(MA) merge changes between beta/production and changes with Blue series (individual LED logging)
+* 2023-10-23(MA) reverse order of comments (newest at top)
+* 2023-09-13(EM) fix null error in processAssociation
+* 2023-07-03(EM) added URL to metadata
+* 2023-07-01(MA) removed "beta" designation
+* 2023-06-15(MA) re-sync all models (VZM31/VZM35/VZW31) for consistent verbiage/function
+* 2023-05-08(MA) fix duration on startLevelChange; fix input number range for P23
+* 2023-04-03(MA) fix scene button mappings
+* 2023-03-31(MA) updates for v0.14 firmware; add p25,p58,p100; 
+* 2023-03-15(MA) display effect name instead of number in ledEffect attribute 
+* 2023-03-12(MA) add params 55,56; fix minor bugs and typos; prep for production firmware release.
+* 2023-03-01(MA) synchronize all changes up to this point between VZM31, VZM35, and VZW31
+* 2023-02-26(MA) fix missing preferences; fix state.auxType; enhance parsing of Unknown Command and Unknown Attribute
+* 2023-02-23(MA) fix Leading/Trailing error in non-neutral; misc code cleanup; more standardization between the different VMark devices
+* 2023-02-21(MA) Updates to get ready for production release.   Standardize across all V-Mark Blue and Red Gen2
+* 2023-02-09(MA) Updates for firmware v0.06
+* 2023-02-06(MA) Updates for firmware v0.05
 *                display detected Power Source (Neutral/non-Neutral); flip incorrect ledEffect color and duration until next firmware fix;
 *                add driverDate, lastCommand, and lastCommandTime state variables; fix multi-line parameter logging in refresh() command
-* 2023-01-08(MA) Reorder some things to align a little better with Blue series (helps with diff/compare); add trace logging
-* 2023-01-09(MA) fix ledEffectOne ledNum offset calculation
-* 2023-01-10(MA) improved ledEffect reporting in log and state variables
-* 2023-01-11(MA) cleanup sendEvent doesn't use "displayed:false" on Hubitat
+* 2023-01-22(MA) fix ledEffect sendEvent
 * 2023-01-12(MA) Updates for firmware v0.04
 * 2023-01-12(MA) change QuickStart description to experimental
-* 2023-01-22(MA) fix ledEffect sendEvent
-* 2023-02-06(MA) Updates for firmware v0.05
-* 2023-02-09(MA) Updates for firmware v0.06
-* 2023-02-21(MA) Updates to get ready for production release.   Standardize across all V-Mark Blue and Red Gen2
-* 2023-02-23(MA) fix Leading/Trailing error in non-neutral; misc code cleanup; more standardization between the different VMark devices
-* 2023-02-26(MA) fix missing preferences; fix state.auxType; enhance parsing of Unknown Command and Unknown Attribute
-* 2023-03-01(MA) synchronize all changes up to this point between VZM31, VZM35, and VZW31
-* 2023-03-12(MA) add params 55,56; fix minor bugs and typos; prep for production firmware release.
-* 2023-03-15(MA) display effect name instead of number in ledEffect attribute 
-* 2023-03-31(MA) updates for v0.14 firmware; add p25,p58,p100; 
-* 2023-04-03(MA) fix scene button mappings
-* 2023-05-08(MA) fix duration on startLevelChange; fix input number range for P23
-* 2023-06-15(MA) re-sync all models (VZM31/VZM35/VSW31) for consistent verbiage/function
-* 2023-07-01(MA) removed "beta" designation
-* 2023-07-03(EM) added URL to metadata
-* 2023-08-14(EM) add processAssociation to updated() & configure() method
-* 2023-09-13(EM) fix null error in processAssociation
-* 2023-09-14(EM) add config option info for smart bulb mode not working in 3-way dumb switch mode. 
-*
-* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-* !!                                                                 !!
-* !! DON'T FORGET TO UPDATE THE DRIVER DATE AT THE TOP OF THIS PAGE  !!
-* !!                                                                 !!
-* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+* 2023-01-11(MA) cleanup sendEvent doesn't use "displayed:false" on Hubitat
+* 2023-01-10(MA) improved ledEffect reporting in log and state variables
+* 2023-01-09(MA) fix ledEffectOne ledNum offset calculation
+* 2023-01-08(MA) Reorder some things to align a little better with Blue series (helps with diff/compare); add trace logging
+* 2023-01-06(MA) Update parameter descriptions; add color text; add descriptions to ledEffect dropdowns and dim/ramp rates;
+* 2023-01-03(EM) Update things for firmware .03
+* 2022-12-12(EM) Fix default values of param 2-8
+* 2022-12-06(EM) Fix led effects when integer value is too large
+* 2022-12-06(EM) Bug fixes for incorrect parameter size and workaround for unsigned integers above a certain value
+* 2022-12-02(EM) Added custom command ledEffectAll & ledEffectOne
+* 2022-11-28(EM) Initial commit
 **/
+
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
 import groovy.transform.Field
+import hubitat.helper.ColorUtils
+//import hubitat.helper.HexUtils
+import java.security.MessageDigest
 
 metadata {
     definition (name: "Inovelli Dimmer 2-in-1 Red Series VZW31-SN", namespace: "InovelliUSA", author: "E.Maycock/M.Amber", importUrl:  "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-vzw31-sn.src/inovelli-dimmer-red-series-vzw31-sn.groovy")
@@ -71,6 +71,7 @@ metadata {
         capability "EnergyMeter"				//Fan does not support energy monitoring but Dimmer does
         //capability "FanControl"
         capability "HoldableButton"
+		capability "Initialize"
         capability "LevelPreset"
         capability "PowerMeter"					//Fan does not support power monitoring but Dimmer does
         capability "PushableButton"
@@ -81,10 +82,14 @@ metadata {
         capability "SwitchLevel"
 
         attribute "lastButton", "String"		//last button event
-        attribute "ledEffect", "String"			//LED effect that was requested
-        //attribute "numberOfBindings", "String"	//(read only)
+        attribute "ledEffect", "String"			//last LED effect requested (may have timed-out and not necessarily displaying currently)
+		attribute "internalTemp", "String"		//Internal Temperature in Celsius	(read-only P32)
+        //attribute "numberOfBindings", "String" //Group bindings count as 2		(read only P51)
+		attribute "overHeat", "String"			//Overheat Indicator				(read-only P33)
+		attribute "powerSource", "String"		//Neutral/non-Neutral				(read-only P21)
+		attribute "remoteProtection", "String"	//Enabled or Disabled				(read-only P257)
         attribute "smartBulb", "String"			//Smart Bulb mode enabled or disabled
-        //attribute "smartFan", "String"			//Smart Fan mode enabled or disabled
+        //attribute "smartFan", "String"		//Smart Fan mode enabled or disabled
         attribute "switchMode", "String"		//Dimmer or On/Off only
 
         // Uncomment these lines if you would like to test your scenes with digital button presses.
@@ -124,7 +129,7 @@ metadata {
         command "customEffectStop"
 **/
 
-        command "configure",           [[name:"Option",    type:"ENUM",   description:"blank=current states only, User=user changed settings only, All=configure all settings, Default=set all settings to default", constraints:[" ","User","All","Default"]]]
+        command "configure",           [[name:"Option",    type:"ENUM",   description:"blank=current states and user-changed settings, All=configure all settings, Default=set all settings to default", constraints:[" ","All","Default"]]]
 
 //		command "identify",			   [[name:"Seconds",   type:"NUMBER", description:"number of seconds to blink the LED bar so it can be identified (leave blank to see remaining seconds in the logs)"],
 //										[name:"number of seconds to blink the LED bar so it can be identified (leave blank to see remaining seconds in the logs)"]]
@@ -148,9 +153,9 @@ metadata {
 
         command "presetLevel",         [[name:"Level",     type:"NUMBER", description:"Level to preset (1 to 101)"]]
         
-        command "refresh",             [[name:"Option",    type:"ENUM",   description:"blank=current states only, User=user changed settings only, All=refresh all settings", constraints: [" ","User","All"]]]
+        command "refresh",             [[name:"Option",    type:"ENUM",   description:"blank=current states and user-changed settings, All=refresh all settings", constraints: [" ","All"]]]
 		
-//		command "remoteControl",	   [[name:"Option*",   type:"ENUM",   description:"change the setting of Remote Protection (P257)", constraints: [" ","Enabled","Disabled"]]]
+//		command "remoteControl",	   [[name:"Option*",   type:"ENUM",   description:"ability to control the switch remotely", constraints: [" ","Enabled","Disabled"]]]
 
         command "resetEnergyMeter"
 
@@ -178,26 +183,21 @@ metadata {
                                         [name:"Duration",  type:"NUMBER", description:"Transition duration in seconds"]]
         command "toggle"
 
-        fingerprint mfr:"031E", prod:"0015", deviceId:"0001", inClusters:"0x5E,0x20,0x26,0x85,0x8E,0x59,0x55,0x86,0x72,0x5A,0x87,0x73,0x98,0x9F,0x60,0x6C,0x70,0x5B,0x32,0x75,0x7A"
-	fingerprint mfr:"031E", prod:"0015", deviceId:"0001", inClusters:"0x5E,0x26,0x85,0x8E,0x59,0x55,0x86,0x72,0x5A,0x87,0x73,0x98,0x9F,0x6C,0x70,0x5B,0x32,0x75,0x7A"
+        fingerprint mfr:"031E", prod:"0015", deviceId:"0001", inClusters:"0x5E,0x26,0x85,0x8E,0x59,0x55,0x86,0x72,0x5A,0x87,0x73,0x98,0x9F,0x6C,0x70,0x5B,0x32,0x75,0x7A"
 																																							   
     }
+
     preferences {
-        getParameterNumbers().each{ i ->
+        userSettableParams().each{ i ->
             switch(configParams["parameter${i.toString().padLeft(3,"0")}"].type){
                 case "number":
                     switch(i){
+						case readOnlyParams().contains(i):	
+							//read-only params are non-settable, so skip user input
+							break 
                         case 23:
 							//special case for Quick Start is below
-                            break
-                        case 51:    //Device Bind Number
-                            input "parameter${i}", "number",
-                                title: "${i}. " + darkGreen(bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name)),
-                                description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description +
-                                     "<br>Range=" + configParams["parameter${i.toString().padLeft(3,"0")}"].range),
-                                //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
-                                range: configParams["parameter${i.toString().padLeft(3,"0")}"].range
-                            break
+							break
                         default:
                             input "parameter${i}", "number",
 								title: "${i}. " + bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name),
@@ -211,26 +211,21 @@ metadata {
                     break
                 case "enum":
                     switch(i){
+						case readOnlyParams().contains(i):	
+							//read-only params are non-settable, so skip user input
+							break 
                         case 23:
 							//special case for Quick Start is below
-                            break
-                        case 21:    //Power Source
-						case 157:	//Remote Protection Zwave
-						case 257:	//Remote Protection Zigbee
-                            input "parameter${i}", "enum",
-                                title: "${i}. " + darkGreen(bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name)),
-                                description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description),
-                                //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
-                                options: configParams["parameter${i.toString().padLeft(3,"0")}"].range
-                            break
+							break
                         case 22:    //Aux Type
                         case 52:    //Smart Bulb Mode
                         case 158:   //Switch Mode Zwave
                         case 258:   //Switch Mode Zigbee
+							//these are important parameters so display in red to draw attention
                             input "parameter${i}", "enum",
                                 title: "${i}. " + indianRed(bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name)),
                                 description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description),
-                                //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
+                                defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
                                 options: configParams["parameter${i.toString().padLeft(3,"0")}"].range
                             break
                         case 95:
@@ -251,18 +246,18 @@ metadata {
             if (i==23) {  //quickStart is implemented in firmware for the fan, emulated in this driver for 2-in-1 Dimmer (experimental)
                 if (state.model?.substring(0,5)!="VZM35") {
                     input "parameter${i}", "number",
-                        title: "${i}. " + orangeRed(bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name + " Level")),
+                        title: "${i}. " + orangeRed(bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name + " Level (experimental)")),
                         description: orangeRed(italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description +
                             "<br>Range=" + configParams["parameter${i.toString().padLeft(3,"0")}"].range +
-				    	    " Default=" +  configParams["parameter${i.toString().padLeft(3,"0")}"].default)),
+							" Default=" +  configParams["parameter${i.toString().padLeft(3,"0")}"].default)),
                         //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
                         range: configParams["parameter${i.toString().padLeft(3,"0")}"].range
                 } else {
 					input "parameter${i}", "number",
-						title: "${i}. " + darkSlateBlue(bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name + " Duration")),
+						title: "${i}. " + bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name + " Duration"),
                         description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description +
                             "<br>Range=" + configParams["parameter${i.toString().padLeft(3,"0")}"].range +
-				    	    " Default=" +  configParams["parameter${i.toString().padLeft(3,"0")}"].default),
+							" Default=" +  configParams["parameter${i.toString().padLeft(3,"0")}"].default),
                         //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
                         range: configParams["parameter${i.toString().padLeft(3,"0")}"].range
 				}
@@ -274,7 +269,7 @@ metadata {
                         title: "${i}. " + hue((settings?."parameter${i}"!=null?settings?."parameter${i}":configParams["parameter${i.toString().padLeft(3,"0")}"].default)?.toInteger(),
                             bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name)),
                         description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description),
-                        //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
+						//defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
                         options: configParams["parameter${i.toString().padLeft(3,"0")}"].range
                 } else {
                     input "parameter${i}", "enum",
@@ -283,7 +278,7 @@ metadata {
                             hue((settings?."parameter${i}custom"!=null?(settings."parameter${i}custom"/360*255):configParams["parameter${i.toString().padLeft(3,"0")}"].default)?.toInteger(),
                                 italic(bold(" Overridden by Custom Hue Value"))),
                         description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description),
-                        //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
+						//defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
                         options: configParams["parameter${i.toString().padLeft(3,"0")}"].range
                 }
                 input "parameter${i}custom", "number",
@@ -298,23 +293,31 @@ metadata {
                     range: "0..360"
             }
         }
-        input name: "infoEnable",          type: "bool",   title: bold("Enable Info Logging"),   defaultValue: true
-        input name: "traceEnable",         type: "bool",   title: bold("Enable Trace Logging"),  defaultValue: false
-        input name: "debugEnable",         type: "bool",   title: bold("Enable Debug Logging"),  defaultValue: false
+        input name: "infoEnable",          type: "bool",   title: bold("Enable Info Logging"),   defaultValue: true,  description: italic("Log general device activity<br>(optional and not required for normal operation)")
+        input name: "traceEnable",         type: "bool",   title: bold("Enable Trace Logging"),  defaultValue: false, description: italic("Additional info for trouble-shooting (not needed unless having issues)")
+        input name: "debugEnable",         type: "bool",   title: bold("Enable Debug Logging"),  defaultValue: false, description: italic("Detailed diagnostic data<br>"+fireBrick("(only enable when asked by a developer)"))
         input name: "disableInfoLogging",  type: "number", title: bold("Disable Info Logging after this number of minutes"),  description: italic("(0=Do not disable)"), defaultValue: 20
         input name: "disableTraceLogging", type: "number", title: bold("Disable Trace Logging after this number of minutes"), description: italic("(0=Do not disable)"), defaultValue: 10
         input name: "disableDebugLogging", type: "number", title: bold("Disable Debug Logging after this number of minutes"), description: italic("(0=Do not disable)"), defaultValue: 5
     }
 }
 
-def getParameterNumbers() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
-    if (parameter158 == "1") return [158,22,52,                  10,11,12,      15,17,18,19,20,21,25,50,            58,59,95,96,97,98,100,123,159,160,161,162]  //on/off mode
-    else                     return [158,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,25,50,53,54,55,56,58,59,95,96,97,98,100,123,    160,    162]  //dimmer mode
+def validConfigParams() {	//all valid parameters for this specific device (configParams MAP contains definitions for all parameters for all devices)
+	return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,25,50,53,54,55,56,58,59,64,69,74,79,84,89,94,95,96,97,98,99,100,123,159,160,161,162]
 }
 
-@Field static Integer defaultDelay = 500    //default delay to use for zwave commands (in milliseconds)
-@Field static Integer longDelay = 1000      //long delay to use for changing modes (in milliseconds)
-@Field static Integer defaultQuickLevel=50 //default startup level for QuickStart emulation
+def userSettableParams() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
+    if (parameter158 == "1") return [158,22,52,                  10,11,12,      15,17,18,19,20,25,50,            58,59,95,96,97,98,100,123,159,160,161,162]  //on/off mode
+    else                     return [158,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,25,50,53,54,55,56,58,59,95,96,97,98,100,123,    160,    162]  //dimmer mode
+}
+
+def readOnlyParams() {
+	return [21,32,33,51,157,257]
+}
+
+@Field static Integer shortDelay = 500		//default delay to use for zwave commands (in milliseconds)
+@Field static Integer longDelay = 1000		//long delay to use for changing modes (in milliseconds)
+@Field static Integer defaultQuickLevel=50	//default startup level for QuickStart emulation
 @Field static List ledNotificationEndpoints = [99]
 
 @Field static Map configParams = [
@@ -521,7 +524,7 @@ def getParameterNumbers() {   //controls which options are available depending o
     parameter022 : [
         number: 22,
         name: "Aux Switch Type",
-        description: "Set the Aux switch type. Smart Bulb Mode does not work in Dumb 3-Way Switch mode.",
+        description: "Set the Aux switch type (Smart Bulb Mode does not work in Dumb 3-Way Switch mode)",
         range: ["0":"No Aux (default)", "1":"Dumb 3-Way Switch", "2":"Smart Aux Switch", "3":"No Aux Full Wave (On/Off only)"],
         default: 0,
         size: 1,
@@ -548,6 +551,46 @@ def getParameterNumbers() {   //controls which options are available depending o
         type: "enum",
         value: null
         ],
+    parameter030 : [
+        number: 30,
+        name: "non-Neutral AUX medium gear learn value (read only)",
+        description: "In the case of non-neutral, to make the AUX switch better compatible.",
+        range: "0..255",
+        default: 90,
+        size: 1,
+        type: "number",
+        value: null
+        ],
+    parameter031 : [
+        number: 31,
+        name: "non-Neutral AUX low gear learn value (read only)",
+        description: "In the case of non-neutral, to make the AUX switch better compatible.",
+        range: "0..255",
+        default: 110,
+        size: 1,
+        type: "number",
+        value: null
+        ],
+    parameter032 : [
+        number: 32,
+        name: "Internal Temperature (read only)",
+        description: "Internal temperature in Celsius",
+        range: "0..100",
+        default: 25,
+        size: 1,
+        type: "number",
+        value: null
+        ],
+    parameter033 : [
+        number: 33,
+        name: "Overheat indicator (read only)",
+        description: "Indicates if switch is in overheat protection mode",
+        range: "0..1",
+        default: 0,
+        size: 1,
+        type: "number",
+        value: null
+        ],
     parameter050 : [
         number: 50,
         name: "Button Press Delay",
@@ -564,14 +607,14 @@ def getParameterNumbers() {   //controls which options are available depending o
         description: "Number of devices currently bound and counts one group as two devices.",
         range: "0..255",
         default: 0,
-        size: 8,
+        size: 1,
         type: "number",
         value: null
         ],
     parameter052 : [
         number: 52,
         name: "Smart Bulb Mode",
-        description: "For use with Smart Bulbs that need constant power and are controlled via commands rather than power. Does not work in 3-way dumb mode.",
+        description: "For use with Smart Bulbs that need constant power and are controlled via commands rather than power.",
         range: ["0":"Disabled (default)", "1":"Enabled"],
         default: 0,
         size: 1,
@@ -638,63 +681,343 @@ def getParameterNumbers() {   //controls which options are available depending o
         type: "enum",
         value: null
         ],
+    parameter060 : [
+        number: 60,
+        name: "LED1 Color (when On)",
+        description: "Set the color of LED1 when the load is on.",
+        range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
+        default: 255,
+        size: 1,
+        type: "enum",
+        value: null
+        ],
+    parameter061 : [
+        number: 61,
+        name: "LED1 Color (when Off)",
+        description: "Set the color of LED1 when the load is off.",
+        range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
+        default: 255,
+        size: 1,
+        type: "enum",
+        value: null
+        ],
+    parameter062 : [
+        number: 62,
+        name: "LED1 Intensity (when On)",
+        description: "Set the intensity of LED1 when the load is on.",
+        range: "0..101",
+        default: 101,
+        size: 1,
+        type: "number",
+        value: null
+        ],
+    parameter063 : [
+        number: 63,
+        name: "LED1 Intensity (when Off)",
+        description: "Set the intensity of LED1 when the load is off.",
+        range: "0..101",
+        default: 101,
+        size: 1,
+        type: "number",
+        value: null
+        ],
     parameter064 : [
         number: 64,
         name: "LED1 Notification",
-        description: "4-byte encoded LED Notification",
+        description: "4-byte encoded LED1 Notification",
         range: "0..4294967295",
-        default: 0,
+        default: 0xFF000000,
         size: 4,
+        type: "number",
+        value: null
+        ],
+    parameter065 : [
+        number: 65,
+        name: "LED2 Color (when On)",
+        description: "Set the color of LED2 when the load is on.",
+        range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
+        default: 255,
+        size: 1,
+        type: "enum",
+        value: null
+        ],
+    parameter066 : [
+        number: 66,
+        name: "LED2 Color (when Off)",
+        description: "Set the color of LED2 when the load is off.",
+        range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
+        default: 255,
+        size: 1,
+        type: "enum",
+        value: null
+        ],
+    parameter067 : [
+        number: 67,
+        name: "LED2 Intensity (when On)",
+        description: "Set the intensity of LED2 when the load is on.",
+        range: "0..101",
+        default: 101,
+        size: 1,
+        type: "number",
+        value: null
+        ],
+    parameter068 : [
+        number: 68,
+        name: "LED2 Intensity (when Off)",
+        description: "Set the intensity of LED2 when the load is off.",
+        range: "0..101",
+        default: 101,
+        size: 1,
         type: "number",
         value: null
         ],
     parameter069 : [
         number: 69,
         name: "LED2 Notification",
-        description: "4-byte encoded LED Notification",
+        description: "4-byte encoded LED2 Notification",
         range: "0..4294967295",
-        default: 0,
+        default: 0xFF000000,
         size: 4,
+        type: "number",
+        value: null
+        ],
+    parameter070 : [
+        number: 70,
+        name: "LED3 Color (when On)",
+        description: "Set the color of LED3 when the load is on.",
+        range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
+        default: 255,
+        size: 1,
+        type: "enum",
+        value: null
+        ],
+    parameter071 : [
+        number: 71,
+        name: "LED3 Color (when Off)",
+        description: "Set the color of LED3 when the load is off.",
+        range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
+        default: 255,
+        size: 1,
+        type: "enum",
+        value: null
+        ],
+    parameter072 : [
+        number: 72,
+        name: "LED3 Intensity (when On)",
+        description: "Set the intensity of LED3 when the load is on.",
+        range: "0..101",
+        default: 101,
+        size: 1,
+        type: "number",
+        value: null
+        ],
+    parameter073 : [
+        number: 73,
+        name: "LED3 Intensity (when Off)",
+        description: "Set the intensity of LED3 when the load is off.",
+        range: "0..101",
+        default: 101,
+        size: 1,
         type: "number",
         value: null
         ],
     parameter074 : [
         number: 74,
         name: "LED3 Notification",
-        description: "4-byte encoded LED Notification",
+        description: "4-byte encoded LED3 Notification",
         range: "0..4294967295",
-        default: 0,
+        default: 0xFF000000,
         size: 4,
+        type: "number",
+        value: null
+        ],
+    parameter075 : [
+        number: 75,
+        name: "LED4 Color (when On)",
+        description: "Set the color of LED4 when the load is on.",
+        range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
+        default: 255,
+        size: 1,
+        type: "enum",
+        value: null
+        ],
+    parameter076 : [
+        number: 76,
+        name: "LED4 Color (when Off)",
+        description: "Set the color of LED4 when the load is off.",
+        range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
+        default: 255,
+        size: 1,
+        type: "enum",
+        value: null
+        ],
+    parameter077 : [
+        number: 77,
+        name: "LED4 Intensity (when On)",
+        description: "Set the intensity of LED4 when the load is on.",
+        range: "0..101",
+        default: 101,
+        size: 1,
+        type: "number",
+        value: null
+        ],
+    parameter078 : [
+        number: 78,
+        name: "LED4 Intensity (when Off)",
+        description: "Set the intensity of LED4 when the load is off.",
+        range: "0..101",
+        default: 101,
+        size: 1,
         type: "number",
         value: null
         ],
     parameter079 : [
         number: 79,
         name: "LED4 Notification",
-        description: "4-byte encoded LED Notification",
+        description: "4-byte encoded LED4 Notification",
         range: "0..4294967295",
-        default: 0,
+        default: 0xFF000000,
         size: 4,
+        type: "number",
+        value: null
+        ],
+    parameter080 : [
+        number: 80,
+        name: "LED5 Color (when On)",
+        description: "Set the color of LED5 when the load is on.",
+        range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
+        default: 255,
+        size: 1,
+        type: "enum",
+        value: null
+        ],
+    parameter081 : [
+        number: 81,
+        name: "LED5 Color (when Off)",
+        description: "Set the color of LED5 when the load is off.",
+        range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
+        default: 255,
+        size: 1,
+        type: "enum",
+        value: null
+        ],
+    parameter082 : [
+        number: 82,
+        name: "LED5 Intensity (when On)",
+        description: "Set the intensity of LED5 when the load is on.",
+        range: "0..101",
+        default: 101,
+        size: 1,
+        type: "number",
+        value: null
+        ],
+    parameter083 : [
+        number: 83,
+        name: "LED5 Intensity (when Off)",
+        description: "Set the intensity of LED5 when the load is off.",
+        range: "0..101",
+        default: 101,
+        size: 1,
         type: "number",
         value: null
         ],
     parameter084 : [
         number: 84,
         name: "LED5 Notification",
-        description: "4-byte encoded LED Notification",
+        description: "4-byte encoded LED5 Notification",
         range: "0..4294967295",
-        default: 0,
+        default: 0xFF000000,
         size: 4,
+        type: "number",
+        value: null
+        ],
+    parameter085 : [
+        number: 85,
+        name: "LED6 Color (when On)",
+        description: "Set the color of LED6 when the load is on.",
+        range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
+        default: 255,
+        size: 1,
+        type: "enum",
+        value: null
+        ],
+    parameter086 : [
+        number: 86,
+        name: "LED6 Color (when Off)",
+        description: "Set the color of LED6 when the load is off.",
+        range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
+        default: 255,
+        size: 1,
+        type: "enum",
+        value: null
+        ],
+    parameter087 : [
+        number: 87,
+        name: "LED6 Intensity (when On)",
+        description: "Set the intensity of LED6 when the load is on.",
+        range: "0..101",
+        default: 101,
+        size: 1,
+        type: "number",
+        value: null
+        ],
+    parameter088 : [
+        number: 88,
+        name: "LED6 Intensity (when Off)",
+        description: "Set the intensity of LED6 when the load is off.",
+        range: "0..101",
+        default: 101,
+        size: 1,
         type: "number",
         value: null
         ],
     parameter089 : [
         number: 89,
         name: "LED6 Notification",
-        description: "4-byte encoded LED Notification",
+        description: "4-byte encoded LED6 Notification",
         range: "0..4294967295",
-        default: 0,
+        default: 0xFF000000,
         size: 4,
+        type: "number",
+        value: null
+        ],
+    parameter090 : [
+        number: 90,
+        name: "LED7 Color (when On)",
+        description: "Set the color of LED7 when the load is on.",
+        range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
+        default: 255,
+        size: 1,
+        type: "enum",
+        value: null
+        ],
+    parameter091 : [
+        number: 91,
+        name: "LED7 Color (when Off)",
+        description: "Set the color of LED7 when the load is off.",
+        range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
+        default: 255,
+        size: 1,
+        type: "enum",
+        value: null
+        ],
+    parameter092 : [
+        number: 92,
+        name: "LED7 Intensity (when On)",
+        description: "Set the intensity of LED7 when the load is on.",
+        range: "0..101",
+        default: 101,
+        size: 1,
+        type: "number",
+        value: null
+        ],
+    parameter093 : [
+        number: 93,
+        name: "LED7 Intensity (when Off)",
+        description: "Set the intensity of LED7 when the load is off.",
+        range: "0..101",
+        default: 101,
+        size: 1,
         type: "number",
         value: null
         ],
@@ -703,7 +1026,7 @@ def getParameterNumbers() {   //controls which options are available depending o
         name: "LED7 Notification",
         description: "4-byte encoded LED Notification",
         range: "0..4294967295",
-        default: 0,
+        default: 0xFF000000,
         size: 4,
         type: "number",
         value: null
@@ -753,7 +1076,7 @@ def getParameterNumbers() {   //controls which options are available depending o
         name: "All LED Notification",
         description: "4-byte encoded LED Notification",
         range: "0..4294967295",
-        default: 0,
+        default: 0xFF000000,
         size: 4,
         type: "number",
         value: null
@@ -877,7 +1200,7 @@ def getVersion() {
     if (infoEnable) log.info "${device.displayName} getVersion()"
 	def cmds = []
 	cmds = [zwave.versionV1.versionGet()]
-    return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+    return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 }
 
 String secure(String cmd){
@@ -914,14 +1237,11 @@ def debugLogsOff() {
     //device.updateSetting("disableDebugLogging",[value:"",type:"number"])
 }
 
-def calculateParameter(number) {
-    def value = Math.round((settings."parameter${number}"!=null?settings."parameter${number}":configParams["parameter${number.toString().padLeft(3,'0')}"].default).toFloat()).toInteger()
-    switch (number){
-		case 21:	//Read-Only (Neutral/non-Neutral)
-		case 51:	//Read-Only (Bindings)
-		case 257:	//Read-Only (Remote Protecion)
-			value = configParams["parameter${number.toString().padLeft(3,'0')}"].default	//Read-Only parameters calculate to their default values
-			break
+															 
+def calculateParameter(paramNum) {
+	paramNum = paramNum?:0
+    def value = Math.round((settings?."parameter${paramNum}"!=null?settings?."parameter${paramNum}":getDefaultValue(paramNum))?.toFloat())?.toInteger()
+    switch (paramNum){
         case 9:     //Min Level
 			value = Math.min(Math.max(value.toInteger(),1),54)
             break
@@ -936,52 +1256,52 @@ def calculateParameter(number) {
 			value = Math.min(Math.max(value.toInteger(),0),99)
             break
         case 18:    //Active Power Reports (percent change)
+        case 97:    //LED Bar Intensity(when On)
+        case 98:    //LED Bar Intensity(when Off)
 			value = Math.min(Math.max(value.toInteger(),0),100)
             break
         case 95:    //custom hue for LED Bar (when On)
         case 96:    //custom hue for LED Bar (when Off)
             //360-hue values need to be converted to byte values before sending to the device
-            if (settings."parameter${number}custom" =~ /^([0-9]{1}|[0-9]{2}|[0-9]{3})$/) {
-                value = Math.round((settings."parameter${number}custom").toInteger()/360*255)
+            if (settings."parameter${paramNum}custom" =~ /^([0-9]{1}|[0-9]{2}|[0-9]{3})$/) {
+                value = Math.round((settings."parameter${paramNum}custom").toInteger()/360*255)
             } else {   //else custom hue is invalid format or not selected
-                if(settings."parameter${number}custom"!=null) {
-                    device.clearSetting("parameter${number}custom")
-                    if (infoEnable) log.warn "${device.displayName} " + fireBrick("Cleared invalid custom hue: ${settings."parameter${number}custom"}")
+                if(settings."parameter${paramNum}custom"!=null) {
+                    device.removeSetting("parameter${paramNum}custom")
+                    if (infoEnable||traceEnable||debugEnable) log.warn "${device.displayName} " + fireBrick("Cleared invalid custom hue: ${settings."parameter${paramNum}custom"}")
                 }
             }
             break
-        case 97:    //LED Bar Intensity(when On)
-        case 98:    //LED Bar Intensity(when Off)
-			value = Math.min(Math.max(value.toInteger(),0),100)
-            break
     }
-    return value
+    return value?:0
 }
+
+def clearSetting(i) {
+	i = i?:0
+	def cleared = false
+	if (settings."parameter${i}"!=null)   {cleared=true; device.removeSetting("parameter" + i)}
+	if (state."parameter${i}value"!=null) {cleared=true; state.remove("parameter" + i + "value")}
+	if (cleared && (infoEnable||traceEnable||debugEnable)) log.info "${device.displayName} cleared P${i} since it is the default"
+}
+
 
 def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS ADDED OR WHEN CONFIGURE BUTTON SELECTED ON DEVICE PAGE
     option = (option==null||option==" ")?"":option
     if (infoEnable) log.info "${device.displayName} configure($option)"
     state.lastCommandSent =                        "configure($option)"
     state.lastCommandTime = nowFormatted()
-    state.driverDate = getDriverDate()
-	state.model = "VZW31-SN"
-    if (infoEnable||traceEnable||debugEnable) log.info "${device.displayName} Driver Date $state.driverDate"
     sendEvent(name: "numberOfButtons", value: 14)
     def cmds = []
     cmds += zwave.versionV1.versionGet()
-    cmds += processAssociations()
-    if (option!="All" && option!="Default") { //if we didn't pick option "All" or "Default" (so we don't read them twice) then preload the dimming/ramp rates and key parameters so they are not null in calculations
-        for(int i = 1;i<=8;i++) if (state."parameter${i}value"==null) cmds += getParameter(i)
-        cmds += getParameter(158)       //switch mode
-        cmds += getParameter(22)        //aux switch type
-        cmds += getParameter(52)        //smart bulb mode
-        cmds += getParameter(21)        //power source (read-only)
-        //cmds += getParameter(51)        //number of bindings (read-only)
-        //cmds += getParameter(157)       //remote protection (read-only)
-    }
-    if (option!="") cmds += updated(option) //if option was selected on Configure button, pass it on to update settings.
-    if (traceEnable) log.trace "${device.displayName} configure $cmds"
-    return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+    if (option=="") {		//IF   we didn't pick an option 
+		cmds += refresh()	//THEN refresh read-only and key parameters
+    } else { 				//ELSE read device attributes and pass on to update settings.
+		if (option=="Default") settings.each {settings.remove(it)}	//if DEFAULT was requested then clear any user settings
+		//cmds += readDeviceAttributes()
+		cmds += updated(option)
+	}
+    if (debugEnable) log.debug "${device.displayName} configure $cmds"
+    return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 }
 
 def convertByteToPercent(int value=0) {                  //convert a 0-254 range where 254=100%.  255 is reserved for special meaning.
@@ -1022,28 +1342,32 @@ def cycleSpeed() {    // FOR FAN ONLY
         state.lastCommandSent =                        "cycleSpeed(${device.currentValue("speed")}->${newSpeed})"
         state.lastCommandTime = nowFormatted()
         cmds += zigbee.setLevel(newLevel)
-        if (traceEnable) log.trace "${device.displayName} cycleSpeed $cmds"
+        if (debugEnable) log.debug "${device.displayName} cycleSpeed $cmds"
     }
     return cmds
 }
 
+def getDefaultValue(paramNum=0) {
+	paramValue=configParams["parameter${paramNum.toString()?.padLeft(3,"0")}"]?.default
+	return paramValue?:0
+	}
 def initialize() {    //CALLED DURING HUB BOOTUP IF "INITIALIZE" CAPABILITY IS DECLARED IN METADATA SECTION
+    log.info "${device.displayName} initialize()"
     state.clear()
-    if (infoEnable) log.info "${device.displayName} initialize()"
-    state.lastCommandSent =                        "initialize()"
+    state.lastCommandSent = "initialize()"
     state.lastCommandTime = nowFormatted()
     state.driverDate = getDriverDate()
 	state.model = "VZW31-SN"
-    device.clearSetting("parameter23level") 
-    device.clearSetting("parameter95custom") 
-    device.clearSetting("parameter96custom") 
+    device.removeSetting("parameter23level")
+    device.removeSetting("parameter95custom")
+    device.removeSetting("parameter96custom")
     def cmds = []
 	cmds += ledEffectOne(1234567,255,0,0,0)	//clear any outstanding oneLED Effects
 	cmds += ledEffectAll(255,0,0,0)			//clear any outstanding allLED Effects
     cmds += processAssociations()
     cmds += refresh()
-    if (traceEnable) log.trace "${device.displayName} initialize $cmds"
-    return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+    if (debugEnable) log.debug "${device.displayName} initialize $cmds"
+    return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 }
 
 def installed() {    //THIS IS CALLED WHEN A DEVICE IS INSTALLED
@@ -1052,17 +1376,18 @@ def installed() {    //THIS IS CALLED WHEN A DEVICE IS INSTALLED
     state.lastCommandTime = nowFormatted()
     state.driverDate = getDriverDate()
 	state.model = "VZW31-SN"
+    log.info "${device.displayName} Driver Date $state.driverDate"
+    log.info "${device.displayName} Model=$state.model"
     //configure()     //I confirmed configure() gets called at Install time so this isn't needed here
     return
 }
 
 def intTo8bitUnsignedHex(value) {
-    return zigbee.convertToHexString(value?.toInteger(),2)
+    return zigbee.convertToHexString(value.toInteger(),2)
 }
 
 def intTo16bitUnsignedHex(value) {
-    def hexStr = zigbee.convertToHexString(value.toInteger(),4)
-    return new String(hexStr.substring(2, 4) + hexStr.substring(0, 2))
+    return zigbee.convertToHexString(value.toInteger(),4)
 }
 
 def intTo32bitUnsignedHex(value) {
@@ -1094,6 +1419,7 @@ def ledEffectAll(effect=255, color=0, level=100, duration=60) {
         case "18":	effectName = "Fast Siren"; break
         case "19":	effectName = "Slow Siren"; break
         case "0":	effectName = "LEDs Off"; break
+		default:	effectName = "Unknown Effect #$effect"; break
 	}
     sendEvent(name:"ledEffect", value: "$effectName All")
     if (infoEnable) log.info "${device.displayName} ledEffectAll(${effect},${color},${level},${duration})"
@@ -1112,8 +1438,8 @@ def ledEffectAll(effect=255, color=0, level=100, duration=60) {
     BigInteger value = new BigInteger("${intTo8bitUnsignedHex(cmdEffect)}${intTo8bitUnsignedHex(cmdColor)}${intTo8bitUnsignedHex(cmdLevel)}${intTo8bitUnsignedHex(cmdDuration)}", 16)
     cmds += zwave.configurationV4.configurationSet(scaledConfigurationValue: value,  parameterNumber: ledNotificationEndpoints[(ep == null)? 0:ep?.toInteger()-1], size: 4)
     cmds += zwave.configurationV4.configurationGet(parameterNumber: ledNotificationEndpoints[(ep == null)? 0:ep?.toInteger()-1])
-    if (traceEnable) log.trace "${device.displayName} ledEffectAll $cmds"
-    return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+    if (debugEnable) log.debug "${device.displayName} ledEffectAll $cmds"
+    return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 }
                                         
 def ledEffectOne(lednum, effect=255, color=0, level=100, duration=60) {
@@ -1131,6 +1457,7 @@ def ledEffectOne(lednum, effect=255, color=0, level=100, duration=60) {
         case "7":	effectName = "Rising"; break
         case "8":	effectName = "Aurora"; break
         case "0":	effectName = "LEDs Off"; break
+		default:	effectName = "Unknown Effect #$effect"; break
 	}
 	sendEvent(name:"ledEffect", value: "$effectName LED${lednum.toString().split(/ /)[0]}")
     if (infoEnable) log.info "${device.displayName} ledEffectOne(${lednum},${effect},${color},${level},${duration})"
@@ -1152,8 +1479,8 @@ def ledEffectOne(lednum, effect=255, color=0, level=100, duration=60) {
         cmds += zwave.configurationV4.configurationSet(scaledConfigurationValue: value,  parameterNumber: cmdLedNum, size: 4)
         cmds += zwave.configurationV4.configurationGet(parameterNumber: cmdLedNum)
     }
-    if (traceEnable) log.trace "${device.displayName} ledEffectOne $cmds"
-    return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+    if (debugEnable) log.debug "${device.displayName} ledEffectOne $cmds"
+    return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 }
 
 def nowFormatted() {
@@ -1168,8 +1495,8 @@ def off() {
     def cmds = []
     cmds += zwave.basicV2.basicSet(value: 0x00)
     cmds += zwave.basicV2.basicGet()
-    if (traceEnable) log.trace "${device.displayName} off $cmds"
-    return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+    if (debugEnable) log.debug "${device.displayName} off $cmds"
+    return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 }
 
 def on() {
@@ -1179,12 +1506,12 @@ def on() {
     def cmds = []
     cmds += zwave.basicV2.basicSet(value: 0xFF)
     cmds += zwave.basicV2.basicGet()
-    if (traceEnable) log.trace "${device.displayName} on $cmds"
-    return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+    if (debugEnable) log.debug "${device.displayName} on $cmds"
+    return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 }
 
 def parse(String description) {
-    if (debugEnable) log.debug "${device.displayName} parse($description)"
+    if (traceEnable) log.trace "${device.displayName} parse($description)"
     hubitat.zwave.Command cmd = zwave.parse(description,[0x85:1,0x86:2])
     if (cmd) {
         if (debugEnable) log.debug "Parsed ${description} to ${cmd}"
@@ -1203,7 +1530,7 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 		case "AssociationReport":
 			def temp = []
 			if (cmd.nodeId != []) {
-				cmd.nodeId.each {a
+				cmd.nodeId.each {	//a
 				temp += it.toString().format( '%02x', it.toInteger() ).toUpperCase()
 				}
 			}
@@ -1217,7 +1544,7 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 			state.associationGroups = cmd.supportedGroupings
 			break
 		case "BasicReport":
-			if (infoEnable) log.info "${device.displayName} Basic Report received value ${cmd.value ? "on" : "off"} ($cmd.value)"
+			if (infoEnable) log.info "${device.displayName} Basic Report: value ${cmd.value ? "on" : "off"} ($cmd.value)"
 			dimmerEvents(cmd, (!state.lastRan || now() <= state.lastRan + 2000)?"digital":"physical")
 			break
 		case "CentralSceneNotification":
@@ -1293,41 +1620,41 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 			}
 			break
 		case "ConfigurationReport":
-				if (traceEnable) log.trace "${device.displayName} $cmd" //Received parameter=${cmd?.parameterNumber} value=${cmd?.scaledConfigurationValue} size=${cmd?.size}"
-				def attrInt = cmd?.parameterNumber
-				def scaled = cmd?.scaledConfigurationValue
-				def valueInt = cmd?.size==1?(scaled<0?scaled+0x100:scaled):cmd.size==4?(scaled<0?scaled+0x100000000:scaled):scaled
-				def valueStr = valueInt.toString()
-				def valueHex = intTo32bitUnsignedHex(valueInt)
-				def infoDev = "${device.displayName} "
-				def infoTxt = "Receive parameter ${attrInt} value ${valueInt}"
-				def infoMsg = infoDev + infoTxt
-				if (attrInt>=1 && attrInt<=8) {
-					if      (valueInt<101) valueStr=(valueInt/10).toString()+"s)"
-					else if (valueInt<161) valueStr=(valueInt-100).toString()+"s)"
-					else if (valueInt<255) valueStr=(valueInt-160).toString()+"m)"
-				}
-                switch (attrInt){
-                    case 0:
-                        infoMsg += " (temporarily saved current level ${valueInt}%)"
-                        break
-                    case 1:
-                        infoMsg += " (Remote Dim Rate Up: " + (valueInt<255?valueStr:"default)")
-                        break
-                    case 2:
-                        infoMsg += " (Local  Dim Rate Up: " + (valueInt<255?valueStr:"sync with 1)")
-                        break
-                    case 3:
-                        infoMsg += " (Remote Ramp Rate On: " + (valueInt<255?valueStr:"sync with 1)")
-                        break
-                    case 4:
-                        infoMsg += " (Local  Ramp Rate On: " + (valueInt<255?valueStr:"sync with 3)")
-                        break
-                    case 5:
-                        infoMsg += " (Remote Dim Rate Down: " + (valueInt<255?valueStr:"sync with 1)")
-                        break
-                    case 6:
-                        infoMsg += " (Local  Dim Rate Down: " + (valueInt<255?valueStr:"sync with 2)")
+			//if (traceEnable) log.trace "${device.displayName} Received parameter=${cmd?.parameterNumber} value=${cmd?.scaledConfigurationValue} size=${cmd?.size}"
+			def attrInt = cmd?.parameterNumber
+			def scaled = cmd?.scaledConfigurationValue
+			def valueInt = cmd?.size==1?(scaled<0?scaled+0x100:scaled):cmd.size==4?(scaled<0?scaled+0x100000000:scaled):scaled
+			def valueStr = valueInt.toString()
+			def valueHex = intTo32bitUnsignedHex(valueInt)
+			def infoDev = "${device.displayName} "
+			def infoTxt = "Config Report: P${attrInt}=${valueInt}"
+			def infoMsg = infoDev + infoTxt
+			if (attrInt>=1 && attrInt<=8) {
+				if      (valueInt<101) valueStr=(valueInt/10).toString()+"s)"
+				else if (valueInt<161) valueStr=(valueInt-100).toString()+"s)"
+				else if (valueInt<255) valueStr=(valueInt-160).toString()+"m)"
+			}
+            switch (attrInt) {
+					case 0:
+						infoMsg += " (temporarily stored level during transitions)"
+						break
+					case 1:
+						infoMsg += " (Remote Dim Rate Up: " + (valueInt<255?valueStr:"default)")
+						break
+					case 2:
+						infoMsg += " (Local Dim Rate Up: " + (valueInt<255?valueStr:"sync with 1)")
+						break
+					case 3:
+						infoMsg += " (Remote Ramp Rate On: " + (valueInt<255?valueStr:"sync with 1)")
+						break
+					case 4:
+						infoMsg += " (Local Ramp Rate On: " + (valueInt<255?valueStr:"sync with 3)")
+						break
+					case 5:
+						infoMsg += " (Remote Dim Rate Down: " + (valueInt<255?valueStr:"sync with 1)")
+						break
+					case 6:
+						infoMsg += " (Local Dim Rate Down: " + (valueInt<255?valueStr:"sync with 2)")
                         break
                     case 7:
                         infoMsg += " (Remote Ramp Rate Off: " + (valueInt<255?valueStr:"sync with 3)")
@@ -1370,23 +1697,23 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
                         infoMsg += " (Active Energy Report " + (valueInt==0?red(" disabled"):" ${valueInt/100}kWh change") + ")"
                         break
                     case 21:    //Power Source
-                        infoMsg = infoDev + darkGreen(infoTxt) + (valueInt==0?red(" (Non-Neutral)"):limeGreen(" (Neutral)"))
-						state.powerSource = valueInt==0?"Non-Neutral":"Neutral"
+                        infoMsg += (valueInt==0?red(" (Non-Neutral)"):limeGreen(" (Neutral)"))
+						sendEvent(name:"powerSource", value:valueInt==0?"Non-Neutral":"Neutral")
                         break
                     case 22:    //Aux Type
                         switch (state.model?.substring(0,5)){
 							case "VZM31":    //Blue 2-in-1 Dimmer
                             case "VZW31":    //Red  2-in-1 Dimmer
-                                infoMsg = infoDev + indianRed(infoTxt + " " + (valueInt==0?"(No Aux)":(valueInt==1?"(Dumb 3-way)":(valueInt==2?"(Smart Aux)":(valueInt==3?"(No Aux Full Wave)":"(unknown type)")))))
-								state.auxType =                         	  (valueInt==0? "No Aux": (valueInt==1? "Dumb 3-way": (valueInt==2? "Smart Aux": (valueInt==3? "No Aux Full Wave":  "unknown type $valueInt"))))
+                                infoMsg += " " + (valueInt==0?"(No Aux)":(valueInt==1?"(Dumb 3-way)":(valueInt==2?"(Smart Aux)":(valueInt==3?"(No Aux Full Wave)":"(unknown type)"))))
+								state.auxType =  (valueInt==0? "No Aux": (valueInt==1? "Dumb 3-way": (valueInt==2? "Smart Aux": (valueInt==3? "No Aux Full Wave":  "unknown type $valueInt"))))
                                 break
                             case "VZM35":    //Fan Switch
-                                infoMsg = infoDev + indianRed(infoTxt + " " + (valueInt==0?"(No Aux)":"(Smart Aux)"))
-                                state.auxType =                                valueInt==0? "No Aux":  "Smart Aux"
+                                infoMsg += " " + (valueInt==0?"(No Aux)":"(Smart Aux)")
+                                state.auxType =   valueInt==0? "No Aux":  "Smart Aux"
                                 break
                             default:
                                 infoMsg = infoDev + indianRed(infoTxt + " unknown model $state.model")
-                                state.auxType =                          "unknown model ${state.model}"
+                                state.auxType = "unknown model ${state.model}"
                                 break
                         }
                         break
@@ -1399,19 +1726,34 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
                     case 25:    //Higher Output in non-Neutral
                         infoMsg += " (non-Neutral High Output " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
                         break
+					case 30:	//non-Neutral AUX med gear learn value
+						infoMsg += " (non-Neutral AUX medium gear)"
+						break
+					case 31:	//non-Neutral AUX low gear learn value
+						infoMsg += " (non-Neutral AUX low gear)"
+						break
+                    case 32:    //Internal Temperature (read only)
+						valueStr = "${Math.round(valueInt*9/5+32)}°F"
+                        infoMsg += " (Internal Temp: " + hue(100-valueInt.toInteger(),"${valueStr}") + ")"
+                        sendEvent(name:"internalTemp", value:valueStr)
+                        break
+                    case 33:    //Overheat (read only)
+                        infoMsg += " (Overheat: " + (valueInt==0?limeGreen("False"):valueInt==1?red("TRUE"):"undefined") + ")"
+                        sendEvent(name:"overHeat",value:valueInt==0?"False":valueInt==1?"TRUE":"undefined")
+                        break
                     case 50:    //Button Press Delay
                         infoMsg += " (${valueInt*100}ms Button Delay)"
-                        break
+						break
                     case 51:    //Device Bind Number
-                        infoMsg = infoDev + darkGreen(infoTxt + " (Bindings)")
+                        infoMsg += " (Bindings)"
                         sendEvent(name:"numberOfBindings", value:valueInt)
                         break
                     case 52:    //Smart Bulb/Fan Mode
-                        if (state.model?.substring(0,5)=="VZM35") { //FOR FAN ONLY
-                            infoMsg = infoDev + indianRed(infoTxt) + (valueInt==0?red(" (SFM disabled)"):limeGreen(" (SFM enabled)"))
+                        if (state.model?.substring(0,5)=="VZM35") {
+                            infoMsg += " (SFM " + (valueInt==0?red("disabled)"):limeGreen("enabled)"))
                             sendEvent(name:"smartFan", value:valueInt==0?"Disabled":"Enabled")
-						} else { 
-                            infoMsg = infoDev + indianRed(infoTxt) + (valueInt==0?red(" (SBM disabled)"):limeGreen(" (SBM enabled)"))
+						} else {
+                            infoMsg += " (SBM " + (valueInt==0?red("disabled)"):limeGreen("enabled)")) + ")"
                             sendEvent(name:"smartBulb", value:valueInt==0?"Disabled":"Enabled")
 						}
                         break
@@ -1433,26 +1775,70 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 					case 59:  //Association Behavior
                         infoMsg += " (Association: " + (valueInt==0?"None":valueInt==1?"Local":valueInt==2?"Hub":"Local+Hub") + ")"
 						break
-                    case 64:	//LED1 Notification
-					case 69:	//LED2 Notification
-					case 74:	//LED3 Notification
-					case 79:	//LED4 Notification
-					case 84:	//LED5 Notification
-					case 89:	//LED6 Notification
-					case 94:	//LED7 Notification
-					case 99:	//All LED Notification
+					case 60:
+					case 65:
+					case 70:
+					case 75:
+					case 80:
+					case 85:
+					case 90:
+					case 95:	//LED(x) color when On
+						if (valueInt<255 || attrInt==95)
+							infoMsg += " " + hue(valueInt,"(LED${attrInt/5-11<8?(attrInt/5-11).toInteger():" bar"} color when On: ${Math.round(valueInt/255*360)}°)")
+						else
+							infoMsg +=                   " (LED${attrInt/5-11<8?(attrInt/5-11).toInteger():" bar"} color " + hue(settings.parameter95?.toInteger(),"sync with P95") + " when On)"
+						break
+					case 61:
+					case 66:
+					case 71:
+					case 76:
+					case 81:
+					case 86:
+					case 91:
+					case 96:	//LED(x) color when Off
+						if (valueInt<255 || attrInt==96)
+							infoMsg += " " + hue(valueInt,"(LED${attrInt/5-11<8?(attrInt/5-11).toInteger():" bar"} color when Off: ${Math.round(valueInt/255*360)}°)")
+						else
+							infoMsg +=                   " (LED${attrInt/5-11<8?(attrInt/5-11).toInteger():" bar"} color " + hue(settings.parameter96?.toInteger(),"sync with P96") + " when Off)"
+						break
+					case 62:
+					case 67:
+					case 72:
+					case 77:
+					case 82:
+					case 87:
+					case 92:
+					case 97:	//LED(x) intensity when On
+						if (valueInt<101 || attrInt==97)
+							infoMsg += "% (LED${attrInt/5-11<8?(attrInt/5-11).toInteger():" bar"} intensity when On)"
+						else
+							infoMsg +=  " (LED${attrInt/5-11<8?(attrInt/5-11).toInteger():" bar"} intensity sync with P97 when On)"
+						break
+					case 63:
+					case 68:
+					case 73:
+					case 78:
+					case 83:
+					case 88:
+					case 93:
+					case 98:	//LED(x) intensity when Off
+						if (valueInt<101 || attrInt==98)
+							infoMsg += "% (LED${attrInt/5-11<8?(attrInt/5-11).toInteger():" bar"} intensity when Off)"
+						else
+							infoMsg +=  " (LED${attrInt/5-11<8?(attrInt/5-11).toInteger():" bar"} intensity sync with P98 when Off)"
+						break
+                    case 64:
+					case 69:
+					case 74:
+					case 79:
+					case 84:
+					case 89:
+					case 94:
+					case 99:	//LED(x) Notification [zwave]
 						def effectHex = valueHex.substring(0,2)
 						int effectInt = Integer.parseInt(effectHex,16)
-						infoMsg += " [0x${valueHex}] " + (effectInt==255?"(Stop Effect)":"(Start Effect ${effectInt})")
+						infoMsg += " [0x${valueHex}] (LED${attrInt/5-11<8?(attrInt/5-11).toInteger():" bar"} Effect " + (effectInt==255?"Stop":"${effectInt}") + ")"
 						break
-                    case 95:  //LED bar color when on
-                    case 96:  //LED bar color when off
-                        infoMsg += hue(valueInt," (LED bar color when " + (attrInt==95?"On:":"Off:") + " ${Math.round(valueInt/255*360)}°)")
-                        break
-                    case 97:  //LED bar intensity when on
-                    case 98:  //LED bar intensity when off
-                        infoMsg += "% (LED bar intensity when " + (attrInt==97?"On)":"Off)")
-                        break
 					case 100:	//LED Bar Scaling
                         infoMsg += " (LED Scaling " + (valueInt==0?blue("VZM-style"):red("LZW-style")) + ")"
 						break
@@ -1460,7 +1846,7 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
                         infoMsg += " (Aux Scenes " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
 						break
 					case 125:	//Binding Off-to-On Sync Level
-                        infoMsg += " (Send Level with Binding Off/On " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
+                        infoMsg += " (Send Level with Binding " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
 						break
                     case 156:    //Local Protection
 					case 256:
@@ -1468,22 +1854,22 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
                         break
                     case 157:    //Remote Protection
 					case 257:
-                        infoMsg = infoDev + darkGreen("$infoTxt (Remote Control ") + (valueInt==0?limeGreen("enabled"):red("disabled")) + darkGreen(")")
+                        infoMsg += " (Remote Control " + (valueInt==0?limeGreen("enabled"):red("disabled")) + ")"
                         break
                     case 158:    //Switch Mode
 					case 258:
                         switch (state.model?.substring(0,5)){
                             case "VZM31":    //Blue 2-in-1 Dimmer
                             case "VZW31":    //Red  2-in-1 Dimmer
-                                infoMsg = infoDev + indianRed(infoTxt + " " + (valueInt==0?"(Dimmer mode)":"(On/Off mode)"))
+                                infoMsg += " " + (valueInt==0?"(Dimmer mode)":"(On/Off mode)")
                                 sendEvent(name:"switchMode", value:valueInt==0?"Dimmer":"On/Off")
                                 break
                             case "VZM35":    //Fan Switch
-								infoMsg = infoDev + indianRed(infoTxt + " " + (valueInt==0?"(Multi-Speed mode)":"(On/Off mode)"))
+								infoMsg += " " + (valueInt==0?"(Multi-Speed mode)":"(On/Off mode)")
 								sendEvent(name:"switchMode", value:valueInt==0?"Multi-Speed":"On/Off")
 								break
                             default:
-                                infoMsg = infoDev + indianRed(infoTxt + " unknown model $state.model")
+                                infoMsg += " " + red(" unknown model $state.model")
                                 sendEvent(name:"switchMode", value:"unknown model")
                                 break
                         }
@@ -1509,20 +1895,20 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
                         infoMsg += " (LED bar display levels: ${valueInt?:'full range'})"
                         break
                     default:
-                        infoMsg += " [0x${intTo32bitUnsignedHex(valueInt)}] " + orangeRed("Undefined Parameter $attrInt")
+						infoMsg += " [0x${valueInt<=0xFF?valueHex.substring(6):valueInt<=0xFFFF?valueHex.substring(4):valueHex}] " + orangeRed(bold("Undefined Parameter $attrInt"))
                         break
                 }
-                if (infoEnable) log.info infoMsg
+                if (infoEnable) log.info infoMsg + ((traceEnable||debugEnable)?" [P:$attrInt V:$valueInt D:${getDefaultValue(attrInt)}]":"")
                 //if ((attrInt==9)    //for zwave these are stored as 0-100, no need to convert
 				//|| (attrInt==10)
 				//|| (attrInt==13)
 				//|| (attrInt==14)
 				//|| (attrInt==15)
 				//|| (attrInt==55)
-				//|| (attrInt==56)) valueInt = convertByteToPercent(valueInt) //these attributes are stored as bytes but presented as percentages
-                state."parameter${attrInt}value" = valueInt                   //update state variable with value received from device
-                if (attrInt>0) device.updateSetting("parameter${attrInt}",[value:"${valueInt}",type:configParams["parameter${attrInt.toString().padLeft(3,"0")}"].type?.toString()]) //update local setting with value received from device  
-                if ((attrInt==95 && parameter95custom!=null)||(attrInt==96 && parameter96custom!=null)) {   //if custom hue was set, update the custom state variable also
+				//|| (attrInt==56)) {
+				//	valueInt = convertByteToPercent(valueInt) //these attributes are stored as bytes but displayed as percentages
+				//}
+                if ((attrInt==95 && parameter95custom!=null)||(attrInt==96 && parameter96custom!=null)) {   //if custom hue was set, update the custom user setting also
                     device.updateSetting("parameter${attrInt}custom",[value:"${Math.round(valueInt/255*360)}",type:configParams["parameter${attrInt.toString().padLeft(3,"0")}"].type?.toString()])
                     state."parameter${attrInt}custom" = Math.round(valueInt/255*360)
                 }
@@ -1542,13 +1928,19 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 							}
 						}
 					}
-					if (traceEnable||debugEnable) log.trace "${device.displayName} Dimming Method = ${state.dimmingMethod}"
+					if (infoEnable||traceEnable||debugEnable) log.info "${device.displayName} Dimming Method = ${state.dimmingMethod}"
 				}
-                if ((valueInt==configParams["parameter${attrInt.toString()?.padLeft(3,"0")}"]?.default?.toInteger())             				 //IF  setting is the default
-                && (attrInt!=21)&&(attrInt!=22)&&(attrInt!=51)&&(attrInt!=52)&&(attrInt!=157&&(attrInt!=257)&&(attrInt!=158)&&(attrInt!=258))) { //AND not read-only or primary config params
-                    device.clearSetting("parameter${attrInt}")                                                                   				 //THEN clear the setting (so only changed settings are displayed)
-                    if (traceEnable||debugEnable) log.trace "${device.displayName} parse() cleared parameter${attrInt} since it is the default"
-                }
+				//Update UI setting with value received from device
+				if ((valueInt==getDefaultValue(attrInt))	//IF   value is the default
+				&& (!readOnlyParams().contains(attrInt))	//AND  not a read-only param
+				&& (![22,52,158,258].contains(attrInt))) {	//AND  not a key parameter
+					clearSetting(attrInt)					//THEN clear the setting (so only changed settings are displayed)
+				} else {									//ELSE update local setting
+					device.updateSetting("parameter${attrInt}",[value:"${valueInt}",type:configParams["parameter${attrInt.toString().padLeft(3,"0")}"]?.type?.toString()])
+				}
+				if (settings."parameter${attrInt}"!=null) {											//IF   device setting is not null
+					state."parameter${attrInt}value" = settings."parameter${attrInt}"?.toInteger()	//THEN set state variable to device setting
+				}
 			break
 		case "FirmwareUpdateMdGet":
 			if (infoEnable) log.info "${device.displayName} ${cmd}"
@@ -1568,21 +1960,21 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 			if (cmd.scale == 0) {
 				if (cmd.meterType == 161) {
 					sendEvent(name: "voltage", value: cmd.scaledMeterValue, unit: "V")
-					if (infoEnable) log.info "${device.displayName} Voltage report received value ${cmd.scaledMeterValue} V"
+					if (infoEnable) log.info "${device.displayName} Voltage Report: value ${cmd.scaledMeterValue} V"
 				} else if (cmd.meterType == 1) {
 					sendEvent(name: "energy", value: cmd.scaledMeterValue, unit: "kWh")
-					if (infoEnable) log.info "${device.displayName} Energy report received value ${cmd.scaledMeterValue} kWh"
+					if (infoEnable) log.info "${device.displayName} Energy Report: value ${cmd.scaledMeterValue} kWh"
 				}
 			} else if (cmd.scale == 1) {
 				sendEvent(name: "amperage", value: cmd.scaledMeterValue, unit: "A")
-				if (infoEnable) log.info "${device.displayName} Amperage report received value ${cmd.scaledMeterValue} A"
+				if (infoEnable) log.info "${device.displayName} Amperage Report: value ${cmd.scaledMeterValue} A"
 			} else if (cmd.scale == 2) {
 				sendEvent(name: "power", value: cmd.scaledMeterValue, unit: "W")
-				if (infoEnable) log.info "${device.displayName} Power report received value ${cmd.scaledMeterValue} W"
+				if (infoEnable) log.info "${device.displayName} Power Report: value ${cmd.scaledMeterValue} W"
 			}
 			break
 		case "ProtectionReport":
-			if (infoEnable) log.info "${device.displayName} Protection report received: Local protection is ${cmd.localProtectionState > 0 ? "on" : "off"} & Remote protection is ${cmd.rfProtectionState > 0 ? "on" : "off"}"
+			if (infoEnable) log.info "${device.displayName} Protection Report: Local protection is ${cmd.localProtectionState > 0 ? "on" : "off"} & Remote protection is ${cmd.rfProtectionState > 0 ? "on" : "off"}"
 			state.localProtectionState = cmd.localProtectionState
 			state.rfProtectionState = cmd.rfProtectionState
 			device.updateSetting("disableLocal",[value:cmd.localProtectionState?"1":"0",type:"enum"])
@@ -1605,7 +1997,7 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 			sendHubCommand(new hubitat.device.HubAction(secureCmd(zwave.supervisionV1.supervisionReport(sessionID: cmd.sessionID, reserved: 0, moreStatusUpdates: false, status: 0xFF, duration: 0)), hubitat.device.Protocol.ZWAVE))
 			break
 		case "SwitchMultilevelReport":
-			if (infoEnable) log.info "${device.displayName} Switch Multilevel report received value ${cmd.targetValue ? "on" : "off"} ($cmd.targetValue)"
+			if (infoEnable) log.info "${device.displayName} Switch Multilevel Report: value ${cmd.targetValue ? "on" : "off"} ($cmd.targetValue)"
 			dimmerEvents(cmd, (!state.lastRan || now() <= state.lastRan + 2000)?"digital":"physical")
 			break
 		case "VersionCommandClassReport":
@@ -1618,7 +2010,7 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 			state.fwVersion = firmware0Version
 			break
 		default:
-			if (infoEnable) log.info "${device.displayName} ${red('Unhandled:')} ${cmd}"
+			log.warn "${device.displayName} ${fireBrick('Unhandled:')} ${cmd}"
 			break
 	}
 }
@@ -1630,8 +2022,8 @@ def presetLevel(value) {
     def cmds = []
     Integer scaledValue = value==null?null:Math.min(Math.max(value.toInteger(),0),99)  //Zwave levels range from 1-99 with 0 = 'use previous'
     cmds += setParameter(13, scaledValue)
-    if (traceEnable) log.trace "${device.displayName} preset $cmds"
-    return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+    if (debugEnable) log.debug  "${device.displayName} preset $cmds"
+    return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 }
 
 def quickStart() {
@@ -1647,7 +2039,7 @@ def quickStart() {
 			cmds += zwave.switchMultilevelV4.switchMultilevelSet(value:settings.parameter23,dimmingDuration:0)}  //only do quickStart if currentLevel is < Quick Start Level
 			cmds += zwave.switchMultilevelV4.switchMultilevelSet(value:startLevel,dimmingDuration:0)
 			cmds += zwave.switchMultilevelV4.switchMultilevelGet()
-			if (traceEnable) log.trace "${device.displayName} quickStart $cmds"
+			if (debugEnable) log.debug "${device.displayName} quickStart $cmds"
 		}
 	}
     return delayBetween(cmds.collect{ secureCmd(it) }, 34)  //34ms is two sinewave cycles
@@ -1655,7 +2047,7 @@ def quickStart() {
 
 def quickStartVariables() {
     if (state.model?.substring(0,5)!="VZM35") {  //IF not the Fan switch THEN set the quickStart variables manually
-        settings.parameter23 =  (settings.parameter23!=null?settings.parameter23:configParams["parameter023"].default).toInteger()
+        settings.parameter23 =  (settings.parameter23!=null?settings.parameter23:getDefaultValue(23))
         state.parameter23value = Math.round((settings.parameter23?:0).toFloat())
         //state.parameter23level = Math.round((settings.parameter23level?:defaultQuickLevel).toFloat())
     }
@@ -1671,32 +2063,28 @@ def refresh(option) {
     if (infoEnable||traceEnable||debugEnable) log.info "${device.displayName} Driver Date $state.driverDate"
     def cmds = []
 	cmds += zwave.versionV1.versionGet()
-    getParameterNumbers().each { i ->
-        //def param_output = ""
-        //param_output = param_output +  " parameter${i} value=${settings."parameter${i}"}, size=${configParams["parameter${i.toString().padLeft(3,"0")}"].size}"
-        //if (infoEnable && (settings."parameter${i}"!=null)) log.info "${device.displayName}:" + param_output
-		if (i==23 && (state.model?.substring(0,5)!="VZM35")) {  //quickStart is implemented in firmware for the fan, emulated in this driver for 2-in-1 Dimmer
-			quickStartVariables()
-		}
+	validConfigParams().each { i ->	//loop through valid parameters (z-wave returns p1 value if we ask for unsupported param)
+		//int i = it.value.number.toInteger()
+		if (i==23 && (state.model?.substring(0,5)!="VZM35")) quickStartVariables()  //quickStart is implemented in firmware for the fan, emulated in this driver for 2-in-1 Dimmer
+
 		switch (option) {
-			case "":
-			case " ":
-			case null:
-				if (((i>=1)&&(i<=8))&&(state?."parameter${i}value"==null)||(i==21)||(i==22)||(i==51)||(i==52)||(i==157)||(i==158)||(i==257)||(i==258)) cmds += getParameter(i) //if option is blank or null then refresh primary and read-only settings
-				break
-			case "User":                
-				if (settings."parameter${i}"!=null) cmds += getParameter(i) //if option is User then refresh settings that are non-blank
+			case "":									//option is blank or null 
+				if (([22,52,158,258].contains(i))		//refresh primary settings
+				|| (readOnlyParams().contains(i))		//refresh read-only params
+				|| (settings."parameter${i}"!=null)) {	//refresh user settings
+					cmds += getParameter(i)
+				}
 				break
 			case "All":
-				cmds += getParameter(i) //if option is All then refresh all settings
+				cmds += getParameter(i) //if option is All then refresh all params
 				break
 			default: 
-				if (infoEnable||traceEnable||debugEnable) log.warn "${device.displayName} Unknonwn refresh option '${option}'"
+				if (traceEnable||debugEnable) log.error "${device.displayName} Unknonwn option 'refresh($option)'"
 				break
 		}
     }
     if (debugEnable) {
-		getParameterNumbers().each { i ->
+		userSettableParams().each { i ->
 			def param_output = ""
 			param_output = param_output + " name: \"parameter${i}\"" + "\n"
 			//log.debug "- name: \"${getParameterInfo(i, "name").replaceAll("\\s","").uncapitalize()}\""
@@ -1719,7 +2107,7 @@ def refresh(option) {
 			log.debug param_output 
 		}
 	}
-	return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+	return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 }
 
 def resetEnergyMeter() {
@@ -1730,8 +2118,8 @@ def resetEnergyMeter() {
     cmds += zwave.meterV2.meterReset()
     cmds += zwave.meterV2.meterGet(scale: 0)
     cmds += zwave.meterV2.meterGet(scale: 2)
-    if (traceEnable) log.trace "${device.displayName} resetEnergyMeter $cmds"
-    return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+    if (debugEnable) log.debug  "${device.displayName} resetEnergyMeter $cmds"
+    return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 }
 
 def setLevel(value) {
@@ -1741,8 +2129,8 @@ def setLevel(value) {
 	def cmds = []
 	cmds += zwave.switchMultilevelV4.switchMultilevelSet(value: value<100?value:99)
     cmds += zwave.switchMultilevelV4.switchMultilevelGet()
-	if (traceEnable) log.trace "${device.displayName} setLevel $cmds"
-	return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+	if (debugEnable) log.debug "${device.displayName} setLevel $cmds"
+	return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 }
 
 def setLevel(value, duration) {
@@ -1753,39 +2141,45 @@ def setLevel(value, duration) {
     def cmds = []
     cmds += zwave.switchMultilevelV4.switchMultilevelSet(value: value<100?value:99, dimmingDuration: duration)
     cmds += zwave.switchMultilevelV4.switchMultilevelGet()
-    if (traceEnable) log.trace "${device.displayName} setLevel $cmds"
-	return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+    if (debugEnable) log.debug "${device.displayName} setLevel $cmds"
+	return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 }
 
 def setConfigParameter(number, value, size) {	//for backward compatibility
     return setParameter(number, value, size.toInteger())
 }
 
-def setParameter(number, value=null, size=null) {
-	number = number?.toInteger()
-	value  = value?.toInteger()
-	size   = size?.toInteger()
-	if (size==null || size==" ") size = configParams["parameter${number.toString().padLeft(3,'0')}"]?.size?:8
-	if (infoEnable) log.info value!=null?"${device.displayName} setParameter($number, $value, $size)":"${device.displayName} getParameter($number)"
-    state.lastCommandSent =  value!=null?                      "setParameter($number, $value, $size)":                      "getParameter($number)"
-    state.lastCommandTime = nowFormatted()
-    def cmds = []
-    if (value!=null) cmds += zwave.configurationV4.configurationSet(parameterNumber: number, scaledConfigurationValue: size==1?(value<0x80?value:value-0x100):size==4?(value<0x80000000?value:value-0x100000000):value, size: size)
-	if (number==52 || number==158 || number==258) cmds += "delay $longDelay"	//allow extra time when changing modes
-	cmds += zwave.configurationV4.configurationGet(parameterNumber: number)
-    if (traceEnable) log.trace value!=null?"${device.displayName} setParameter $cmds":"${device.displayName} getParameter $cmds"
-    return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+def setParameter(paramNum=0, value=null, size=null, delay=shortDelay) {
+	paramNum = paramNum?.toInteger()
+	value    = value?.toInteger()
+	size     = size?.toInteger()
+	if (size==null || size==" ") size = configParams["parameter${paramNum.toString().padLeft(3,'0')}"]?.size?:8
+	if (traceEnable) log.trace value!=null?"${device.displayName} setParameter($paramNum, $value, $size)":"${device.displayName} getParameter($paramNum)"
+	state.lastCommandSent =    value!=null?                      "setParameter($paramNum, $value, $size)":                      "getParameter($paramNum)"
+	state.lastCommandTime = nowFormatted()
+	def cmds = []
+    if (value!=null) cmds += zwave.configurationV4.configurationSet(parameterNumber: paramNum, scaledConfigurationValue: size==1?(value<0x80?value:value-0x100):size==4?(value<0x80000000?value:value-0x100000000):value, size: size)
+	if (paramNum==52 || paramNum==158 || paramNum==258) cmds += "delay $longDelay"	//allow extra time when changing modes
+	cmds += zwave.configurationV4.configurationGet(parameterNumber: paramNum)
+    if (debugEnable) log.debug value!=null?"${device.displayName} setParameter $cmds":"${device.displayName} getParameter $cmds"
+    return delayBetween(cmds.collect{ secureCmd(it) }, delay)
 }
 
-def getParameter(number=0) {
-	number = number?.toInteger()
-    //if (infoEnable) log.info "${device.displayName} getParameter($number)"
-    //state.lastCommandSent =                        "getParameter($number)"
+def getParameter(paramNum=0, delay=shortDelay) {
+	paramNum = paramNum?.toInteger()
+    if (traceEnable) log.trace "${device.displayName} getParameter($paramNum)"
+    //state.lastCommandSent =                        "getParameter($paramNum)"
     //state.lastCommandTime = nowFormatted() //this is not a custom command.  Only use state variable for commands on the device details page
     def cmds = []
-	cmds += zwave.configurationV1.configurationGet(parameterNumber: number)
-    if (traceEnable) log.trace "${device.displayName} getParameter $cmds"
-    return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+	if (paramNum<0) {	//special case, if negative then read all params from 0-max (for debugging)
+		for(int i = 0;i<=validConfigParams().max();i++) {
+			cmds += zwave.configurationV4.configurationGet(parameterNumber: i)
+		}	
+	} else {	//otherwise, just get the requested parameter
+		cmds += zwave.configurationV4.configurationGet(parameterNumber: paramNum)
+	}
+    if (debugEnable) log.debug "${device.displayName} getParameter $cmds"
+    return delayBetween(cmds.collect{ secureCmd(it) }, delay)
 }
 
 def startLevelChange(direction, duration=null) {
@@ -1798,8 +2192,8 @@ def startLevelChange(direction, duration=null) {
 	def cmds = []
 	cmds += zwave.switchMultilevelV4.switchMultilevelStartLevelChange(upDown: upDownVal, dimmingDuration: duration, ignoreStartLevel: true, startLevel: device.currentValue("level"))
     cmds += zwave.switchMultilevelV4.switchMultilevelGet()
-    if (traceEnable) log.trace "${device.displayName} startLevelChange $cmds"
-	return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+    if (debugEnable) log.debug "${device.displayName} startLevelChange $cmds"
+	return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 }
 
 def stopLevelChange() {
@@ -1809,8 +2203,8 @@ def stopLevelChange() {
 	def cmds = []
 	cmds += zwave.switchMultilevelV4.switchMultilevelStopLevelChange()
     cmds += zwave.switchMultilevelV4.switchMultilevelGet()
-    if (traceEnable) log.trace "${device.displayName} stopLevelChange $cmds"
-    return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+    if (debugEnable) log.debug "${device.displayName} stopLevelChange $cmds"
+    return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 }
 
 def startNotification(value, ep = null){	//for backward compatibility
@@ -1823,8 +2217,8 @@ def startNotification(value, ep = null){	//for backward compatibility
     def cmds = []
     cmds += zwave.configurationV4.configurationSet(scaledConfigurationValue: bigValue, parameterNumber: ledNotificationEndpoints[(ep == null)? 0:ep?.toInteger()-1], size: 4)
     cmds += zwave.configurationV4.configurationGet(parameterNumber: ledNotificationEndpoints[(ep == null)? 0:ep?.toInteger()-1])
-    if (traceEnable) log.trace "${device.displayName} startNotification $cmds"
-    return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+    if (debugEnable) log.debug "${device.displayName} startNotification $cmds"
+    return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 }
 
 def stopNotification(ep = null){	//for backward compatibility
@@ -1835,8 +2229,8 @@ def stopNotification(ep = null){	//for backward compatibility
     def cmds = []
     cmds += zwave.configurationV4.configurationSet(scaledConfigurationValue: 0, parameterNumber: ledNotificationEndpoints[(ep == null)? 0:ep?.toInteger()-1], size: 4)
     cmds += zwave.configurationV4.configurationGet(parameterNumber: ledNotificationEndpoints[(ep == null)? 0:ep?.toInteger()-1])
-    if (traceEnable) log.trace "${device.displayName} stopNotification $cmds"
-    return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+    if (debugEnable) log.debug "${device.displayName} stopNotification $cmds"
+    return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 }
 
 def toggle() {	
@@ -1845,7 +2239,7 @@ def toggle() {
     state.lastCommandSent =                        "toggle(${toggleDirection})"
     state.lastCommandTime = nowFormatted()
     def cmds = []
-    // emulate toggle
+    // emulate toggle since z-wave does not have native toggle command like zigbee
     if (device.currentValue("switch")=="off") {
 		if (settings.parameter23?.toInteger()>0) {
 			cmds += quickStart()  //IF quickStart is enabled THEN quickStart
@@ -1857,17 +2251,15 @@ def toggle() {
 		cmds += zwave.basicV2.basicSet(value: 0x00)
 		cmds += zwave.basicV2.basicGet()
 	}
-    if (traceEnable) log.trace "${device.displayName} toggle $cmds"
-    return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+    if (debugEnable) log.debug "${device.displayName} toggle $cmds"
+    return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 }
 
 def updated(option) { // called when "Save Preferences" is requested
     option = (option==null||option==" ")?"":option
-    if (infoEnable) log.info "${device.displayName} updated(${option})"
+    if (infoEnable) log.info "${device.displayName} updated(${option})" + (traceEnable||debugEnable)?" $settings":""
     state.lastCommandSent =                        "updated(${option})"
     state.lastCommandTime = nowFormatted()
-    state.driverDate = getDriverDate()
-	state.model = "VZW31-SN"
     if (state?.lastRan && now()<state?.lastRan + 2000) {
         if (infoEnable) log.info "${device.displayName} updated() ran within the last 2 seconds. Skipping execution."
 		return null
@@ -1877,60 +2269,97 @@ def updated(option) { // called when "Save Preferences" is requested
 	runIn(2,lastRanRemove)
     def changedParams = []
     def cmds = []
-    cmds += processAssociations()
     def nothingChanged = true
     int defaultValue
     int newValue
-    int oldValue
-    getParameterNumbers().each{ i ->
-        defaultValue=configParams["parameter${i.toString().padLeft(3,'0')}"].default.toInteger()
-        oldValue=state."parameter${i}value"!=null?state."parameter${i}value".toInteger():defaultValue
-		//if ((i==9)||(i==10)||(i==13)||(i==14)||(i==15)||(i==55)||(i==56)) {    //convert the percent preferences back to byte values before testing for changes
-		//    defaultValue=convertPercentToByte(defaultValue)
-		//    oldValue=convertPercentToByte(oldValue)
-		//}
-		if (i==23 && parameter23level!=null) {
-			if (parameter23level.toInteger()==defaultQuickLevel.toInteger()) device.clearSetting("parameter23level")
+	validConfigParams().each { i ->	//loop through all parameters
+		//int i = it.value.number.toInteger()
+		newValue = calculateParameter(i)
+		defaultValue=getDefaultValue(i)
+		if ([9,10,13,14,15,55,56].contains(i)) defaultValue=convertPercentToByte(defaultValue) //convert percent values back to byte values
+		if ((i==95 && parameter95custom!=null)||(i==96 && parameter96custom!=null)) {                                         //IF   a custom hue value is set
+			if ((Math.round(settings?."parameter${i}custom"?.toInteger()/360*255)==settings?."parameter${i}"?.toInteger())) { //AND  custom setting is same as normal setting
+				device.removeSetting("parameter${i}custom")                                                                   //THEN clear custom hue and use normal color 
+				if (infoEnable||traceEnable||debugEnable) log.info "${device.displayName} Cleared Custom Hue setting since it equals standard color setting"
 			}
-        if ((i==95 && parameter95custom!=null)||(i==96 && parameter96custom!=null)) {                                         //IF  a custom hue value is set
-            if ((Math.round(settings?."parameter${i}custom"?.toInteger()/360*255)==settings?."parameter${i}"?.toInteger())) { //AND custom setting is same as normal setting
-                device.clearSetting("parameter${i}custom")                                                                    //THEN clear custom hue and use normal color 
-                if (infoEnable) log.info "${device.displayName} Cleared Custom Hue setting since it equals standard color setting"
-            }
-            oldvalue=state."parameter${i}custom"!=null?state."parameter${i}custom".toInteger():oldValue
-        }
-        newValue = calculateParameter(i)
-        if ((option == "Default")&&(i!=21)&&(i!=22)&&(i!=51)&&(i!=52)&&(i!=157)&&(i!=158)&&(i!=257)&&(i!=258)){    //if DEFAULT option was selected then use the default value (but don't change switch modes)
-            newValue = defaultValue
-            if (traceEnable||debugEnable) log.trace "${device.displayName} updated() has cleared parameter${i}"
-            device.clearSetting("parameter${i}")  //and clear the local settings so they go back to default values
-            if (i==23)          device.clearSetting("parameter${i}level")    //clear the custom quickstart level
-            if (i==95 || i==96) device.clearSetting("parameter${i}custom")   //clear the custom custom hue values
-        }
-        //If a setting changed OR we selected ALL then update parameters in the switch (but don't change switch modes when ALL is selected)
-        //log.debug "Param:$i default:$defaultValue oldValue:$oldValue newValue:$newValue setting:${settings."parameter$i"} `$option`"
-        if ((newValue!=oldValue) 
-        || ((option=="User")&&(settings."parameter${i}"!=null)) 
-        || ((option=="Default"||option=="All")&&(i!=158)&&(i!=258))) {
-			if (i!=21 && i!=51 && i!=257) {						//IF this is not a read-only parameter															
-				cmds += setParameter(i, newValue.toInteger())	//THEN set the new value
-				changedParams += i
-				nothingChanged = false
-			}
-        }
+		}
+		switch (option) {
+			case "":
+				if ((userSettableParams().contains(i))		//IF   this is a valid parameter for this device mode
+				&& (settings."parameter$i"!=null)			//AND  this is a non-default setting
+				&& (!readOnlyParams().contains(i))) {		//AND  this is not a read-only parameter
+					cmds += setParameter(i, newValue)		//THEN set the new value
+					nothingChanged = false
+				}
+				break
+			case "All":
+			case "Default":
+				if (option=="Default") newValue = defaultValue	//if user selected "Default" then set the new value to the default value
+				if (((i!=158)&&(i!=258))					//IF   we are not changing Switch Mode
+				&& (!readOnlyParams().contains(i))) {		//AND  this is not a read-only parameter
+					cmds += setParameter(i, newValue)		//THEN Set the new value
+					nothingChanged = false
+				} else {									//ELSE this is a read-only parameter or Switch Mode parameter
+					cmds += getParameter(i)					//so Get current value from device
+				}
+				break
+			default: 
+				if (traceEnable||debugEnable) log.error "${device.displayName} Unknown option 'updated($option)'"
+				break
+		}
         if ((i==23)&&(state.model?.substring(0,5)!="VZM35")) {  //IF not Fan switch THEN manually update the quickStart state variables since Dimmer does not store these
             quickStartVariables()
 		}
     }
-    //changedParams.each{ i ->     //read back the parameters we've changed so the state variables are updated 
-    //    cmds += getParameter(i)  //no longer needed since we do a getParam after every setParam
-    //}
-    if (nothingChanged && (infoEnable||traceEnable||debugEnable)) {
-	    log.info  "${device.displayName} No DEVICE settings were changed"
-		log.info  "${device.displayName} Info logging  " + (infoEnable?limeGreen("Enabled"):red("Disabled"))
-		log.trace "${device.displayName} Trace logging " + (traceEnable?limeGreen("Enabled"):red("Disabled"))
-		log.debug "${device.displayName} Debug logging " + (debugEnable?limeGreen("Enabled"):red("Disabled"))
+    if (settings?.groupBinding1 && !state?.groupBinding1) {
+        bindGroup("bind",settings.groupBinding1?.toInteger())
+		//device.updateSetting("groupBinding1",[value:settings.groupBinding1?.toInteger(),type:"number"])
+		state.groupBinding1=settings.groupBinding1?.toInteger()
+        nothingChanged = false
+    } else {
+        if (!settings?.groupBinding1 && state?.groupBinding1) {
+            bindGroup("unbind",state.groupBinding1?.toInteger())
+			device.removeSetting("groupBinding1")
+			state.groupBinding1=null
+            nothingChanged = false
+        }
     }
+    if (settings?.groupBinding2 && !state?.groupBinding2) {
+        bindGroup("bind",settings.groupBinding2?.toInteger())
+		//device.updateSetting("groupBinding2",[value:settings.groupBinding2?.toInteger(),type:"number"])
+		state.groupBinding2=settings.groupBinding2?.toInteger()
+        nothingChanged = false
+    } else {
+        if (!settings?.groupBinding2 && state?.groupBinding2) {
+            bindGroup("unbind",state.groupBinding2?.toInteger())
+			device.removeSetting("groupBinding2")
+			state.groupBinding2=null
+            nothingChanged = false
+        }
+    }
+    if (settings?.groupBinding3 && !state?.groupBinding3) {
+        bindGroup("bind",settings.groupBinding3?.toInteger())
+		//device.updateSetting("groupBinding3",[value:state.groupBinding3?.toInteger(),type:"number"])
+		state.groupBinding3=state.groupBinding3?.toInteger()
+        nothingChanged = false
+    } else {
+        if (!settings?.groupBinding3 && state?.groupBinding3) {
+            bindGroup("unbind",state.groupBinding3?.toInteger())
+			device.removeSetting("groupBinding3")
+			state.groupBinding3=null
+            nothingChanged = false
+        }
+    }
+	// remove duplicate groups
+	if (settings.groupBinding3!=null && settings.groupBinding3==settings.groupBinding2) {device.removeSetting("groupBinding3"); state.groupBinding3 = null; if (infoEnable) log.info "${device.displayName} Removed duplicate Group Bind #3"}
+	if (settings.groupBinding2!=null && settings.groupBinding2==settings.groupBinding1) {device.removeSetting("groupBinding2"); state.groupBinding2 = null; if (infoEnable) log.info "${device.displayName} Removed duplicate Group Bind #2"}
+	if (settings.groupBinding1!=null && settings.groupBinding1==settings.groupBinding3) {device.removeSetting("groupBinding3"); state.groupBinding3 = null; if (infoEnable) log.info "${device.displayName} Removed duplicate Group Bind #3"}
+	
+    if (nothingChanged && (infoEnable||traceEnable||debugEnable)) log.info "${device.displayName} No DEVICE settings were changed"
+	log.info  "${device.displayName} Info logging  " + (infoEnable?limeGreen("Enabled"):red("Disabled"))
+	log.trace "${device.displayName} Trace logging " + (traceEnable?limeGreen("Enabled"):red("Disabled"))
+	log.debug "${device.displayName} Debug logging " + (debugEnable?limeGreen("Enabled"):red("Disabled"))
+
     if (infoEnable && disableInfoLogging) {
 		log.info "${device.displayName} Info Logging will be disabled in $disableInfoLogging minutes"
 		runIn(disableInfoLogging*60,infoLogsOff)
@@ -1943,7 +2372,7 @@ def updated(option) { // called when "Save Preferences" is requested
 		log.debug "${device.displayName} Debug Logging will be disabled in $disableDebugLogging minutes"
 		runIn(disableDebugLogging*60,debugLogsOff) 
 	}
-    if (cmds) return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+    if (cmds) return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 	else return
 }
 def lastRanRemove() {if (state?.lastRan) state.remove("lastRan")}
@@ -2217,13 +2646,13 @@ String italic(s)    { return "<i>$s</i>" }
 String mark(s)      { return "<mark>$s</mark>" }    //yellow background
 String strike(s)    { return "<s>$s</s>" }
 String underline(s) { return "<u>$s</u>" }
-String hue(h,s) {
+String hue(Integer h, String s) {
     h = Math.min(Math.max((h!=null?h:170),1),255)    //170 is Inovelli factory default blue
 	def result =  '<font '
-	if (h==255 
-	|| (h>40&&h<60)) result += 'style="background-color:lightGray" '
-    if (h==255)      result += 'color="White"'
-	else             result += 'color="' + hubitat.helper.ColorUtils.rgbToHEX(hubitat.helper.ColorUtils.hsvToRGB([(h/255*100), 100, 100])) + '"' 
+	if (h==255)     result += 'style="background-color:Gray" '
+	if (h>30&&h<70) result += 'style="background-color:DarkGray" '
+    if (h==255)     result += 'color="White"'
+	else            result += 'color="' + hubitat.helper.ColorUtils.rgbToHEX(hubitat.helper.ColorUtils.hsvToRGB([(h/255*100), 100, 100])) + '"' 
 	result += ">$s</font>"
     return result
 }
@@ -2283,6 +2712,7 @@ String sienna(s)        { return '<font color = "Sienna">' + s + '</font>'}
 
 //Grays
 String lightGray(s) { return '<font color = "LightGray">' + s + '</font>'}
+String darkGray(s)  { return '<font color = "DarkGray">' + s + '</font>'}
 String gray(s)      { return '<font color = "Gray">' + s + '</font>'}
 String dimGray(s)   { return '<font color = "DimGray">' + s + '</font>'}
 String slateGray(s) { return '<font color = "SlateGray">' + s + '</font>'}
