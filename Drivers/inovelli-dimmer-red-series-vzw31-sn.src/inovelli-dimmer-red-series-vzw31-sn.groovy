@@ -464,7 +464,7 @@ def readOnlyParams() {
     parameter015 : [
         number: 15,
         name: "Level After Power Restored",
-        description: "Level the dimmer will return to when power is restored after power failure (if Switch is in On/Off Mode any level 1-99 will convert to 99).<br>0=Off<br>1-99=Set Level<br>0=Use previous level.",
+        description: "Level the dimmer will return to when power is restored after power failure (if Switch is in On/Off Mode any level 1-99 will convert to 99).<br>0=Off<br>1-99=Set Level<br>100=Use previous level.",
         range: "0..99",
         default: 99,
         size: 1,
