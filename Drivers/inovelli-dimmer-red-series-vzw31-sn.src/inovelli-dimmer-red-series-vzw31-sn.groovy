@@ -1,4 +1,4 @@
-def getDriverDate() { return "2023-11-11" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2023-11-15" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW31-SN Red Series Z-Wave 2-in-1 Dimmer
@@ -18,6 +18,7 @@ def getDriverDate() { return "2023-11-11" /** + orangeRed(" (beta)") **/ }	// **
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2023-11-15(MA) fix range and default value for P15
 * 2023-11-11(MA) merge changes between beta/production and changes with Blue series (individual LED logging)
 * 2023-10-23(MA) reverse order of comments (newest at top)
 * 2023-09-13(EM) fix null error in processAssociation
@@ -465,8 +466,8 @@ def readOnlyParams() {
         number: 15,
         name: "Level After Power Restored",
         description: "Level the dimmer will return to when power is restored after power failure (if Switch is in On/Off Mode any level 1-99 will convert to 99).<br>0=Off<br>1-99=Set Level<br>100=Use previous level.",
-        range: "0..99",
-        default: 99,
+        range: "0..100",
+        default: 100,
         size: 1,
         type: "number",
         value: null
