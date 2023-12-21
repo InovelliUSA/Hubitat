@@ -1,4 +1,4 @@
-def getDriverDate() { return "2023-11-11" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2023-12-18" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW31-SN Red Series Z-Wave 2-in-1 Dimmer
@@ -18,6 +18,7 @@ def getDriverDate() { return "2023-11-11" /** + orangeRed(" (beta)") **/ }	// **
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2023-12-18(EM) adding associaiton processing to configure and updated methods
 * 2023-11-11(MA) merge changes between beta/production and changes with Blue series (individual LED logging)
 * 2023-10-23(MA) reverse order of comments (newest at top)
 * 2023-09-13(EM) fix null error in processAssociation
@@ -1292,6 +1293,7 @@ def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS A
     state.lastCommandTime = nowFormatted()
     sendEvent(name: "numberOfButtons", value: 14)
     def cmds = []
+    cmds += processAssociations()
     cmds += zwave.versionV1.versionGet()
     if (option=="") {		//IF   we didn't pick an option 
 		cmds += refresh()	//THEN refresh read-only and key parameters
@@ -2269,6 +2271,7 @@ def updated(option) { // called when "Save Preferences" is requested
 	runIn(2,lastRanRemove)
     def changedParams = []
     def cmds = []
+    cmds += processAssociations()
     def nothingChanged = true
     int defaultValue
     int newValue
