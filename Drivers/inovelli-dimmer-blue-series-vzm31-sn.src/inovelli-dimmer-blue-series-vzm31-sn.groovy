@@ -1,6 +1,6 @@
-def getDriverDate() { return "2023-12-22" /* + orangeRed(" (beta)") */ }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-01-15" /* + orangeRed(" (beta)") */ }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
-/**
+/*
 * Inovelli VZM31-SN Blue Series Zigbee 2-in-1 Dimmer
 *
 * Author: Eric Maycock (erocm123)
@@ -18,171 +18,146 @@ def getDriverDate() { return "2023-12-22" /* + orangeRed(" (beta)") */ }	// ****
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
-* 2021-12-15(EM) Initial release.
-* 2021-12-16(EM) Adding configuration options and working on code
-* 2021-12-20(EM) Adding additional parameters
-* 2021-12-21(EM) Adding configuration options
-* 2021-12-22(EM) Cleaning up and consolidating code
-* 2021-12-23(EM) Adding min & max level parameters
-* 2021-12-27(EM) Starting to standardize logging
-* 2021-12-30(EM) Adding options for power type and switch type
-* 2022-01-03(EM) Change wording and make settings dynamic based on which mode is chosen
-                 Fix for parameter 9 not working correctly. More text changes to LED parameters
-                 Fixing Set Level when you enter a value > 99
-* 2022-01-04(MA) Fix 'div() on null object' error when Param9 is blank.  Fix attribute size is 'bits' not 'bytes'
-* 2022-01-05(MA) Fix ranges for params 1-4.  These are slightly different for zigbee(blue) than they were for zwave(red)
-* 2022-01-06(EM) Updating parse section of code. Requesting firmware version and date.
-* 2022-01-11(EM) Adding code for firmware update.
-* 2022-01-20(EM) Changes to make the driver compatible with firmware v5.
+* 2024-01-15(MA) fix additional Aux scenes (P123 enabled) not getting parsed
+* 2024-01-01(MA) reverse order of changelog (newest on top)
+* 2023-12-22(MA) remove (comment out) code that does automatic group binding
+* 2023-10-18(MA) move configParams map down to the bottom for easier scrolling
+* 2023-10-14(MA) fix "Switch Mode" not changing; warn null ClusterID; fix null setLevel
+* 2023-10-10(EM) add additional description information for aux switch and non-neutral settings
+* 2023-10-01(MA) remove "beta" designation
+* 2023-09-15(MA) streamlined Config All and Refresh All
+* 2023-09-13(MA) streamlined parsing of individual LED parameters (P60-P94)
+* 2023-09-06(MA) streamlined logging with traceCluster() method; change read-only params from Settings to Attributes
+* 2023-08-28(MA) add P30-P33; add P60-P94; change "defaultDelay" to "shortDelay"
+* 2023-07-01(MA) removed "beta" designation
+* 2023-06-15(MA) re-sync all models (VZM31/VZM35/VZW31) for consistent verbiage/function
+* 2023-06-01(MA) remove "double-click to update firmware" logic since new Hubitat firmware now prompts user to click OK or CANCEL 
+* 2023-05-08(MA) fix duration on startLevelChange; fix input number range for P23
+* 2023-05-01(MA) misc. minor bug fixes
+* 2023-04-22(MA) update presetLevel to set Local AND Remote default levels; more code cleanup
+* 2023-04-19(MA) rename bindSlave/bindSource back to bindTarget/bindInitiator to keep in line with Zigbee terminology
+* 2023-04-17(MA) add gray background to the lighter yellow-green hues for easier viewing; lots of code cleanup; 
+* 2023-04-16(MA) enhanced Group Binding to automatically bind/unbind groups that add/remove this switch in the Groups and Scenes App
+* 2023-04-11(MA) Hotfix Add parsing for P125; fix P55-56 not scaling to percent
+* 2023-04-10(MA) Hotfix P25 is 1-bit boolean, not 1-byte integer
+* 2023-04-09(MA) added range/error checking to group binding; enhanced cluster name reporting; remove "beta" designation for v2.14 public release
+* 2023-04-07(EM) Adding group binding support. See: https://community.inovelli.com/t/how-to-s-setup-zigbee-group-binding-hubitat/13909/1
+* 2023-04-03(MA) add parameters 25,100,125 (for Dimmer v2.14+ firmware)
+* 2023-03-31(MA) display effect name instead of number in ledEffect attribute 
+* 2023-03-23(MA) rename bindInitiator/bindTarget to bindSlave/bindSource to reduce confusion
+* 2023-03-12(MA) add params 55,56; fix minor bugs and typos; prep for production firmware release.
+* 2023-03-01(MA) synchronize all changes up to this point between VZM31, VZM35, and VZW31; includes all current firmware changes
+* 2023-02-26(MA) fix missing preferences; fix state.auxType; enhance parsing of Unknown Command and Unknown Attribute
+* 2023-02-23(MA) fix Leading/Trailing error in non-neutral; misc code cleanup; more standardization between the different VMark devices
+* 2023-02-21(MA) add setParameter/getParameter; add Aux Unique Scenes option; add state.dimmingMethod (leading/trailing)
+* 2023-01-24(MA) decrease shortDelay slightly and increase longDelay slightly; small tweak to setLevel
+* 2023-01-22(MA) fix ledEffect sendEvent
+* 2023-01-18(MA) updates for Dimmer v2.10 firmware
+* 2023-01-12(MA) change QuickStart description to experimental
+* 2023-01-11(MA) cleanup sendEvent doesn't use "displayed:false" on Hubitat
+* 2023-01-10(MA) improved ledEffect reporting in log and state variables
+* 2023-01-08(MA) HOTFIX for ledEffect Integer/String error when called from Rule Machine
+* 2023-01-04(MA) P257 is read-only, must be changed with remoteControl command 
+* 2023-01-01(MA) enhanced Unknown Cluster/Attribute logging; fix typo in remoteControl command
+* 2022-12-31(MA) more changes to quickStart emulation.
+* 2022-12-30(MA) add more context to LED Effect dropdowns; add more detail to state.lastCommand
+* 2022-12-28(MA) add Identify command; add device names to trace logging; add remoteControl command to allow re-enabling if Remote Protection (P257) is disabled
+* 2022-12-26(MA) sync with updates to Fan driver
+* 2022-12-12(MA) add presetLevel command; allow param15 to be set in on/off mode; workaround for setLevel bug in firmware (firmware ignores off-on duration)
+* 2022-11-26(MA) fix Config Default not defaulting all parameters
+* 2022-11-24(MA) improvements to quickStartEmulation
+* 2022-11-18(MA) fix startLevelChange with null duration
+* 2022-11-17(MA) more fixes for when user enters decimal (floating) values for an integer parameter
+* 2022-11-05(MA) fix selection of multiple individual leds with ledEffectOne (e.g.1357 to select the odd leds and 246 to select the even leds)
+* 2022-11-04(MA) fix 'siren' fast/slow effects (18/19) were backwards
+* 2022-11-03(MA) updates for fw2.05: addeded param 262; added additional LED effects rising,falling,fast/slow, etc.
+* 2022-11-02(EM) added warning for firmware update and requirement for double click. Enabled maximum level setting in on/off mode for "problem load" troubleshooting in 3-way dumb mode
+* 2022-08-14(MA) emulate QuickStart for dimmer(can be disabled); add presetLevel command to use in Rule Machine - can also be done with setPrivateCluster custom command
+* 2022-08-09(MA) added Trace logging; setCluster/setAttribute commands will Get current value if you leave Value blank
+* 2022-08-02(MA) fix fan high speed not working with neutral; don't display min-level and max-level when in on/off mode; fix p9-p10 so they only get written if changed
+* 2022-07-30(MA) fix params 9-10 so they send the full 0-255 to the switch; don't log Config() calls if info logging is off
+* 2022-07-29(MA) add Quick Start to parsing/reporting; add driverDate variable so it can be seen on the Device page in Hubitat
+* 2022-07-27(MA) updates for v1.12 firmware; remove details from last.command to keep it simple (details are in log.info)
+* 2022-07-22(MA) don't request ramp rate for fan; more cleanup for production
+* 2022-07-15(MA) cleanup and remove some unneeded debug code; add grey background to white text; remove unused report bindings
+* 2022-07-08(MA) add param#261, add Aurora Effect, and other updates for firmware v1.11
+* 2022-07-03(MA) new Refresh User option to only refresh User-changed settings; enhanced support for custom LED bar colors
+* 2022-06-27(MA) param 95-98 titles change color to match selection; Add common Led groupings for the Led Effect One notification
+* 2022-06-23(MA) add weblink to Hue Color Wheel for Custom LED color; add color to some log entries
+* 2022-06-21(MA) enhanced logic for Fan speed changes when using setLevel()
+* 2022-06-20(MA) fix condition where user enters decimal string (e.g. "12.3") for a parameter
+* 2022-06-19(MA) minor adjustment to percent conversions to be consistent with Fan v4 firmware
+* 2022-06-18(MA) fix startLevelChange to accept a duration value; fix setPrivateCluster and setZigbeeAttribute; standardize all variables to camelCase
+* 2022-06-10(MA) merge with changes to 2022-06-10 VZM31-SN
+* 2022-06-08(MA) lots of cleanup and minor bug fixes; add some code to detect model and more merges with VZM35
+* 2022-06-07(MA) fix bug with null level on initial pairing
+* 2022-06-06(MA) more updates to stay in sync with Fan v4 firmware
+* 2022-06-04(MA) added parsing and logging for binding clusters - still under development
+* 2022-05-31(MA) fix bug with dimRate in StartLevelChange
+* 2022-05-30(MA) merge with changes to zigbee fan v4
+* 2022-05-04(MA) added logging for Alexa Cluster
+* 2022-05-03(MA) some additional support for zigbee binding app and a couple small tweaks to text and logging
+* 2022-04-25(MA) updated for v10 (0x0A) firmware
+* 2022-04-21(MA) change default LED intensity (params 97-98 ) to match PRD (33%/1%).  Also change switch mode (param 258) default to On/Off
+* 2022-04-11(MA) sync up with changes to Zigbee Fan driver for consistency.  No functional changes to dimmer
+* 2022-03-28(MA) added Alexa clusters to fingerprint ID, cleaned up a little code to match a little better with ST driver
+* 2022-03-26(MA) updated for v9 firmware
+* 2022-03-21(MA) replace empty ENUM values with " "  and fix basic on/off via rules and dashboard
+* 2022-03-16(MA) remove doubleTap and add full 5-tap capability for Config button.
+* 2022-03-12(MA) move switch config options to the top.  Add doubleTapped event for Config button. fix another rounding error
+* 2022-03-10(MA) add null check before sending attribute
+* 2022-03-09(MA) various tweaks and code optimizations to help merge with Fan driver.  Remove lastRan carryover from Red Series as its not used with the Blue Series
+* 2022-03-08(MA) Hotfix: found another case where some settings were not getting sent to device, and remove extra level report from StopLevelChange
+* 2022-03-07(MA) Even more detailed parsing.  Stub in some code for possible future "Preset Level" command
+* 2022-03-06(MA) change hubitat hexutils to zigbee hexutils for compatibility with ST driver (which doesn't have the hubitat libraries)
+* 2022-03-04(MA) Parameter21 auto-senses Neutral and is read-only.  Add powerSource attribute to display what the switch detected instead of what the user selected.
+* 2022-03-03(MA) Hotfix: in some edge cases settings were not getting sent.
+* 2022-03-01(MA) Rename with official model name in preparation for production release and standardize across other drivers (like the VZM35 Fan Switch)
+* 2022-03_02(MA) More detailed parsing of Zigbee Description Map reports
+* 2022-02-28(EM) Adding individual LED notifications, modifying parameters for firmware v8, & fixing issue that was preventing "initialize()" commands from being sent. 
+* 2022-02-27(MA) Add default delay to Refresh commands so we're not waiting 2 seconds on every attribute
+* 2022-02-24(MA) Replace recently added 'Reset Parameters' command with new options for the existing Config command. Options to reset all settings to Default or force All current settings to device.
+* 2022-02-22(MA) Hotfix to remove spaces that broke multi-tap button events
+* 2022-02-21(MA) Excluding Parmeter258 (Switch/Dimmer Output Mode) from Reset All command since it creates confusion with different parameter sets.
+* 2022-02-20(MA) New 'Reset Parameters' command to reset ALL parameters and not just the ones it thinks have changed. 
+* 2022-02-19(MA) Patches for bugs still in v7 firmware. (mostly for parameters 13-14)
+* 2022-02-17(MA) Clean up tab/space and other formatting to simplify diff comparisons between HE and ST groovy drivers
+* 2022-02-16(MA) Fix button released event.  Add Config button Held and Released events.  Add digital button support for testing scenes (un-comment in the metadata section to enable) 
+* 2022-02-15(MA) Merged most (not all) changes into the ST driver.  No changes to this HE driver *** placeholder only                                                                                            
+* 2022-02-14(MA) Arrange procedures in alphabetical order to help match edits between HE and ST. No other code changes
+* 2022-02-11(MA) Add range checking for LEDeffect
+* 2022-02-10(MA) Add bind() method to support the Zigbee Bindings app.
+* 2022-02-09(MA) Enhance the 0-255 to 0-99 conversion formulas. Fix rounding down 1 to 0. ZigBee LEVEL range is 0x01-0xfe
+* 2022-02-08(EM) Reverse change that broke LEDeffect
+* 2022-02-04(MA) Fix startLevelChange to use dimming params in seconds.  Fix 0-99 vs 0-255 scaling on Default Levels (param 13-14)
+* 2022-02-03(MA) Fix LEDeffect. Clean up some text/spelling/formatting.  More enhancements to logging
+* 2022-02-02(EM) Changing speed parameters to match functionality. Updated setLevel method to use firmware speed options (param 1-8)
+* 2022-02-01(MA) Lots of tweaks and enhancements to support v6 firmware update
+* 2022-01-27(MA) Fix setLevel so it uses separate Dim Up / Dim Down rates (parameter1 and parameter5) 
+* 2022-01-26(MA) Restore formatting on custom hue value - its needed to avoid div() errors on null values
+* 2022-01-25(MA) Parameter259 (On/Off LED mode) should only be visible when in On/Off Mode
+* 2022-01-24(MA) Add Custom Color override for the LED Indicator to allow any color from a standard hue color wheel
+* 2022-01-23(MA) Fix range on Active Energy Report (parameter20)
+* 2022-01-22(MA) More cleanup of the new parameter descriptions
+* 2022-01-21(MA) Fix typo's and cleanup some of the new parameter descriptions
 * 2022-01-20(EM) Some config parameter fixes. Energy measurement was changed to the simple metering cluster.
 * 2022-01-20(EM) Fix scene reports not working since firmware v5. Need to "Save Preferences" to configure the reporting.
-* 2022-01-21(MA) Fix typo's and cleanup some of the new parameter descriptions
-* 2022-01-22(MA) More cleanup of the new parameter descriptions
-* 2022-01-23(MA) Fix range on Active Energy Report (parameter20)
-* 2022-01-24(MA) Add Custom Color override for the LED Indicator to allow any color from a standard hue color wheel
-* 2022-01-25(MA) Parameter259 (On/Off LED mode) should only be visible when in On/Off Mode
-* 2022-01-26(MA) Restore formatting on custom hue value - its needed to avoid div() errors on null values
-*                Fix issue using dropdown color after clearing custom color
-* 2022-01-27(MA) Fix setLevel so it uses separate Dim Up / Dim Down rates (parameter1 and parameter5) 
-* 2022-02-01(MA) Lots of tweaks and enhancements to support v6 firmware update
-* 2022-02-02(EM) Changing speed parameters to match functionality. Updated setLevel method to use firmware speed options (param 1-8)
-* 2022-02-03(MA) Fix LEDeffect. Clean up some text/spelling/formatting.  More enhancements to logging
-* 2022-02-04(MA) Fix startLevelChange to use dimming params in seconds.  Fix 0-99 vs 0-255 scaling on Default Levels (param 13-14)
-* 2022-02-08(EM) Reverse change that broke LEDeffect
-* 2022-02-09(MA) Enhance the 0-255 to 0-99 conversion formulas. Fix rounding down 1 to 0. ZigBee LEVEL range is 0x01-0xfe
-*                Fix levelChange UP so it now turns light on if off, levelChange DOWN now stops at 1% not 0%.  This matches Red Series dimmers
-*                Removed extra 'rattr' commands from level changing events since the firmware automatically sends them anyway.  Doing both was affecting performance
-*                Add lastActivity, lastEvent, and lastRan features to match Red Series dimmers.
-*                Add lastCommand as a feature enhancement over the Red Series.  I can easily remove if its not desired
-* 2022-02-10(MA) Add bind() method to support the Zigbee Bindings app.
-* 2022-02-11(MA) Add range checking for LEDeffect
-* 2022-02-14(MA) Arrange procedures in alphabetical order to help match edits between HE and ST. No other code changes
-* 2022-02-15(MA) Merged most (not all) changes into the ST driver.  No changes to this HE driver *** placeholder only                                                                                            
-* 2022-02-16(MA) Fix button released event.  Add Config button Held and Released events.  Add digital button support for testing scenes (un-comment in the metadata section to enable) 
-* 2022-02-17(MA) Clean up tab/space and other formatting to simplify diff comparisons between HE and ST groovy drivers
-* 2022-02-19(MA) Patches for bugs still in v7 firmware. (mostly for parameters 13-14)
-* 2022-02-20(MA) New 'Reset Parameters' command to reset ALL parameters and not just the ones it thinks have changed. 
-*                This is needed when settings in the device don't match settings in the hub (typical after a factory reset and some firmware updates). 
-*                It has the option to reset all parameters to their Current Settings on the hub or reset all parameters to their Default values.
-* 2022-02-21(MA) Excluding Parmeter258 (Switch/Dimmer Output Mode) from Reset All command since it creates confusion with different parameter sets.
-*                Extended delay time between bulk parameter changes to try and avoid lockups
-* 2022-02-22(MA) Hotfix to remove spaces that broke multi-tap button events
-* 2022-02-24(MA) Replace recently added 'Reset Parameters' command with new options for the existing Config command. Options to reset all settings to Default or force All current settings to device.
-*                Add 'switchMode' attribute so the current Operating Mode (Dimmer or On/Off) is diplayed under Current States.
-*                Adjusted the 0-99 ranges to 0-100 for consistency.
-*                Update local settings variable whenever a device report is received and the device value is different than the local setting
-*                Refresh command now includes 'get all attributes' so a refresh will ensure all state variables match whats in the device
-*                Created new 'calculateSize' common method to use wherever a bitsize needs to be converted to a hex DataType
-*                Add temporary hack to prevent parameter 22 from getting set to the same value as this causes freeze in v7 firmware.  Will remove hack when fixed in future firmware
-* 2022-02-27(MA) Add default delay to Refresh commands so we're not waiting 2 seconds on every attribute
-* 2022-02-28(EM) Adding individual LED notifications, modifying parameters for firmware v8, & fixing issue that was preventing "initialize()" commands from being sent. 
-* 2022-03-01(MA) Rename with official model name in preparation for production release and standardize across other drivers (like the VZM35 Fan Switch)
-*                Add Tertiary colors to LED Indicator options.  More tweaks for v8 firmware.  Hotfix: percent conversion fix and p22 hack removal
-* 2022-03_02(MA) More detailed parsing of Zigbee Description Map reports
-*                Display Level values as 0-100% instead of 0-255.  
-*                Allow default values for LEDeffects - easier to enable/disable with just one or two clicks 
-*                Move "Save Preferences" code from config() to updated(), move bindings from initialize() to configure()
-*                Created Refresh-ALL and simplified Config-ALL & Config-DEFAULT commands
-*                CLICKING ON CONFIGURE WILL RE-ESTABLISH ZIGBEE REPORT BINDINGS AFTER FACTORY RESET OF SWITCH
-* 2022-03-03(MA) Hotfix: in some edge cases settings were not getting sent.
-* 2022-03-04(MA) Parameter21 auto-senses Neutral and is read-only.  Add powerSource attribute to display what the switch detected instead of what the user selected.
-* 2022-03-06(MA) change hubitat hexutils to zigbee hexutils for compatibility with ST driver (which doesn't have the hubitat libraries)
-* 2022-03-07(MA) Even more detailed parsing.  Stub in some code for possible future "Preset Level" command
-* 2022-03-08(MA) Hotfix: found another case where some settings were not getting sent to device, and remove extra level report from StopLevelChange
-* 2022-03-09(MA) various tweaks and code optimizations to help merge with Fan driver.  Remove lastRan carryover from Red Series as its not used with the Blue Series
-* 2022-03-10(MA) add null check before sending attribute
-* 2022-03-12(MA) move switch config options to the top.  Add doubleTapped event for Config button. fix another rounding error
-* 2022-03-16(MA) remove doubleTap and add full 5-tap capability for Config button.
-* 2022-03-21(MA) replace empty ENUM values with " "  and fix basic on/off via rules and dashboard
-* 2022-03-26(MA) updated for v9 firmware
-* 2022-03-28(MA) added Alexa clusters to fingerprint ID, cleaned up a little code to match a little better with ST driver
-* 2022-04-11(MA) sync up with changes to Zigbee Fan driver for consistency.  No functional changes to dimmer
-* 2022-04-21(MA) change default LED intensity (params 97-98 ) to match PRD (33%/1%).  Also change switch mode (param 258) default to On/Off
-* 2022-04-25(MA) updated for v10 (0x0A) firmware
-* 2022-05-03(MA) some additional support for zigbee binding app and a couple small tweaks to text and logging
-* 2022-05-04(MA) added logging for Alexa Cluster
-* 2022-05-30(MA) merge with changes to zigbee fan v4
-* 2022-05-31(MA) fix bug with dimRate in StartLevelChange
-* 2022-06-04(MA) added parsing and logging for binding clusters - still under development
-* 2022-06-06(MA) more updates to stay in sync with Fan v4 firmware
-* 2022-06-07(MA) fix bug with null level on initial pairing
-* 2022-06-08(MA) lots of cleanup and minor bug fixes; add some code to detect model and more merges with VZM35
-* 2022-06-10(MA) merge with changes to 2022-06-10 VZM31-SN	
-* 2022-06-18(MA) fix startLevelChange to accept a duration value; fix setPrivateCluster and setZigbeeAttribute; standardize all variables to camelCase
-* 2022-06-19(MA) minor adjustment to percent conversions to be consistent with Fan v4 firmware
-* 2022-06-20(MA) fix condition where user enters decimal string (e.g. "12.3") for a parameter
-* 2022-06-21(MA) enhanced logic for Fan speed changes when using setLevel()
-* 2022-06-23(MA) add weblink to Hue Color Wheel for Custom LED color; add color to some log entries
-* 2022-06-27(MA) param 95-98 titles change color to match selection; Add common Led groupings for the Led Effect One notification
-* 2022-07-03(MA) new Refresh User option to only refresh User-changed settings; enhanced support for custom LED bar colors
-* 2022-07-08(MA) add param#261, add Aurora Effect, and other updates for firmware v1.11
-* 2022-07-15(MA) cleanup and remove some unneeded debug code; add grey background to white text; remove unused report bindings
-* 2022-07-22(MA) don't request ramp rate for fan; more cleanup for production
-* 2022-07-27(MA) updates for v1.12 firmware; remove details from last.command to keep it simple (details are in log.info)
-* 2022-07-29(MA) add Quick Start to parsing/reporting; add driverDate variable so it can be seen on the Device page in Hubitat
-* 2022-07-30(MA) fix params 9-10 so they send the full 0-255 to the switch; don't log Config() calls if info logging is off
-* 2022-08-02(MA) fix fan high speed not working with neutral; don't display min-level and max-level when in on/off mode; fix p9-p10 so they only get written if changed
-* 2022-08-09(MA) added Trace logging; setCluster/setAttribute commands will Get current value if you leave Value blank
-* 2022-08-14(MA) emulate QuickStart for dimmer(can be disabled); add presetLevel command to use in Rule Machine - can also be done with setPrivateCluster custom command
-* 2022-11-02(EM) added warning for firmware update and requirement for double click. Enabled maximum level setting in on/off mode for "problem load" troubleshooting in 3-way dumb mode
-* 2022-11-03(MA) updates for fw2.05: addeded param 262; added additional LED effects rising,falling,fast/slow, etc.
-* 2022-11-04(MA) fix 'siren' fast/slow effects (18/19) were backwards
-* 2022-11-05(MA) fix selection of multiple individual leds with ledEffectOne (e.g.1357 to select the odd leds and 246 to select the even leds)
-* 2022-11-17(MA) more fixes for when user enters decimal (floating) values for an integer parameter
-* 2022-11-18(MA) fix startLevelChange with null duration
-* 2022-11-24(MA) improvements to quickStartEmulation
-* 2022-11-26(MA) fix Config Default not defaulting all parameters
-* 2022-12-12(MA) add presetLevel command; allow param15 to be set in on/off mode; workaround for setLevel bug in firmware (firmware ignores off-on duration)
-* 2022-12-26(MA) sync with updates to Fan driver
-* 2022-12-28(MA) add Identify command; add device names to trace logging; add remoteControl command to allow re-enabling if Remote Protection (P257) is disabled
-* 2022-12-30(MA) add more context to LED Effect dropdowns; add more detail to state.lastCommand
-* 2022-12-31(MA) more changes to quickStart emulation.
-* 2023-01-01(MA) enhanced Unknown Cluster/Attribute logging; fix typo in remoteControl command
-* 2023-01-04(MA) P257 is read-only, must be changed with remoteControl command 
-* 2023-01-08(MA) HOTFIX for ledEffect Integer/String error when called from Rule Machine
-* 2023-01-10(MA) improved ledEffect reporting in log and state variables
-* 2023-01-11(MA) cleanup sendEvent doesn't use "displayed:false" on Hubitat
-* 2023-01-12(MA) change QuickStart description to experimental
-* 2023-01-18(MA) updates for Dimmer v2.10 firmware
-* 2023-01-22(MA) fix ledEffect sendEvent
-* 2023-01-24(MA) decrease shortDelay slightly and increase longDelay slightly; small tweak to setLevel
-* 2023-02-21(MA) add setParameter/getParameter; add Aux Unique Scenes option; add state.dimmingMethod (leading/trailing)
-* 2023-02-23(MA) fix Leading/Trailing error in non-neutral; misc code cleanup; more standardization between the different VMark devices
-* 2023-02-26(MA) fix missing preferences; fix state.auxType; enhance parsing of Unknown Command and Unknown Attribute
-* 2023-03-01(MA) synchronize all changes up to this point between VZM31, VZM35, and VZW31; includes all current firmware changes
-* 2023-03-12(MA) add params 55,56; fix minor bugs and typos; prep for production firmware release.
-* 2023-03-23(MA) rename bindInitiator/bindTarget to bindSlave/bindSource to reduce confusion
-* 2023-03-31(MA) display effect name instead of number in ledEffect attribute 
-* 2023-04-03(MA) add parameters 25,100,125 (for Dimmer v2.14+ firmware)
-* 2023-04-07(EM) Adding group binding support. See: https://community.inovelli.com/t/how-to-s-setup-zigbee-group-binding-hubitat/13909/1
-* 2023-04-09(MA) added range/error checking to group binding; enhanced cluster name reporting; remove "beta" designation for v2.14 public release
-* 2023-04-10(MA) Hotfix P25 is 1-bit boolean, not 1-byte integer
-* 2023-04-11(MA) Hotfix Add parsing for P125; fix P55-56 not scaling to percent
-* 2023-04-16(MA) enhanced Group Binding to automatically bind/unbind groups that add/remove this switch in the Groups and Scenes App
-* 2023-04-17(MA) add gray background to the lighter yellow-green hues for easier viewing; lots of code cleanup; 
-* 2023-04-19(MA) rename bindSlave/bindSource back to bindTarget/bindInitiator to keep in line with Zigbee terminology
-* 2023-04-22(MA) update presetLevel to set Local AND Remote default levels; more code cleanup
-* 2023-05-01(MA) misc. minor bug fixes
-* 2023-05-08(MA) fix duration on startLevelChange; fix input number range for P23
-* 2023-06-01(MA) remove "double-click to update firmware" logic since new Hubitat firmware now prompts user to click OK or CANCEL 
-* 2023-06-15(MA) re-sync all models (VZM31/VZM35/VZW31) for consistent verbiage/function
-* 2023-07-01(MA) removed "beta" designation
-* 2023-08-28(MA) add P30-P33; add P60-P94; change "defaultDelay" to "shortDelay"
-* 2023-09-06(MA) streamlined logging with traceCluster() method; change read-only params from Settings to Attributes
-* 2023-09-13(MA) streamlined parsing of individual LED parameters (P60-P94)
-* 2023-09-15(MA) streamlined Config All and Refresh All
-* 2023-10-01(MA) remove "beta" designation
-* 2023-10-10(EM) add additional description information for aux switch and non-neutral settings
-* 2023-10-14(MA) fix "Switch Mode" not changing; warn null ClusterID; fix null setLevel
-* 2023-10-18(MA) move configParams map down to the bottom for easier scrolling
-* 2023-12-22(MA) remove (comment out) code that does automatic group binding
-*
-* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-* !!                                                                 !!
-* !! DON'T FORGET TO UPDATE THE DRIVER DATE AT THE TOP OF THIS PAGE  !!
-* !!                                                                 !!
-* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-**/
+* 2022-01-20(EM) Changes to make the driver compatible with firmware v5.
+* 2022-01-11(EM) Adding code for firmware update.
+* 2022-01-06(EM) Updating parse section of code. Requesting firmware version and date.
+* 2022-01-05(MA) Fix ranges for params 1-4.  These are slightly different for zigbee(blue) than they were for zwave(red)
+* 2022-01-04(MA) Fix 'div() on null object' error when Param9 is blank.  Fix attribute size is 'bits' not 'bytes'
+* 2022-01-03(EM) Change wording and make settings dynamic based on which mode is chosen
+* 2021-12-30(EM) Adding options for power type and switch type
+* 2021-12-27(EM) Starting to standardize logging
+* 2021-12-23(EM) Adding min & max level parameters
+* 2021-12-22(EM) Cleaning up and consolidating code
+* 2021-12-21(EM) Adding configuration options
+* 2021-12-20(EM) Adding additional parameters
+* 2021-12-16(EM) Adding configuration options and working on code
+* 2021-12-15(EM) Initial release.
+* 
+*/
 
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
@@ -576,7 +551,7 @@ def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS A
     if (infoEnable) log.info "${device.displayName} configure($option)"
     state.lastCommandSent =                        "configure($option)"
     state.lastCommandTime = nowFormatted()
-    sendEvent(name: "numberOfButtons", value: 14)
+	sendEvent(name: "numberOfButtons", value: settings.parmeter23?28:14)
     def cmds = []
 	if (infoEnable) log.info "${device.displayName} re-establish lifeline bindings to hub"
 //  cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0000 {${device.zigbeeId}} {}", "delay ${666}"] //Basic Cluster
@@ -1496,6 +1471,7 @@ def parse(String description) {
 						break
 					case 123:	//Aux Switch Scenes
                         infoMsg += " (Aux Scenes " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
+						sendEvent(name: "numberOfButtons", value: valueInt?28:14)
 						break
 					case 125:	//Binding Off-to-On Sync Level
                         infoMsg += " (Send Level with Binding " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
@@ -2150,32 +2126,10 @@ List updateFirmware() {
 //def lastUpdateFwRemove() {if (state?.lastUpdateFw) state.remove("lastUpdateFw")}
 
 void ZigbeePrivateCommandEvent(data) {
-    if (infoEnable) log.info "${device.displayName} SceneButton=${data[0]} ButtonAttributes=${data[1]}"
+    if (infoEnable) log.info "${device.displayName} Scene Button=${data[0]} ButtonAttributes=${data[1]}"
     Integer ButtonNumber = Integer.parseInt(data[0],16)
     Integer ButtonAttributes = Integer.parseInt(data[1],16)
     switch(zigbee.convertToHexString(ButtonNumber,2) + zigbee.convertToHexString(ButtonAttributes,2)) {
-        case "0200":    //Tap Up 1x
-            //if (state.model?.substring(0,5)!="VZM35") quickStart()  //If not Fan then emulate quickStart for local button push (this doesn't appear to work - not sure why)
-            buttonEvent(1, "pushed", "physical")
-            break
-        case "0203":    //Tap Up 2x
-            buttonEvent(2, "pushed", "physical")
-            break
-        case "0204":    //Tap Up 3x
-            buttonEvent(3, "pushed", "physical")
-            break
-        case "0205":    //Tap Up 4x
-            buttonEvent(4, "pushed", "physical")
-            break
-        case "0206":    //Tap Up 5x
-            buttonEvent(5, "pushed", "physical")
-            break
-        case "0202":    //Hold Up
-            buttonEvent(6, "pushed", "physical")
-            break
-        case "0201":    //Release Up
-            buttonEvent(7, "pushed", "physical")
-            break
         case "0100":    //Tap Down 1x
             buttonEvent(1, "held", "physical")
             break
@@ -2196,6 +2150,27 @@ void ZigbeePrivateCommandEvent(data) {
             break
         case "0101":    //Release Down
             buttonEvent(7, "held", "physical")
+            break
+        case "0200":    //Tap Up 1x
+            buttonEvent(1, "pushed", "physical")
+            break
+        case "0203":    //Tap Up 2x
+            buttonEvent(2, "pushed", "physical")
+            break
+        case "0204":    //Tap Up 3x
+            buttonEvent(3, "pushed", "physical")
+            break
+        case "0205":    //Tap Up 4x
+            buttonEvent(4, "pushed", "physical")
+            break
+        case "0206":    //Tap Up 5x
+            buttonEvent(5, "pushed", "physical")
+            break
+        case "0202":    //Hold Up
+            buttonEvent(6, "pushed", "physical")
+            break
+        case "0201":    //Release Up
+            buttonEvent(7, "pushed", "physical")
             break
         case "0300":    //Tap Config 1x
             buttonEvent(8, "pushed", "physical")
@@ -2218,8 +2193,71 @@ void ZigbeePrivateCommandEvent(data) {
         case "0301":    //Release Config
             buttonEvent(14, "pushed", "physical")
             break
-        default:       //undefined button function
-            log.warn "${device.displayName} " + fireBrick("Undefined button function Scene=${data[0]} Attributes=${data[1]}")
+        case "0400":    //Aux Tap Down 1x
+            buttonEvent(15, "held", "physical")
+            break
+        case "0403":    //Aux Tap Down 2x
+            buttonEvent(16, "held", "physical")
+            break
+        case "0404":    //Aux Tap Down 3x
+            buttonEvent(17, "held", "physical")
+            break
+        case "0405":    //Aux Tap Down 4x
+            buttonEvent(18, "held", "physical")
+            break
+        case "0406":    //Aux Tap Down 5x
+            buttonEvent(19, "held", "physical")
+            break
+        case "0402":    //Aux Hold Down
+            buttonEvent(20, "held", "physical")
+            break
+        case "0401":    //Aux Release Down
+            buttonEvent(21, "held", "physical")
+            break
+        case "0500":    //Aux Tap Up 1x
+            buttonEvent(15, "pushed", "physical")
+            break
+        case "0503":    //Aux Tap Up 2x
+            buttonEvent(16, "pushed", "physical")
+            break
+        case "0504":    //Aux Tap Up 3x
+            buttonEvent(17, "pushed", "physical")
+            break
+        case "0505":    //Aux Tap Up 4x
+            buttonEvent(18, "pushed", "physical")
+            break
+        case "0506":    //Aux Tap Up 5x
+            buttonEvent(19, "pushed", "physical")
+            break
+        case "0502":    //Aux Hold Up
+            buttonEvent(20, "pushed", "physical")
+            break
+        case "0501":    //Aux Release Up
+            buttonEvent(21, "pushed", "physical")
+            break
+        case "0600":    //Aux Tap Config 1x
+            buttonEvent(22, "pushed", "physical")
+            break
+        case "0603":    //Aux Tap Config 2x
+            buttonEvent(23, "pushed", "physical")
+            break
+        case "0604":    //Aux Tap Config 3x
+            buttonEvent(24, "pushed", "physical")
+            break
+        case "0605":    //Aux Tap Config 4x
+            buttonEvent(25, "pushed", "physical")
+            break
+        case "0606":    //Aux Tap Config 5x
+            buttonEvent(26, "pushed", "physical")
+            break
+        case "0602":    //Aux Hold Config
+            buttonEvent(27, "pushed", "physical")
+            break
+        case "0601":    //Aux Release Config
+            buttonEvent(28, "pushed", "physical")
+            break
+        default:       //undefined scene
+            log.warn "${device.displayName} " + fireBrick("Undefined Scene=${data[0]} Attributes=${data[1]}")
             break
     }
 }
@@ -2275,6 +2313,35 @@ void buttonEvent(button, action, type = "digital") {
             break
         case 14:
             sendEvent(name:"lastButton", value: "Release ►")
+            break
+        case 15:
+        case 16:
+        case 17:
+        case 18:
+        case 19:
+            sendEvent(name:"lastButton", value: "${action=='pushed'?'Aux Tap '.padRight(button-6, '▲'):'Aux Tap '.padRight(button-6, '▼')}")
+            break
+        case 20:
+            sendEvent(name:"lastButton", value: "${action=='pushed'?'Aux Hold ▲':'Aux Hold ▼'}")
+            break
+        case 21:
+            sendEvent(name:"lastButton", value: "${action=='pushed'?'Aux Release ▲':'Aux Release ▼'}")
+            break
+        case 22:
+        case 23:
+        case 24:
+        case 25:
+        case 26:
+            sendEvent(name:"lastButton", value: "Aux Tap ".padRight(button-13, "►"))
+            break
+        case 27:
+            sendEvent(name:"lastButton", value: "Aux Hold ►")
+            break
+        case 28:
+            sendEvent(name:"lastButton", value: "Aux Release ►")
+            break
+        default:       //undefined button event
+            log.warn "${device.displayName} " + fireBrick("Undefined Button=$button Action=$action Type=$type")
             break
     }
 }
@@ -3181,7 +3248,7 @@ def releaseConfig()  {buttonEvent(14, "released", "digital")}
         ]
 ]
 
-/**
+/*
  *  -----------------------------------------------------------------------------
  *  Everything below here are LIBRARY includes and should NOT be edited manually!
  *  -----------------------------------------------------------------------------
