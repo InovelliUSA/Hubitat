@@ -47,7 +47,7 @@
 import groovy.transform.Field
 
 metadata {
-    definition (name: "Inovelli Light Strip LZW45", namespace: "InovelliUSA", author: "InovelliUSA", importUrl: "") {
+	definition (name: "Inovelli Light Strip LZW45", namespace: "InovelliUSA", author: "InovelliUSA", importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-light-strip-lzw45.src/inovelli-light-strip-lzw45.groovy") {
         capability "SwitchLevel"
         capability "ColorTemperature"
         capability "ColorControl"
