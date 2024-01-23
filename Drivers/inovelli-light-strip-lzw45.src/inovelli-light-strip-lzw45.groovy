@@ -1,7 +1,7 @@
 /**
  *  Inovelli Light Strip LZW45
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-01-05
+ *  Date: 2022-12-29
  *  Platform: Hubitat
  *
  *  ******************************************************************************************************
@@ -11,11 +11,9 @@
  *      devices is the preferences section to get the desired effect. 
  *      https://docs.google.com/spreadsheets/d/1reGdEL9Nkf04jN3GQVWqMcfJtuVpEfObQQn5Vf9tVmU/edit?usp=sharing
  * 
- *      Firmware version required: 1.20.3 - Check https://files.inovelli.com/firmware/LZW45/Beta/ for latest version
- *
  *  ******************************************************************************************************
  *
- *  Copyright 2020 Eric Maycock / Inovelli
+ *  Copyright 2021 Eric Maycock / Inovelli
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -25,6 +23,24 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *  
+ *  2022-12-29: Adding Light Capability for Homekit. Also adding "color transition" to allow for smooth changing from one
+ *              color to another. 
+ *  
+ *  2022-05-04: Fixing start level change problem.
+ *  
+ *  2021-11-30: Adding push & hold methods for Hubitat capability updates.
+ *  
+ *  2021-07-19: Fix for duration and level not working with "setColorTemperature" command. 
+ *    
+ *  2021-05-25: Updating method that is used to determine whether to send non-secure, S0, or S2. 
+ *  
+ *  2021-03-19: Fixing issue with Color Temperature when device is off. 
+ *
+ *  2021-03-10: Adding parameter numbers to preferences description. 
+ *
+ *  2021-01-23: Adding color prestaging option. Getting controller state after turning on or off an effect so the 
+ *              Device state shows correctly in the GUI.
  *
  */
 
@@ -32,23 +48,24 @@ import groovy.transform.Field
 
 metadata {
 	definition (name: "Inovelli Light Strip LZW45", namespace: "InovelliUSA", author: "InovelliUSA", importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-light-strip-lzw45.src/inovelli-light-strip-lzw45.groovy") {
-		capability "SwitchLevel"
-		capability "ColorTemperature"
-		capability "ColorControl"
-		capability "Switch"
-		capability "Refresh"
-		capability "Actuator"
-		capability "Sensor"
-		capability "Configuration"
-		capability "ColorMode"
+        capability "SwitchLevel"
+        capability "ColorTemperature"
+        capability "ColorControl"
+        capability "Switch"
+        capability "Refresh"
+        capability "Actuator"
+        capability "Sensor"
+        capability "Configuration"
+        capability "ColorMode"
         capability "PushableButton"
         capability "HoldableButton"
         capability "Switch Level"
         capability "Energy Meter"
         capability "Power Meter"
         capability "ChangeLevel"
+        capability "Light"
 
-		attribute "colorName", "string"
+        attribute "colorName", "string"
         attribute "lastActivity", "String"
         attribute "lastEvent", "String"
         attribute "firmware", "String"
@@ -92,19 +109,19 @@ metadata {
 
         fingerprint mfr: "031E", prod: "000A", deviceId: "0001", inClusters: "0x5E,0x86,0x33,0x72,0x5A,0x85,0x59,0x73,0x32,0x26,0x70,0x75,0x22,0x8E,0x55,0x98,0x9F,0x6C,0x7A,0x5B,0x87"
 
-	}
-	preferences {
-		getParameterNumbers().each{ i ->
+    }
+    preferences {
+        getParameterNumbers().each{ i ->
             switch(configParams["parameter${i.toString().padLeft(3,"0")}"].type)
             {   
                 case "number":
                     input "parameter${i}", "number",
-                        title:configParams["parameter${i.toString().padLeft(3,"0")}"].name + "\n" + configParams["parameter${i.toString().padLeft(3,"0")}"].description + "\nRange: " + configParams["parameter${i.toString().padLeft(3,"0")}"].range + "\nDefault: " + configParams["parameter${i.toString().padLeft(3,"0")}"].default,
+                        title:"${i}. " + configParams["parameter${i.toString().padLeft(3,"0")}"].name + "\n" + configParams["parameter${i.toString().padLeft(3,"0")}"].description + "\nRange: " + configParams["parameter${i.toString().padLeft(3,"0")}"].range + "\nDefault: " + configParams["parameter${i.toString().padLeft(3,"0")}"].default,
                         range: configParams["parameter${i.toString().padLeft(3,"0")}"].range
                 break
                 case "enum":
                     input "parameter${i}", "enum",
-                        title: configParams["parameter${i.toString().padLeft(3,"0")}"].name, // + getParameterInfo(i, "description"),
+                        title:"${i}. " + configParams["parameter${i.toString().padLeft(3,"0")}"].name, // + getParameterInfo(i, "description"),
                         options: configParams["parameter${i.toString().padLeft(3,"0")}"].range
                 break
                 if (i == 9){
@@ -159,6 +176,8 @@ metadata {
             input "parameter21-${i}d", "enum", title: "Quick Effect ${i-200} - Effect", description: "Tap to set", displayDuringSetup: false, required: false, options: [
                 0:"Off", 1:"Solid", 2:"Chase", 3:"Fast Blink", 4:"Slow Blink", 5:"Fast Fade", 6:"Slow Fade"]
         }
+        input name: "colorStaging", type: "bool", description: "", title: "Enable color pre-staging", defaultValue: false
+        input name: "colorTransition", type: "number", description: "", title: "Color fade time:", defaultValue: 0
         input description: "Use the below options to enable child devices for the specified settings. This will allow you to adjust these settings using " +
             "SmartApps such as Smart Lighting.", title: "Child Devices", displayDuringSetup: false, type: "paragraph", element: "paragraph"
         input "enableDefaultLocalChild", "bool", title: "Create \"Default Level (Local)\" Child Device", description: "", required: false, defaultValue: "false"
@@ -174,7 +193,7 @@ metadata {
             title: "Disable Debug Logging: Disable debug logging after this number of minutes (0=Do not disable)", defaultValue: 0
         input name: "disableInfoLogging", type: "number", 
             title: "Disable Info Logging: Disable info logging after this number of minutes (0=Do not disable)", defaultValue: 30
-	}
+    }
 }
 
 @Field static List ledNotificationEndpoints = [21]
@@ -289,7 +308,7 @@ private getCOLOR_TEMP_DIFF() { COLOR_TEMP_MAX - COLOR_TEMP_MIN }
     parameter021 : [
         number: 21,
         name: "Quick Strip Effect",
-        description: "See website for details\n\n\n(1)     Sending Basic, Binary Switch, Multilevel, and Color SET will automatically disable the strip effect .\n\n(2)     Toggling OFF -> ON will cancel effect mode set on LED Strip and change the LED Strip back to the Previous color.",
+        description: "See website for details\n\n\n(1)     Sending Basic, Binary Switch, Multilevel, and Color SET will automatically disable the strip effect .\n\n(2)     Toggling OFF -> ON will cancel effect mode set on LED Strip and change the LED Strip back to the Previous color.",
         range: "0..2147483647",
         default: 0,
         size: 4,
@@ -389,7 +408,7 @@ private getCOLOR_TEMP_DIFF() { COLOR_TEMP_MAX - COLOR_TEMP_MIN }
 ]
 
 private getCommandClassVersions() {
-	[0x20: 1, 0x25: 1, 0x70: 1, 0x98: 1, 0x32: 3, 0x5B: 1]
+    [0x20: 1, 0x25: 1, 0x70: 1, 0x98: 1, 0x32: 3, 0x5B: 1]
 }
 
 def childExists(ep) {
@@ -451,7 +470,7 @@ def childSetLevel(String dni, value) {
             cmds << getParameter(14)
         break
     }
-	return commands(cmds)
+    return commands(cmds)
 }
 
 def childOn(String dni) {
@@ -501,7 +520,7 @@ void childRefresh(String dni) {
 
 def componentSetLevel(cd,level,transitionTime = null) {
     if (infoEnable) log.info "${device.label?device.label:device.name}: componentSetLevel($cd, $value)"
-	return childSetLevel(cd.deviceNetworkId,level)
+    return childSetLevel(cd.deviceNetworkId,level)
 }
 
 def componentOn(cd) {
@@ -651,13 +670,15 @@ def customEffectStart(effect) {
                      getParameter(23),
                      getParameter(24),
                      getParameter(30),
+                     zwave.switchMultilevelV2.switchMultilevelGet()
                     ]
                    )
 }
 
 def customEffectStop() {
     return commands([setParameter(30, 0, 4),
-                     getParameter(30)
+                     getParameter(30),
+                     zwave.switchMultilevelV2.switchMultilevelGet()
                     ]
                    )
 }
@@ -708,7 +729,7 @@ def pixelEffectStart(number, level = 99) {
     state.pixelEffectLevel = level
     cmdValue += number
     cmdValue += level * 256
-    return command(setParameter(31, cmdValue, 2))
+    return commands([setParameter(31, cmdValue, 2), zwave.switchMultilevelV2.switchMultilevelGet()])
 }
 
 def pixelEffectNext(){
@@ -720,7 +741,7 @@ def pixelEffectPrevious(){
 }
 
 def pixelEffectStop(){
-    return command(setParameter(31, 0, 2))
+    return commands([setParameter(31, 0, 2), zwave.switchMultilevelV2.switchMultilevelGet()])
 }
 
 private huePercentToValue(value){
@@ -773,21 +794,21 @@ def updated() {
 def zwaveEvent(hubitat.zwave.commands.meterv3.MeterReport cmd) {
     if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
     def event
-	if (cmd.scale == 0) {
-    	if (cmd.meterType == 161) {
-		    event = createEvent(name: "voltage", value: cmd.scaledMeterValue, unit: "V")
+    if (cmd.scale == 0) {
+        if (cmd.meterType == 161) {
+            event = createEvent(name: "voltage", value: cmd.scaledMeterValue, unit: "V")
             if (infoEnable) log.info "${device.label?device.label:device.name}: Voltage report received with value of ${cmd.scaledMeterValue} V"
         } else if (cmd.meterType == 1) {
-        	event = createEvent(name: "energy", value: cmd.scaledMeterValue, unit: "kWh")
+            event = createEvent(name: "energy", value: cmd.scaledMeterValue, unit: "kWh")
             if (infoEnable) log.info "${device.label?device.label:device.name}: Energy report received with value of ${cmd.scaledMeterValue} kWh"
         }
-	} else if (cmd.scale == 1) {
-		event = createEvent(name: "amperage", value: cmd.scaledMeterValue, unit: "A")
+    } else if (cmd.scale == 1) {
+        event = createEvent(name: "amperage", value: cmd.scaledMeterValue, unit: "A")
         if (infoEnable) log.info "${device.label?device.label:device.name}: Amperage report received with value of ${cmd.scaledMeterValue} A"
-	} else if (cmd.scale == 2) {
-		event = createEvent(name: "power", value: Math.round(cmd.scaledMeterValue), unit: "W")
+    } else if (cmd.scale == 2) {
+        event = createEvent(name: "power", value: Math.round(cmd.scaledMeterValue), unit: "W")
         if (infoEnable) log.info "${device.label?device.label:device.name}: Power report received with value of ${cmd.scaledMeterValue} W"
-	}
+    }
 
     return event
 }
@@ -818,17 +839,17 @@ def zwaveEvent(hubitat.zwave.commands.configurationv1.ConfigurationReport cmd) {
 }
 
 def refresh() {
-	commands([zwave.switchMultilevelV2.switchMultilevelGet()] + queryAllColors())
+    commands([zwave.switchMultilevelV2.switchMultilevelGet()] + queryAllColors())
 }
 
 private void refreshColor() {
-	sendToDevice(queryAllColors())
+    sendToDevice(queryAllColors())
 }
 
 def startLevelChange(direction) {
     def upDownVal = direction == "down" ? true : false
-	if (infoEnable) log.debug "${device.label?device.label:device.name}: startLevelChange(${direction})"
-    commands([zwave.switchMultilevelV2.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal)])
+    if (infoEnable) log.debug "${device.label?device.label:device.name}: startLevelChange(${direction})"
+    commands([zwave.switchMultilevelV3.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal, incDec: 1, stepSize: 1, dimmingDuration: settings."parameter2"!=null? settings."parameter2":3)])
 }
 
 def stopLevelChange() {
@@ -837,7 +858,7 @@ def stopLevelChange() {
 }
 
 void zwaveEvent(hubitat.zwave.commands.switchcolorv2.SwitchColorReport cmd) {
-	if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
+    if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
 
 }
 
@@ -877,62 +898,71 @@ def setLevel(value, duration) {
 }
 
 def setSaturation(percent) {
-	if (infoEnable) log.info "${device.label?device.label:device.name}: setSaturation($percent)"
-	setColor([saturation: percent, hue: device.currentValue("hue"), level: device.currentValue("level")])
+    if (infoEnable) log.info "${device.label?device.label:device.name}: setSaturation($percent)"
+    setColor([saturation: percent, hue: device.currentValue("hue"), level: device.currentValue("level")])
 }
 
 def setHue(value) {
-	if (infoEnable) log.info "${device.label?device.label:device.name}: setHue($value)"
-	setColor([hue: value, saturation: 100, level: device.currentValue("level")])
+    if (infoEnable) log.info "${device.label?device.label:device.name}: setHue($value)"
+    setColor([hue: value, saturation: 100, level: device.currentValue("level")])
 }
 
 def setColor(value) {
-	if (infoEnable) log.info "${device.label?device.label:device.name}: setColor($value)"
-	def cmds = []
-	if (value.hex) {
-		def c = value.hex.findAll(/[0-9a-fA-F]{2}/).collect { Integer.parseInt(it, 16) }
-		cmds << zwave.switchColorV3.switchColorSet(red: c[0], green: c[1], blue: c[2], warmWhite: 0, coldWhite: 0)
-	} else {
-		def rgb = hubitat.helper.ColorUtils.hsvToRGB([value.hue, value.saturation, 100])
-		cmds << zwave.switchColorV3.switchColorSet(red: rgb[0], green: rgb[1], blue: rgb[2], warmWhite:0, coldWhite:0)
-	}
+    if (infoEnable) log.info "${device.label?device.label:device.name}: setColor($value)"
+    def cmds = []
+    int dimmingDuration=0
+    if (tt) dimmingDuration=tt
+	else if (colorTransition) dimmingDuration=colorTransition
+    if (value.hex) {
+        def c = value.hex.findAll(/[0-9a-fA-F]{2}/).collect { Integer.parseInt(it, 16) }
+        cmds << zwave.switchColorV3.switchColorSet(red: c[0], green: c[1], blue: c[2], warmWhite: 0, coldWhite: 0, dimmingDuration: dimmingDuration)
+    } else {
+        def rgb = hubitat.helper.ColorUtils.hsvToRGB([value.hue, value.saturation, 100])
+        cmds << zwave.switchColorV3.switchColorSet(red: rgb[0], green: rgb[1], blue: rgb[2], warmWhite:0, coldWhite:0, dimmingDuration: dimmingDuration)
+    }
     if ((!colorStaging)){
         if (infoEnable) log.info "${device.label?device.label:device.name}: Bulb is off. Turning on"
         cmds << zwave.basicV1.basicSet(value: value.level < 100 ? value.level : 99)
     }
     sendEvent(name: "colorMode", value: "RGB", descriptionText: "${device.getDisplayName()} color mode is RGB")
     sendEvent(name: "hue", value: value.hue)
-	sendEvent(name: "saturation", value: value.saturation)
-	commands(cmds)// + "delay 4000" + commands(queryAllColors(), 500)
+    sendEvent(name: "saturation", value: value.saturation)
+    commands(cmds)// + "delay 4000" + commands(queryAllColors(), 500)
 }
 
-def setColorTemperature(temp) {
-	if (infoEnable) log.info "${device.label?device.label:device.name}: setColorTemperature($temp)"
-	def cmds = []
-	if (temp < COLOR_TEMP_MIN) temp = COLOR_TEMP_MIN
-	if (temp > COLOR_TEMP_MAX) temp = COLOR_TEMP_MAX
-	def warmValue = ((COLOR_TEMP_MAX - temp) / COLOR_TEMP_DIFF * 255) as Integer
-	def coldValue = 255 - warmValue
-	cmds << zwave.switchColorV2.switchColorSet(red: 0, green: 0, blue: 0, warmWhite: warmValue, coldWhite: coldValue)
-	if ((device.currentValue("switch") != "on") && (!colorStaging)) {
-		if (infoEnable) log.info "${device.label?device.label:device.name}: Bulb is off. Turning on"
-		cmds << zwave.basicV1.basicSet(value: value.level < 100 ? value.level : 99)
-	}
+def setColorTemperature(temp, level = null, tt = null) {
+    if (infoEnable) log.info "${device.label?device.label:device.name}: setColorTemperature($temp, $level, $tt)"
+    int dimmingDuration=0
+    if (tt) dimmingDuration=tt
+	else if (colorTransition) dimmingDuration=colorTransition
+    def cmds = []
+    if (temp < COLOR_TEMP_MIN) temp = COLOR_TEMP_MIN
+    if (temp > COLOR_TEMP_MAX) temp = COLOR_TEMP_MAX
+    def warmValue = ((COLOR_TEMP_MAX - temp) / COLOR_TEMP_DIFF * 255) as Integer
+    def coldValue = 255 - warmValue
+    cmds << zwave.switchColorV2.switchColorSet(red: 0, green: 0, blue: 0, warmWhite: warmValue, coldWhite: coldValue, dimmingDuration: dimmingDuration)
+    if ((device.currentValue("switch") != "on") && (!colorStaging)) {
+        if (infoEnable) log.info "${device.label?device.label:device.name}: Bulb is off. Turning on"
+        cmds << zwave.basicV1.basicSet(value: 0xFF)
+    }
+    if (level) {
+        cmds << zwave.switchMultilevelV2.switchMultilevelSet(value: level < 100 ? level : 99, dimmingDuration: tt!=null?tt:2)  
+    }
     sendEvent(name: "colorMode", value: "CT", descriptionText: "${device.getDisplayName()} color mode is CT")
     sendEvent(name: "colorTemperature", value: temp)
-	commands(cmds)// + "delay 4000" + commands(queryAllColors(), 500)
+    commands(cmds)// + "delay 4000" + commands(queryAllColors(), 500)
 }
 
 private queryAllColors() {
-	def colors = WHITE_NAMES + RGB_NAMES
-	[zwave.basicV1.basicGet()] + colors.collect { zwave.switchColorV3.switchColorGet(colorComponent: it) }
+    def colors = WHITE_NAMES + RGB_NAMES
+    [zwave.basicV1.basicGet()] + colors.collect { zwave.switchColorV3.switchColorGet(colorComponent: it) }
 }
 
 void zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cmd) {
-	hubitat.zwave.Command encapsulatedCommand = cmd.encapsulatedCommand(CMD_CLASS_VERS)
-	if (encapsulatedCommand) {
-		zwaveEvent(encapsulatedCommand)
-	}
+    hubitat.zwave.Command encapsulatedCommand = cmd.encapsulatedCommand(CMD_CLASS_VERS)
+    if (encapsulatedCommand) {
+        zwaveEvent(encapsulatedCommand)
+    }
 }
 
 def parse(description) {
@@ -958,13 +988,16 @@ def parse(description) {
     result
 }
 
-void zwaveEvent(hubitat.zwave.commands.supervisionv1.SupervisionGet cmd) {
-	if (logEnable) log.debug "Supervision get: ${cmd}"
-	hubitat.zwave.Command encapsulatedCommand = cmd.encapsulatedCommand(CMD_CLASS_VERS)
-	if (encapsulatedCommand) {
-		zwaveEvent(encapsulatedCommand)
-	}
-	command(zwave.supervisionV1.supervisionReport(sessionID: cmd.sessionID, reserved: 0, moreStatusUpdates: false, status: 0xFF, duration: 0))
+private command(hubitat.zwave.Command cmd) {
+    return zwaveSecureEncap(cmd)
+}
+
+void zwaveEvent(hubitat.zwave.commands.supervisionv1.SupervisionGet cmd){
+    hubitat.zwave.Command encapCmd = cmd.encapsulatedCommand(commandClassVersions)
+    if (encapCmd) {
+        zwaveEvent(encapCmd)
+    }
+    sendHubCommand(new hubitat.device.HubAction(command(zwave.supervisionV1.supervisionReport(sessionID: cmd.sessionID, reserved: 0, moreStatusUpdates: false, status: 0xFF, duration: 0)), hubitat.device.Protocol.ZWAVE))
 }
 
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd) {
@@ -1030,45 +1063,29 @@ def zwaveEvent(hubitat.zwave.Command cmd) {
 
 def reset() {
     if (infoEnable) log.info "${device.label?device.label:device.name}: Resetting energy statistics"
-	def cmds = []
+    def cmds = []
     cmds << zwave.meterV2.meterReset()
     cmds << zwave.meterV2.meterGet(scale: 0)
     cmds << zwave.meterV2.meterGet(scale: 2)
-	commands(cmds, 1000)
+    commands(cmds, 1000)
 }
 
 private commands(commands, delay=1000) {
     delayBetween(commands.collect{ command(it) }, delay)
 }
 
-private command(hubitat.zwave.Command cmd) {
-    if (getDataValue("zwaveSecurePairingComplete") != "true") {
-        return cmd.format()
-    }
-    Short S2 = getDataValue("S2")?.toInteger()
-    String encap = ""
-    String keyUsed = "S0"
-    if (S2 == null) { //S0 existing device
-        encap = "988100"
-    } else if ((S2 & 0x04) == 0x04) { //S2_ACCESS_CONTROL
-        keyUsed = "S2_ACCESS_CONTROL"
-        encap = "9F0304"
-    } else if ((S2 & 0x02) == 0x02) { //S2_AUTHENTICATED
-        keyUsed = "S2_AUTHENTICATED"
-        encap = "9F0302"
-    } else if ((S2 & 0x01) == 0x01) { //S2_UNAUTHENTICATED
-        keyUsed = "S2_UNAUTHENTICATED"
-        encap = "9F0301"
-    } else if ((S2 & 0x80) == 0x80) { //S0 on C7
-        encap = "988100"
-    }
-    return "${encap}${cmd.format()}"
+private int gammaCorrect(value) {
+    def temp=value/255
+    def correctedValue=(temp>0.4045) ? Math.pow((temp+0.055)/ 1.055, 2.4) : (temp / 12.92)
+    return Math.round(correctedValue * 255) as Integer
 }
 
-private int gammaCorrect(value) {
-	def temp=value/255
-	def correctedValue=(temp>0.4045) ? Math.pow((temp+0.055)/ 1.055, 2.4) : (temp / 12.92)
-	return Math.round(correctedValue * 255) as Integer
+void push(button) {
+   sendEvent(name: "pushed", value: button, isStateChange: true, type: "digital")
+}
+
+void hold(button) {
+   sendEvent(name: "held", value: button, isStateChange: true, type: "digital")
 }
 
 def setDefaultAssociations() {
@@ -1176,12 +1193,12 @@ def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationGroupingsReport c
 def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
     if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
     if(cmd.applicationVersion != null && cmd.applicationSubVersion != null) {
-	    def firmware = "${cmd.applicationVersion}.${cmd.applicationSubVersion.toString().padLeft(2,'0')}"
+        def firmware = "${cmd.applicationVersion}.${cmd.applicationSubVersion.toString().padLeft(2,'0')}"
         if (infoEnable) log.info "${device.label?device.label:device.name}: Firmware report received: ${firmware}"
         state.needfwUpdate = "false"
         createEvent(name: "firmware", value: "${firmware}")
     } else if(cmd.firmware0Version != null && cmd.firmware0SubVersion != null) {
-	    def firmware = "${cmd.firmware0Version}.${cmd.firmware0SubVersion.toString().padLeft(2,'0')}"
+        def firmware = "${cmd.firmware0Version}.${cmd.firmware0SubVersion.toString().padLeft(2,'0')}"
         if (infoEnable != false) log.info "${device.label?device.label:device.name}: Firmware report received: ${firmware}"
         state.needfwUpdate = "false"
         createEvent(name: "firmware", value: "${firmware}")

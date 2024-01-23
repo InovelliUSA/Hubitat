@@ -1,5 +1,5 @@
 /**
- *  Copyright 2019 Inovelli / Eric Maycock
+ *  Copyright 2022 Inovelli / Eric Maycock
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -13,7 +13,7 @@
  *  Inovelli Bulb Multi-Color LZW42
  *
  *  Author: Eric Maycock
- *  Date: 2019-9-9
+ *  Date: 2022-12-29
  *  updated by bcopeland 1/7/2020
  *		Added color pre-staging option
  *		Added power restored memory configuration
@@ -64,7 +64,12 @@
  *    	added gamma correction as an optional setting
  *  updated by bcopeland 4/16/2020
  *      updated ambiguous language
- *
+ *  updated by erocm123 7/19/2021
+ *      adding new options for "setColorTemperature" command
+ *  updated by erocm123 6/10/2022
+ *      Fix start level change problem.
+ *  adding Light Capability for Homekit.
+ *  
  */
 
 import groovy.transform.Field
@@ -81,6 +86,7 @@ metadata {
 		capability "Configuration"
 		capability "ChangeLevel"
 		capability "ColorMode"
+                capability "Light"
 
 		attribute "colorName", "string"
 		attribute "firmware", "String"
@@ -218,7 +224,8 @@ void eventProcess(Map evt) {
 void startLevelChange(direction) {
 	boolean upDownVal = direction == "down" ? true : false
 	if (logEnable) log.debug "got startLevelChange(${direction})"
-	sendToDevice(zwave.switchMultilevelV2.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal))
+	//sendToDevice(zwave.switchMultilevelV3.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal, incDec: 1, stepSize: 1, dimmingDuration: 3))
+    sendToDevice(zwave.switchMultilevelV2.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal, dimmingDuration: settings."dimmingSpeed"!=null? settings."dimmingSpeed":3))
 }
 
 void stopLevelChange() {
@@ -336,13 +343,14 @@ void setColor(value) {
 	}
 	sendToDevice(cmds)
 	eventProcess(name: "colorMode", value: "RGB", descriptionText: "${device.getDisplayName()} color mode is RGB")
-	runIn(dimmingDuration, "refreshColor")
+	runIn(dimmingDuration, "refresh")
 }
 
-void setColorTemperature(temp) {
-	if (logEnable) log.debug "setColorTemperature($temp)"
+void setColorTemperature(temp, level = null, tt = null) {
+	if (logEnable) log.debug "setColorTemperature($temp, $level, $tt)"
 	int dimmingDuration=0
-	if (colorTransition) dimmingDuration=colorTransition
+    if (tt) dimmingDuration=tt
+	else if (colorTransition) dimmingDuration=colorTransition
 	List<hubitat.zwave.Command> cmds = []
 	if (temp < COLOR_TEMP_MIN) temp = COLOR_TEMP_MIN
 	if (temp > COLOR_TEMP_MAX) temp = COLOR_TEMP_MAX
@@ -353,9 +361,10 @@ void setColorTemperature(temp) {
 		if (logEnable) log.debug "Bulb is off. Turning on"
 		cmds.add(zwave.basicV1.basicSet(value: 0xFF))
 	}
+    if (level) setLevel(level, tt)
 	sendToDevice(cmds)
 	eventProcess(name: "colorMode", value: "CT", descriptionText: "${device.getDisplayName()} color mode is CT")
-	runIn(dimmingDuration, "refreshColor")
+	runIn(dimmingDuration, "refresh")
 }
 
 private void setGenericTempName(temp){

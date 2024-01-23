@@ -4,7 +4,8 @@
    "author": "Eric Maycock",
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
-   "releaseNotes": "LZW31/LZW31-SN/LZW30/LZW30-SN/LZW36: Adding custom command setConfigParameter(number, value, size)",
+   "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
+   "releaseNotes": "VZM35-SN: adding parameter 120, 121, 129, 130, 131, 132, 133, 134 for firmware 1.05.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -13,7 +14,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-lzw31-sn.src/inovelli-dimmer-red-series-lzw31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.10.1",
+                "version": "22.5.4",
 		"releaseNotes": "" 
    	},
 	{
@@ -23,7 +24,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-lzw31.src/inovelli-dimmer-lzw31.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.10.1",
+                "version": "22.5.4",
 		"releaseNotes": "" 
    	},
 	{
@@ -33,7 +34,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-red-series-lzw30-sn.src/inovelli-switch-red-series-lzw30-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.10.1",
+                "version": "22.2.3",
 		"releaseNotes": "" 
    	},
 	{
@@ -43,7 +44,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-lzw30.src/inovelli-switch-lzw30.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.10.1",
+                "version": "22.2.3",
 		"releaseNotes": "" 
    	},
 	{
@@ -53,7 +54,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-4-in-1-sensor.src/inovelli-4-in-1-sensor.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.9.1"
+                "version": "21.7.2"
    	},
 	{
    		"id" : "49d6f741-9c58-4310-ab61-0a68874dc2bf",
@@ -62,7 +63,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-bulb-multi-color-lzw42.src/inovelli-bulb-multi-color-lzw42.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.4.16"
+                "version": "22.12.29"
    	},
 	{
    		"id" : "4184e20b-43f2-4e4e-8b39-3881e5427e8c",
@@ -71,7 +72,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-bulb-multi-white-lzw41.src/inovelli-bulb-multi-white-lzw41.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.4.16"
+                "version": "22.5.4"
    	},
 	{
    		"id" : "66b164ca-b968-11ea-b3de-0242ac130004",
@@ -80,7 +81,46 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-lzw36.src/inovelli-fan-light-lzw36.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "20.10.1"
+                "version": "21.11.30"
+   	},
+	   {
+   		"id" : "66a064ca-b968-11ba-b3de-0242ac270024",
+   		"name": "Inovelli Lightstrip LZW45",
+                "namespace": "InovelliUSA",
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-light-strip-lzw45.src/inovelli-light-strip-lzw45.groovy",
+   		"required": false,
+   		"oauth": false,
+                "version": "22.12.29"
+   	},
+	{
+   		"id" : "c0d82d86-1545-49b6-943e-3435cccce7d6",
+   		"name": "Inovelli Dimmer 2-in-1 Blue Series VZM31-SN",
+                "namespace": "InovelliUSA",
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-blue-series-vzm31-sn.src/inovelli-dimmer-blue-series-vzm31-sn.groovy",
+   		"required": false,
+   		"oauth": false,
+                "version": "24.1.1",
+		"releaseNotes": "" 
+   	},
+	   {
+   		"id" : "dada3ebc-3d4f-11ee-be56-0242ac120002",
+   		"name": "Inovelli Fan Blue Series VZM35-SN",
+                "namespace": "InovelliUSA",
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-blue-series-vzm35-sn.src/inovelli-fan-blue-series-vzm35-sn.groovy",
+   		"required": false,
+   		"oauth": false,
+                "version": "24.1.18",
+		"releaseNotes": "" 
+   	},
+	{
+   		"id" : "effbd34b-1d62-4fff-889b-566d70a72531",
+   		"name": "Inovelli Dimmer 2-in-1 Red Series VZW31-SN",
+                "namespace": "InovelliUSA",
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-vzw31-sn.src/inovelli-dimmer-red-series-vzw31-sn.groovy",
+   		"required": false,
+   		"oauth": false,
+                "version": "24.1.15",
+		"releaseNotes": "" 
    	}
    ]
 }

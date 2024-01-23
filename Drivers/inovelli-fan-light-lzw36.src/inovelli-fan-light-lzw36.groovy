@@ -1,9 +1,9 @@
 /**
  *  Inovelli Fan + Light LZW36
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-10-01
+ *  Date: 2021-11-30
  *
- *  Copyright 2020 Inovelli / Eric Maycock
+ *  Copyright 2021 Inovelli / Eric Maycock
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -13,6 +13,14 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *  
+ *  2021-11-30: Adding push & hold methods for Hubitat capability updates.
+ *  
+ *  2021-11-02: Fix and add support for Hubitat's change in componentSetColorTemperature (now supports level).
+ *  
+ *  2021-05-26: Updating method that is used to determine whether to send non-secure, S0, or S2. 
+ *  
+ *  2021-03-10: Adding parameter numbers to preferences description.  
  *
  *  2020-10-01: Adding custom command setConfigParameter(number, value, size) to be able to easily
  *              set parameters from Rule Machine.  
@@ -635,12 +643,17 @@ def componentSetColor(cd, value) {
     if(cmds) commands(cmds)
 }
 
-def componentSetColorTemperature(cd, value) {
+def componentSetColorTemperature(cd, value, level = null, duration = null) {
     if (infoEnable != "false") log.info "${device.label?device.label:device.name}: $cd.deviceNetworkId, componentSetColorTemperature($value)"
     if (infoEnable) log.info "${device.label?device.label:device.name}: Setting LED color value to 255"
     state.lastRan = now()
     state.colorTemperature = value
     def cmds = []
+    if (level != null) {
+        def ledLevel = Math.round(level/10)
+        cmds << setParameter(ledIntensityEndpoints[channelNumber(cd.deviceNetworkId)], ledLevel, 1)
+        cmds << getParameter(ledIntensityEndpoints[channelNumber(cd.deviceNetworkId)])
+    }
     cmds << setParameter(ledColorEndpoints[channelNumber(cd.deviceNetworkId)], 255, 2)
     cmds << getParameter(ledColorEndpoints[channelNumber(cd.deviceNetworkId)])
     if(cmds) commands(cmds)
@@ -1164,14 +1177,14 @@ def generate_preferences()
         {   
             case "number":
                 input "parameter${i}", "number",
-                    title:getParameterInfo(i, "name") + "\n" + getParameterInfo(i, "description") + "\nRange: " + getParameterInfo(i, "options") + "\nDefault: " + getParameterInfo(i, "default"),
+                    title:"${i}. " + getParameterInfo(i, "name") + "\n" + getParameterInfo(i, "description") + "\nRange: " + getParameterInfo(i, "options") + "\nDefault: " + getParameterInfo(i, "default"),
                     range: getParameterInfo(i, "options")
                     //defaultValue: getParameterInfo(i, "default")
                     //displayDuringSetup: "${it.@displayDuringSetup}"
             break
             case "enum":
                 input "parameter${i}", "enum",
-                    title:getParameterInfo(i, "name"), // + getParameterInfo(i, "description"),
+                    title:"${i}. " + getParameterInfo(i, "name"), // + getParameterInfo(i, "description"),
                     //defaultValue: getParameterInfo(i, "default"),
                     //displayDuringSetup: "${it.@displayDuringSetup}",
                     options: getParameterInfo(i, "options")
@@ -1967,35 +1980,20 @@ private encap(cmd, endpoint) {
 }
 
 private command(hubitat.zwave.Command cmd) {
-    if (getDataValue("zwaveSecurePairingComplete") != "true") {
-        return cmd.format()
-    }
-    Short S2 = getDataValue("S2")?.toInteger()
-    String encap = ""
-    String keyUsed = "S0"
-    if (S2 == null) { //S0 existing device
-        encap = "988100"
-    } else if ((S2 & 0x04) == 0x04) { //S2_ACCESS_CONTROL
-        keyUsed = "S2_ACCESS_CONTROL"
-        encap = "9F0304"
-    } else if ((S2 & 0x02) == 0x02) { //S2_AUTHENTICATED
-        keyUsed = "S2_AUTHENTICATED"
-        encap = "9F0302"
-    } else if ((S2 & 0x01) == 0x01) { //S2_UNAUTHENTICATED
-        keyUsed = "S2_UNAUTHENTICATED"
-        encap = "9F0301"
-    } else if ((S2 & 0x80) == 0x80) { //S0 on C7
-        encap = "988100"
-    }
-    return "${encap}${cmd.format()}"
+    return zwaveSecureEncap(cmd)
 }
 
-void zwaveEvent(hubitat.zwave.commands.supervisionv1.SupervisionGet cmd, ep=null){
-    hubitat.zwave.Command encapCmd = cmd.encapsulatedCommand(commandClassVersions)
-    if (encapCmd) {
-        zwaveEvent(encapCmd, ep)
+void zwaveEvent(hubitat.zwave.commands.supervisionv1.SupervisionGet cmd, ep = 0) {
+    if (infoEnable) log.info  "Supervision Get - SessionID: ${cmd.sessionID}, CC: ${cmd.commandClassIdentifier}, Command: ${cmd.commandIdentifier}"
+    hubitat.zwave.Command encapsulatedCommand = cmd.encapsulatedCommand(CMD_CLASS_VERS)
+    if (encapsulatedCommand) {
+        zwaveEvent(encapsulatedCommand, ep)
     }
-    //sendHubCommand(new hubitat.device.HubAction(command(zwave.supervisionV1.supervisionReport(sessionID: cmd.sessionID, reserved: 0, moreStatusUpdates: false, status: 0xFF, duration: 0)), hubitat.device.Protocol.ZWAVE))
+    if (ep > 0) {
+        sendHubCommand(new hubitat.device.HubAction(command(zwave.multiChannelV4.multiChannelCmdEncap(sourceEndPoint: 0, bitAddress: 0, res01: 0, destinationEndPoint: ep).encapsulate(zwave.supervisionV1.supervisionReport(sessionID: cmd.sessionID, reserved: 0, moreStatusUpdates: false, status: 0xFF, duration: 0))), hubitat.device.Protocol.ZWAVE))
+    } else {
+        sendHubCommand(new hubitat.device.HubAction(command(zwave.supervisionV1.supervisionReport(sessionID: cmd.sessionID, reserved: 0, moreStatusUpdates: false, status: 0xFF, duration: 0)), hubitat.device.Protocol.ZWAVE))
+    }
 }
 
 private commands(commands, delay = 500) {
@@ -2101,6 +2099,14 @@ def integer2Cmd(value, size) {
     } catch (e) {
         if (debugEnable) log.debug "Error: integer2Cmd $e Value: $value"
     }
+}
+
+void push(button) {
+   sendEvent(name: "pushed", value: button, isStateChange: true, type: "digital")
+}
+
+void hold(button) {
+   sendEvent(name: "held", value: button, isStateChange: true, type: "digital")
 }
 
 def setDefaultAssociations() {

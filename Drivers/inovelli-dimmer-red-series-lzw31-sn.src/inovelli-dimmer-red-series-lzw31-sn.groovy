@@ -1,9 +1,9 @@
 /**
  *  Inovelli Dimmer Red Series LZW31-SN
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-10-01
+ *  Date: 2022-05-04
  *
- *  Copyright 2020 Eric Maycock / Inovelli
+ *  Copyright 2022 Eric Maycock / Inovelli
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -13,6 +13,35 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *  
+ *  2022-05-04: Fixing start level change problem.
+ *  
+ *  2021-12-29: Fixing bug when LED color gets stuck on "custom value".
+ *  
+ *  2021-11-30: Adding push & hold methods for Hubitat capability updates.
+ *  
+ *  2021-11-24: Increase accuracy of digital vs phsyical detection.
+ *  
+ *  2021-11-02: Fix and add support for Hubitat's change in componentSetColorTemperature (now supports level).
+ *  
+ *  2021-06-30: Scene support for aux switch (up, down, held, released) to be used with Smart Bulb. (Firmware 1.54+)
+ *  
+ *  2021-05-25: Updating method that is used to determine whether to send non-secure, S0, or S2. 
+ *  
+ *  2021-05-10: Adding "LED When Off" child device option. 
+ *  
+ *  2021-05-03: Adding ability to detect firmware target 1 version. firmware1 = target 1 & firmware0 = target 0. 
+ *  
+ *  2021-04-26: Adding options for parameter 52 (disabled, on/off only mode, smartbulb mode). 
+ *
+ *  2021-04-09: Fix digital command methods "holdUp, holdDown, etc." for those that use them. 
+ *
+ *  2021-03-10: Adding parameter numbers to preferences description. Also, adding new 7 held & 7 released scenes
+ *              for config button (firmware 1.52+). 
+ *
+ *  2021-01-28: Adding parameter 50 which allows you to specify the button press delay. 
+ *
+ *  2021-01-13: Adding white option to notification child devices. 
  *
  *  2020-10-01: Adding custom command setConfigParameter(number, value, size) to be able to easily
  *              set parameters from Rule Machine.  
@@ -86,6 +115,14 @@
  *  2019-11-13: Bug fix for not being able to set default level back to 0
  *  2020-02-06: updated by bcopeland - added ChangeLevel capability and relevant commands 
  */
+
+import groovy.transform.Field
+import groovy.json.JsonOutput
+
+@Field static List ledNotificationEndpoints = [16]
+@Field static Map ledColorEndpoints = [103:13]
+@Field static Map ledIntensityEndpoints = [103:14]
+@Field static Map ledIntensityOffEndpoints = [104:15]
  
 metadata {
     definition (name: "Inovelli Dimmer Red Series LZW31-SN", namespace: "InovelliUSA", author: "Eric Maycock", vid: "generic-dimmer", importUrl:"https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-lzw31-sn.src/inovelli-dimmer-red-series-lzw31-sn.groovy") {
@@ -96,6 +133,7 @@ metadata {
         capability "Sensor"
         capability "PushableButton"
         capability "HoldableButton"
+        capability "ReleasableButton"
         capability "Switch Level"
         capability "Configuration"
         capability "Energy Meter"
@@ -106,7 +144,11 @@ metadata {
         attribute "lastActivity", "String"
         attribute "lastEvent", "String"
         attribute "firmware", "String"
+        attribute "firmware0", "String"
+        attribute "firmware1", "String"
         attribute "groups", "Number"
+        
+        // Uncomment these lines if you would like to test your scenes with digital button presses.
         /*
         command "pressUpX1"
         command "pressDownX1"
@@ -120,7 +162,11 @@ metadata {
         command "pressDownX5"
         command "holdUp"
         command "holdDown"
+        command "releaseUp"
+        command "releaseDown"
+        command "pressConfig"
         */
+        
         command "childOn", ["string"]
         command "childOff", ["string"]
         command "childSetLevel", ["string"]
@@ -167,14 +213,14 @@ def generate_preferences()
         {   
             case "number":
                 input "parameter${i}", "number",
-                    title:getParameterInfo(i, "name") + "\n" + getParameterInfo(i, "description") + "\nRange: " + getParameterInfo(i, "options") + "\nDefault: " + getParameterInfo(i, "default"),
+                    title:"${i}. " + getParameterInfo(i, "name") + "\n" + getParameterInfo(i, "description") + "\nRange: " + getParameterInfo(i, "options") + "\nDefault: " + getParameterInfo(i, "default"),
                     range: getParameterInfo(i, "options")
                     //defaultValue: getParameterInfo(i, "default")
                     //displayDuringSetup: "${it.@displayDuringSetup}"
             break
             case "enum":
                 input "parameter${i}", "enum",
-                    title:getParameterInfo(i, "name"), // + getParameterInfo(i, "description"),
+                    title:"${i}. " + getParameterInfo(i, "name"), // + getParameterInfo(i, "description"),
                     //defaultValue: getParameterInfo(i, "default"),
                     //displayDuringSetup: "${it.@displayDuringSetup}",
                     options: getParameterInfo(i, "options")
@@ -200,7 +246,8 @@ def generate_preferences()
                     127:"Cyan",
                     170:"Blue",
                     212:"Violet",
-                    234:"Pink"]
+                    234:"Pink",
+                    255:"White"]
                 input "parameter16-${i}b", "enum", title: "LED Effect Level - Notification $i", description: "Tap to set", displayDuringSetup: false, required: false, options: [
                     0:"0%",
                     1:"10%",
@@ -480,6 +527,7 @@ def generate_preferences()
     input "disableRemote", "enum", title: "Disable Remote Control", description: "\nDisable ability to control switch from inside Hubitat", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
     input description: "Use the below options to enable child devices for the specified settings. This will allow you to adjust these settings using Apps such as Rule Machine.", title: "Child Devices", displayDuringSetup: false, type: "paragraph", element: "paragraph"
     input "enableLEDChild", "bool", title: "Create \"LED Color\" Child Device", description: "", required: false, defaultValue: true
+    input "enableLED1OffChild", "bool", title: "Create \"LED When Off\" Child Device", description: "", required: false, defaultValue: false
     input "enableDisableLocalChild", "bool", title: "Create \"Disable Local Control\" Child Device", description: "", required: false, defaultValue: false
     input "enableDisableRemoteChild", "bool", title: "Create \"Disable Remote Control\" Child Device", description: "", required: false, defaultValue: false
     input "enableDefaultLocalChild", "bool", title: "Create \"Default Level (Local)\" Child Device", description: "", required: false, defaultValue: false
@@ -570,11 +618,16 @@ def componentSetColor(cd,value) {
     return commands(cmds)
 }
 
-def componentSetColorTemperature(cd, value) {
+def componentSetColorTemperature(cd, value, level = null, duration = null) {
     if (infoEnable != "false") log.info "${device.label?device.label:device.name}: cd, componentSetColorTemperature($value)"
     if (infoEnable) log.info "${device.label?device.label:device.name}: Setting LED color value to 255"
     state.colorTemperature = value
     def cmds = []
+    if (level != null) {
+        def ledLevel = Math.round(level/10)
+        cmds << setParameter(14, ledLevel, 1)
+        cmds << getParameter(14)
+    }
     cmds << setParameter(13, 255, 2)
     cmds << getParameter(13)
     if(cmds) commands(cmds)
@@ -603,7 +656,7 @@ private zwaveValueToHuePercent(value){
 def startLevelChange(direction) {
     def upDownVal = direction == "down" ? true : false
 	if (infoEnable) log.debug "${device.label?device.label:device.name}: startLevelChange(${direction})"
-    commands([zwave.switchMultilevelV2.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal)])
+    commands([zwave.switchMultilevelV3.switchMultilevelStartLevelChange(ignoreStartLevel: true, startLevel: device.currentValue("level"), upDown: upDownVal, incDec: 1, stepSize: 1, dimmingDuration: settings."parameter1"!=null? settings."parameter1":3)])
 }
 
 def stopLevelChange() {
@@ -637,6 +690,10 @@ def childSetLevel(String dni, value) {
         case 103:
             cmds << setParameter(14, Math.round(level/10), 1)
             cmds << getParameter(14)
+        break
+        case 104:
+            cmds << setParameter(15, Math.round(level/10), 1)
+            cmds << getParameter(15)
         break
     }
 	return commands(cmds)
@@ -765,6 +822,8 @@ def initialize() {
     else deleteChild("ep102")
     if (enableLEDChild) addChild("ep103", "LED Color", "hubitat", "Generic Component RGBW", false)
     else deleteChild("ep103")
+    if (enableLED1OffChild) addChild("ep104", "LED - When Off", "hubitat", "Generic Component Dimmer", false)
+    else deleteChild("ep104")
     
     [1,2,3,4,5].each { i ->
         if ((settings."parameter16-${i}a"!=null && settings."parameter16-${i}b"!=null && settings."parameter16-${i}c"!=null && settings."parameter16-${i}d"!=null && settings."parameter16-${i}d"!="0") && !childExists("ep${i}")) {
@@ -836,7 +895,8 @@ def calculateParameter(number) {
     def value = 0
     switch (number){
       case "13":
-          if (settings.parameter13custom =~ /^([0-9]{1}|[0-9]{2}|[0-9]{3})$/) value = hueValueToZwaveValue(settings.parameter13custom.toInteger())
+          if (settings.parameter13) value = settings."parameter${number}"
+          else if (settings.parameter13custom =~ /^([0-9]{1}|[0-9]{2}|[0-9]{3})$/) value = hueValueToZwaveValue(settings.parameter13custom.toInteger())
           else value = settings."parameter${number}"
       break
       case "16-1":
@@ -871,7 +931,7 @@ def getParameter(number) {
 }
 
 def getParameterNumbers(){
-    return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,22,51,52]
+    return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,22,50,51,52]
 }
 
 def getParameterInfo(number, value){
@@ -899,6 +959,7 @@ def getParameterInfo(number, value){
     parameter.parameter20default=10
     parameter.parameter21default=1
     parameter.parameter22default=0
+    parameter.parameter50default=5
     parameter.parameter51default=1
     parameter.parameter52default=0
     
@@ -924,6 +985,7 @@ def getParameterInfo(number, value){
     parameter.parameter20type="number"
     parameter.parameter21type="enum"
     parameter.parameter22type="enum"
+    parameter.parameter50type="enum"
     parameter.parameter51type="enum"
     parameter.parameter52type="enum"
     
@@ -949,6 +1011,7 @@ def getParameterInfo(number, value){
     parameter.parameter20size=1
     parameter.parameter21size=1
     parameter.parameter22size=1
+    parameter.parameter50size=1
     parameter.parameter51size=1
     parameter.parameter52size=1
     
@@ -956,8 +1019,8 @@ def getParameterInfo(number, value){
     parameter.parameter2options="0..101"
     parameter.parameter3options="0..101"
     parameter.parameter4options="0..101"
-    parameter.parameter5options="1..45"
-    parameter.parameter6options="55..99"
+    parameter.parameter5options="1..98"
+    parameter.parameter6options="2..99"
     parameter.parameter7options=["1":"Yes", "0":"No"]
     parameter.parameter8options="0..32767"
     parameter.parameter9options="0..99"
@@ -974,8 +1037,9 @@ def getParameterInfo(number, value){
     parameter.parameter20options="0..100"
     parameter.parameter21options=["0":"Non Neutral", "1":"Neutral"]
     parameter.parameter22options=["0":"Load Only", "1":"3-way Toggle", "2":"3-way Momentary"]
+    parameter.parameter50options=["1":"100ms", "2":"200ms", "3":"300ms","4":"400ms", "5":"500ms", "6":"600ms","7":"700ms", "8":"800ms", "9":"900ms"]
     parameter.parameter51options=["1":"No (Default)", "0":"Yes"]
-    parameter.parameter52options=["0":"No (Default)", "1":"Yes"]
+    parameter.parameter52options=["0":"Disabled", "1":"On / Off Only", "2":"Smart Bulb"]
     
     parameter.parameter1name="Dimming Speed"
     parameter.parameter2name="Dimming Speed (From Switch)"
@@ -999,6 +1063,7 @@ def getParameterInfo(number, value){
     parameter.parameter20name="Energy Reports"
     parameter.parameter21name="AC Power Type"
     parameter.parameter22name="Switch Type"
+    parameter.parameter50name="Button Press Delay"
     parameter.parameter51name="Disable Physical On/Off Delay"
     parameter.parameter52name="Smart Bulb Mode"
     
@@ -1024,8 +1089,9 @@ def getParameterInfo(number, value){
     parameter.parameter20description="The energy level change that will result in a new energy report being sent. The value is a percentage of the previous report."
     parameter.parameter21description="Configure the switch to use a neutral wire."
     parameter.parameter22description="Configure the type of 3-way switch connected to the dimmer."
+    parameter.parameter50description="This will set the button press delay if parameter 51 is set to 1. For this parameter 1 = 100ms, 2 = 200ms, 3 = 300ms, etc. up to 900ms (firmware 1.52+)"
     parameter.parameter51description="The 700ms delay that occurs after pressing the physical button to turn the switch on/off is removed. Consequently this also removes the following scenes: 2x, 3x, 4x, 5x tap. 1x tap and config button scenes still work. (firmware 1.47+)"
-    parameter.parameter52description="Optimize power output to be more compatible with smart bulbs. This prevents the dimmer from being able to dim & makes it act like an ON / OFF switch. (firmware 1.47+)"
+    parameter.parameter52description="Change the working mode of the dimmer. Choose either on / off only which makes the device work like an on / off switch. Or choose smart bulb mode which optimized the device for interaction with smart bulbs. (firmware 1.54+)"
     
     return parameter."parameter${number}${value}"
 }
@@ -1184,7 +1250,7 @@ def parse(description) {
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd) {
     if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
     if (infoEnable) log.info "${device.label?device.label:device.name}: Basic report received with value of ${cmd.value ? "on" : "off"} ($cmd.value)"
-    dimmerEvents(cmd, (!state.lastRan || now() <= state.lastRan + 2000)?"digital":"physical")
+    dimmerEvents(cmd, (!state.lastRan || now() <= state.lastRan + 5000)?"digital":"physical")
 }
 
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicSet cmd) {
@@ -1202,7 +1268,7 @@ def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd) {
 def zwaveEvent(hubitat.zwave.commands.switchmultilevelv3.SwitchMultilevelReport cmd) {
     if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
     if (infoEnable) log.info "${device.label?device.label:device.name}: Switch Multilevel report received with value of ${cmd.value ? "on" : "off"} ($cmd.value)"
-    dimmerEvents(cmd, (!state.lastRan || now() <= state.lastRan + 2000)?"digital":"physical")
+    dimmerEvents(cmd, (!state.lastRan || now() <= state.lastRan + 5000)?"digital":"physical")
 }
 
 private dimmerEvents(hubitat.zwave.Command cmd, type="physical") {
@@ -1219,25 +1285,40 @@ void zwaveEvent(hubitat.zwave.commands.centralscenev1.CentralSceneNotification c
     switch (cmd.keyAttributes) {
        case 0:
        if (cmd.sceneNumber == 3) buttonEvent(7, "pushed", "physical")
-       else buttonEvent(cmd.keyAttributes + 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
+       else buttonEvent(cmd.keyAttributes + 1, (cmd.sceneNumber == 2 || cmd.sceneNumber == 4? "pushed" : "held"), "physical")
        break
        case 1:
-       buttonEvent(6, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
+       if (cmd.sceneNumber == 3) buttonEvent(7, "released", "physical")
+       else buttonEvent(6, (cmd.sceneNumber == 2 || cmd.sceneNumber == 4? "pushed" : "held"), "physical")
        break
        case 2:
-       buttonEvent(8, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
+       if (cmd.sceneNumber == 3) buttonEvent(7, "held", "physical")
+       else buttonEvent(8, (cmd.sceneNumber == 2 || cmd.sceneNumber == 4? "pushed" : "held"), "physical")
        break
        default:
-       buttonEvent(cmd.keyAttributes - 1, (cmd.sceneNumber == 2? "pushed" : "held"), "physical")
+       if (cmd.sceneNumber == 3) buttonEvent(7, "held", "physical")
+       else buttonEvent(cmd.keyAttributes - 1, (cmd.sceneNumber == 2 || cmd.sceneNumber == 4? "pushed" : "held"), "physical")
        break
     }
 }
 
 void buttonEvent(button, value, type = "digital") {
-    if(button != 6)
-        sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Tap '.padRight(button+5, '▼'):' Tap '.padRight(button+5, '▲')}", displayed:false)
-    else
-        sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Hold ▼':' Hold ▲'}", displayed:false)
+    switch (button) {
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+            sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Tap '.padRight(button+5, '▼'):' Tap '.padRight(button+5, '▲')}", displayed:false)
+        break
+        case 6:
+            sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Released ▼':' Released ▲'}", displayed:false)
+        break
+        case 8:
+            sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Hold ▼':' Hold ▲'}", displayed:false)
+        break
+    }
+        
     if (infoEnable) log.info "${device.label?device.label:device.name}: Button ${button} was ${value}"
     
     sendEvent(name: value, value: button, isStateChange:true)
@@ -1262,6 +1343,7 @@ def on() {
     state.lastRan = now()
     commands([
         zwave.basicV1.basicSet(value: 0xFF)
+        //zwave.switchMultilevelV2.switchMultilevelSet(value: 99)
     ])
 }
 
@@ -1270,6 +1352,7 @@ def off() {
     state.lastRan = now()
     commands([
         zwave.basicV1.basicSet(value: 0x00)
+        //zwave.switchMultilevelV2.switchMultilevelSet(value: 0)
     ])
 }
 
@@ -1310,27 +1393,7 @@ def refresh() {
 }
 
 private command(hubitat.zwave.Command cmd) {
-    if (getDataValue("zwaveSecurePairingComplete") != "true") {
-        return cmd.format()
-    }
-    Short S2 = getDataValue("S2")?.toInteger()
-    String encap = ""
-    String keyUsed = "S0"
-    if (S2 == null) { //S0 existing device
-        encap = "988100"
-    } else if ((S2 & 0x04) == 0x04) { //S2_ACCESS_CONTROL
-        keyUsed = "S2_ACCESS_CONTROL"
-        encap = "9F0304"
-    } else if ((S2 & 0x02) == 0x02) { //S2_AUTHENTICATED
-        keyUsed = "S2_AUTHENTICATED"
-        encap = "9F0302"
-    } else if ((S2 & 0x01) == 0x01) { //S2_UNAUTHENTICATED
-        keyUsed = "S2_UNAUTHENTICATED"
-        encap = "9F0301"
-    } else if ((S2 & 0x80) == 0x80) { //S0 on C7
-        encap = "988100"
-    }
-    return "${encap}${cmd.format()}"
+    return zwaveSecureEncap(cmd)
 }
 
 void zwaveEvent(hubitat.zwave.commands.supervisionv1.SupervisionGet cmd){
@@ -1346,55 +1409,72 @@ private commands(commands, delay=1000) {
 }
 
 def pressUpX1() {
-    sendEvent(buttonEvent(1, "pushed"))
+    buttonEvent(1, "pushed")
 }
 
 def pressDownX1() {
-    sendEvent(buttonEvent(1, "held"))
+    buttonEvent(1, "held")
 }
 
 def pressUpX2() {
-    sendEvent(buttonEvent(2, "pushed"))
+    buttonEvent(2, "pushed")
 }
 
 def pressDownX2() {
-    sendEvent(buttonEvent(2, "held"))
+    buttonEvent(2, "held")
 }
 
 def pressUpX3() {
-    sendEvent(buttonEvent(3, "pushed"))
+    buttonEvent(3, "pushed")
 }
 
 def pressDownX3() {
-    sendEvent(buttonEvent(3, "held"))
+    buttonEvent(3, "held")
 }
 
 def pressUpX4() {
-    sendEvent(buttonEvent(4, "pushed"))
+    buttonEvent(4, "pushed")
 }
 
 def pressDownX4() {
-    sendEvent(buttonEvent(4, "held"))
+    buttonEvent(4, "held")
 }
 
 def pressUpX5() {
-    sendEvent(buttonEvent(5, "pushed"))
+    buttonEvent(5, "pushed")
 }
 
 def pressDownX5() {
-    sendEvent(buttonEvent(5, "held"))
+    buttonEvent(5, "held")
 }
 
 def holdUp() {
-    sendEvent(buttonEvent(6, "pushed"))
+    buttonEvent(8, "pushed")
 }
 
 def holdDown() {
-    sendEvent(buttonEvent(6, "held"))
+    buttonEvent(8, "held")
+}
+
+def releaseUp() {
+    buttonEvent(6, "pushed")
+}
+
+def releaseDown() {
+    buttonEvent(6, "held")
 }
 
 def pressConfig() {
-    sendEvent(buttonEvent(7, "pushed"))
+    buttonEvent(7, "pushed")
+}
+
+
+void push(button) {
+   sendEvent(name: "pushed", value: button, isStateChange: true, type: "digital")
+}
+
+void hold(button) {
+   sendEvent(name: "held", value: button, isStateChange: true, type: "digital")
 }
 
 def setDefaultAssociations() {
@@ -1499,18 +1579,24 @@ def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationGroupingsReport c
     state.associationGroups = cmd.supportedGroupings
 }
 
-def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
+void zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
     if (debugEnable) log.debug "${device.label?device.label:device.name}: ${cmd}"
     if(cmd.applicationVersion != null && cmd.applicationSubVersion != null) {
 	    def firmware = "${cmd.applicationVersion}.${cmd.applicationSubVersion.toString().padLeft(2,'0')}"
         if (infoEnable) log.info "${device.label?device.label:device.name}: Firmware report received: ${firmware}"
         state.needfwUpdate = "false"
-        createEvent(name: "firmware", value: "${firmware}")
+        sendEvent(name: "firmware", value: "${firmware}")
     } else if(cmd.firmware0Version != null && cmd.firmware0SubVersion != null) {
-	    def firmware = "${cmd.firmware0Version}.${cmd.firmware0SubVersion.toString().padLeft(2,'0')}"
-        if (infoEnable != false) log.info "${device.label?device.label:device.name}: Firmware report received: ${firmware}"
+	    def firmware0 = "${cmd.firmware0Version}.${cmd.firmware0SubVersion.toString().padLeft(2,'0')}"
+        if (infoEnable != false) log.info "${device.label?device.label:device.name}: Firmware report received: ${firmware0}"
         state.needfwUpdate = "false"
-        createEvent(name: "firmware", value: "${firmware}")
+        sendEvent(name: "firmware", value: "${firmware0}")
+        sendEvent(name: "firmware0", value: "${firmware0}")
+    }
+    cmd.targetVersions.each { i ->
+        def firmware = "${i.version}.${i.subVersion.toString().padLeft(2,'0')}"
+        if (infoEnable != false) log.info "${device.label?device.label:device.name}: Firmware Target ${i.target} report received: firmware ${firmware}"
+        sendEvent(name: "firmware${i.target}", value: firmware)
     }
 }
 

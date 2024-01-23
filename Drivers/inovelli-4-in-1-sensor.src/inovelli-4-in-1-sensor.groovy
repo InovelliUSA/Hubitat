@@ -3,7 +3,7 @@
  *  Inovelli 4-in-1 Sensor 
  *   
  *    github: InovelliUSA
- *    Date: 2020-09-01
+ *    Date: 2021-09-10
  *    Copyright Inovelli / Eric Maycock
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -14,7 +14,17 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
- *
+ *  
+ *  2021-09-10: Adding refresh option for devices included with 5x button tap (firmware 2.05). 
+ *              Optimized to submit config changes upon clicking "Save Preferences" for 5x button
+ *              tap included devices. 
+ *  
+ *  2021-07-02: Fix for negative values with luminance reports. 
+ *  
+ *  2021-06-04: Adding preference for "wake interval" to be used with threshold reporting. 
+ *  
+ *  2021-05-25: Updating method that is used to determine whether to send non-secure, S0, or S2. 
+ *  
  *  2020-09-01: Cleaning up fingerprint info. 
  *
  *  2020-08-05: Adding S2 support for C-7 Hub. 
@@ -46,6 +56,7 @@ import groovy.transform.Field
         capability "Illuminance Measurement"
         capability "Sensor"
         capability "Battery"
+        capability "Refresh"
         
         command "resetBatteryRuntime"
         command "setAssociationGroup", [[name: "Group Number*",type:"NUMBER", description: "Provide the association group number to edit"], 
@@ -64,6 +75,10 @@ import groovy.transform.Field
         input description: "If battery powered, the configuration options (aside from temp, humidity, & lux offsets) will not be updated until the " +
             "sensor wakes up (once every 24-Hours). To manually wake up the sensor, press the button on the back 3 times quickly.", 
             title: "Settings", displayDuringSetup: false, type: "paragraph", element: "paragraph"
+        input "wakeInterval", "number",
+            title: "Wake Interval",
+            description: "Interval, in seconds, used with threshold reporting. Range: 0..2678400\nDefault: 43200",
+            range: "0..2678400"
         input "parameter10", "number",
             title: "Low Battery Alert Level",
             description: "At what battery level should the sensor send a low battery alert\nRange: 10..50\nDefault: 10",
@@ -373,8 +388,8 @@ def zwaveEvent(hubitat.zwave.commands.sensormultilevelv5.SensorMultilevelReport 
             break;
         case 3:
             map.name = "illuminance"
-            state.realLuminance = cmd.scaledSensorValue.toInteger()
-            map.value = getAdjustedLuminance(cmd.scaledSensorValue.toInteger())
+            state.realLuminance = cmd.scaledSensorValue.toInteger()<0?(((cmd.scaledSensorValue.toInteger()+32768) % 65536) + 32768) : cmd.scaledSensorValue.toInteger()
+            map.value = getAdjustedLuminance(cmd.scaledSensorValue.toInteger()<0?(((cmd.scaledSensorValue.toInteger()+32768) % 65536) + 32768) : cmd.scaledSensorValue.toInteger())
             map.unit = "lux"
             if (infoEnable != false) log.info "${device.label?device.label:device.name}: Illuminance report received: ${map.value}"
             break;
@@ -497,6 +512,8 @@ def updated() {
     if (state.realLuminance != null) sendEvent(name:"illuminance", value: getAdjustedLuminance(state.realLuminance))
     if (settings.parameter12 == 0) sendEvent(name:"motion", value: "inactive")
     state.needfwUpdate = ""
+    def cmds = initialize()
+    commands(cmds)
 }
 
 def initialize() {
@@ -520,9 +537,9 @@ def initialize() {
         if (infoEnable != false) log.info "${device.label?device.label:device.name}: Illuminance report not yet received. Sending request"
         cmds << zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:3, scale:1)
     }
-    if(state.wakeInterval == null || state.wakeInterval != 43200){
-        if (infoEnable != false) log.info "${device.label?device.label:device.name}: Setting Wake Interval to 43200"
-        cmds << zwave.wakeUpV1.wakeUpIntervalSet(seconds: 43200, nodeid:zwaveHubNodeId)
+    if(state.wakeInterval == null || state.wakeInterval != settings.wakeInterval){
+        if (infoEnable != false) log.info "${device.label?device.label:device.name}: Setting Wake Interval to ${settings.wakeInterval? settings.wakeInterval : 43200}"
+        cmds << zwave.wakeUpV1.wakeUpIntervalSet(seconds: settings.wakeInterval? settings.wakeInterval : 43200, nodeid:zwaveHubNodeId)
         cmds << zwave.wakeUpV1.wakeUpIntervalGet()
     }
     
@@ -576,27 +593,7 @@ def integer2Cmd(value, size) {
 
 
 private command(hubitat.zwave.Command cmd) {
-    if (getDataValue("zwaveSecurePairingComplete") != "true") {
-        return cmd.format()
-    }
-    Short S2 = getDataValue("S2")?.toInteger()
-    String encap = ""
-    String keyUsed = "S0"
-    if (S2 == null) { //S0 existing device
-        encap = "988100"
-    } else if ((S2 & 0x04) == 0x04) { //S2_ACCESS_CONTROL
-        keyUsed = "S2_ACCESS_CONTROL"
-        encap = "9F0304"
-    } else if ((S2 & 0x02) == 0x02) { //S2_AUTHENTICATED
-        keyUsed = "S2_AUTHENTICATED"
-        encap = "9F0302"
-    } else if ((S2 & 0x01) == 0x01) { //S2_UNAUTHENTICATED
-        keyUsed = "S2_UNAUTHENTICATED"
-        encap = "9F0301"
-    } else if ((S2 & 0x80) == 0x80) { //S0 on C7
-        encap = "988100"
-    }
-    return "${encap}${cmd.format()}"
+    return zwaveSecureEncap(cmd)
 }
 
 void zwaveEvent(hubitat.zwave.commands.supervisionv1.SupervisionGet cmd){
@@ -667,6 +664,28 @@ private getAdjustedLuminance(value) {
        return value
     }
     
+}
+
+def refresh() {
+   	if (infoEnable != false) log.info "$device.displayName refresh()"
+
+    def cmds = []
+    if (state.lastRefresh != null && now() - state.lastRefresh < 5000) {
+        if (infoEnable != false) log.info "Refresh Double Press"
+        state.wakeInterval = null
+        cmds << zwave.versionV1.versionGet()
+        cmds << zwave.wakeUpV1.wakeUpIntervalGet()
+    } else {
+        cmds << zwave.batteryV1.batteryGet()
+        cmds << zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:1, scale:1)
+        cmds << zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:3, scale:1)
+        cmds << zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:5, scale:1)
+        cmds << zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:27, scale:1)
+    }
+
+    state.lastRefresh = now()
+    
+    commands(cmds)
 }
 
 def resetBatteryRuntime() {

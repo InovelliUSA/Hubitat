@@ -1,9 +1,9 @@
 /**
  *  Inovelli Switch Red Series
  *  Author: Eric Maycock (erocm123)
- *  Date: 2020-10-01
+ *  Date: 2022-02-03
  *
- *  Copyright 2020 Eric Maycock / Inovelli
+ *  Copyright 2022 Eric Maycock / Inovelli
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -13,6 +13,20 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *  
+ *  2022-02-03: Fixing bug when LED color gets stuck on "custom value".
+ *
+ *  2021-11-30: Adding push & hold methods for Hubitat capability updates.
+ *  
+ *  2021-11-02: Fix and add support for Hubitat's change in componentSetColorTemperature (now supports level).
+ *  
+ *  2021-05-25: Updating method that is used to determine whether to send non-secure, S0, or S2. 
+ *  
+ *  2021-05-10: Adding "LED When Off" child device option. 
+ *  
+ *  2021-04-09: Fix digital command methods "holdUp, holdDown, etc." for those that use them. 
+ *
+ *  2021-03-10: Adding parameter numbers to preferences description.  
  *
  *  2020-10-01: Adding custom command setConfigParameter(number, value, size) to be able to easily
  *              set parameters from Rule Machine.  
@@ -79,6 +93,14 @@
  *              Adding the ability to enable z-wave "rf protection" to disable control from z-wave commands.
  *
  */
+
+import groovy.transform.Field
+import groovy.json.JsonOutput
+
+@Field static List ledNotificationEndpoints = [8]
+@Field static Map ledColorEndpoints = [103:5]
+@Field static Map ledIntensityEndpoints = [103:6]
+@Field static Map ledIntensityOffEndpoints = [104:7]
  
 metadata {
     definition (name: "Inovelli Switch Red Series LZW30-SN", namespace: "InovelliUSA", author: "Eric Maycock", vid: "generic-switch", importUrl: "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-switch-red-series-lzw30-sn.src/inovelli-switch-red-series-lzw30-sn.groovy") {
@@ -96,6 +118,8 @@ metadata {
         attribute "lastEvent", "String"
         attribute "firmware", "String"
         attribute "groups", "Number"
+        
+        // Uncomment these lines if you would like to test your scenes with digital button presses.
         /*
         command "pressUpX1"
         command "pressDownX1"
@@ -109,8 +133,11 @@ metadata {
         command "pressDownX5"
         command "holdUp"
         command "holdDown"
+        command "releaseUp"
+        command "releaseDown"
         command "pressConfig"
         */
+        
         command "childOn", ["string"]
         command "childOff", ["string"]
         command "childRefresh", ["string"]
@@ -157,13 +184,13 @@ def generate_preferences()
         {   
             case "number":
                 input "parameter${i}", "number",
-                    title:getParameterInfo(i, "name") + "\n" + getParameterInfo(i, "description") + "\nRange: " + getParameterInfo(i, "options") + "\nDefault: " + getParameterInfo(i, "default"),
+                    title:"${i}. " + getParameterInfo(i, "name") + "\n" + getParameterInfo(i, "description") + "\nRange: " + getParameterInfo(i, "options") + "\nDefault: " + getParameterInfo(i, "default"),
                     range: getParameterInfo(i, "options")
                     //defaultValue: getParameterInfo(i, "default")
             break
             case "enum":
                 input "parameter${i}", "enum",
-                    title:getParameterInfo(i, "name") + "\n" + getParameterInfo(i, "description"), 
+                    title:"${i}. " + getParameterInfo(i, "name") + "\n" + getParameterInfo(i, "description"), 
                     //defaultValue: getParameterInfo(i, "default"),
                     options: getParameterInfo(i, "options")
             break
@@ -469,6 +496,7 @@ def generate_preferences()
     input "disableRemote", "enum", title: "Disable Remote Control", description: "\nDisable ability to control switch from inside Hubitat", required: false, options:[["1": "Yes"], ["0": "No"]], defaultValue: "0"
     input description: "Use the below options to enable child devices for the specified settings. This will allow you to adjust these settings using Apps such as Rule Machine.", title: "Child Devices", displayDuringSetup: false, type: "paragraph", element: "paragraph"
     input "enableLEDChild", "bool", title: "Create \"LED Color\" Child Device", description: "", required: false, defaultValue: true
+    input "enableLED1OffChild", "bool", title: "Create \"LED When Off\" Child Device", description: "", required: false, defaultValue: false
     input "enableDisableLocalChild", "bool", title: "Create \"Disable Local Control\" Child Device", description: "", required: false, defaultValue: false
     input "enableDisableRemoteChild", "bool", title: "Create \"Disable Remote Control\" Child Device", description: "", required: false, defaultValue: false
     input name: "debugEnable", type: "bool", title: "Enable debug logging", defaultValue: true
@@ -557,11 +585,16 @@ def componentSetColor(cd,value) {
     return commands(cmds)
 }
 
-def componentSetColorTemperature(cd, value) {
+def componentSetColorTemperature(cd, value, level = null, duration = null) {
     if (infoEnable != "false") log.info "${device.label?device.label:device.name}: cd, componentSetColorTemperature($value)"
     if (infoEnable) log.info "${device.label?device.label:device.name}: Setting LED color value to 255"
     state.colorTemperature = value
     def cmds = []
+    if (level != null) {
+        def ledLevel = Math.round(level/10)
+        cmds << setParameter(6, ledLevel, 1)
+        cmds << getParameter(6)
+    }
     cmds << setParameter(5, 255, 2)
     cmds << getParameter(5)
     if(cmds) commands(cmds)
@@ -604,6 +637,10 @@ def childSetLevel(String dni, value) {
         case 103:
             cmds << setParameter(6, Math.round(level/10), 1)
             cmds << getParameter(6)
+        break
+        case 104:
+            cmds << setParameter(7, Math.round(level/10), 1)
+            cmds << getParameter(7)
         break
     }
 	return commands(cmds)
@@ -726,6 +763,8 @@ def initialize() {
     else deleteChild("ep102")
     if (enableLEDChild) addChild("ep103", "LED Color", "hubitat", "Generic Component RGBW", false)
     else deleteChild("ep103")
+    if (enableLED1OffChild) addChild("ep104", "LED - When Off", "hubitat", "Generic Component Dimmer", false)
+    else deleteChild("ep104")
     
     [1,2,3,4,5].each { i ->
         if ((settings."parameter8-${i}a"!=null && settings."parameter8-${i}b"!=null && settings."parameter8-${i}c"!=null && settings."parameter8-${i}d"!=null && settings."parameter8-${i}d"!="0") && !childExists("ep${i}")) {
@@ -795,7 +834,8 @@ def calculateParameter(number) {
     def value = 0
     switch (number){
       case "5":
-          if (settings.parameter5custom =~ /^([0-9]{1}|[0-9]{2}|[0-9]{3})$/) value = hueValueToZwaveValue(settings.parameter5custom.toInteger())
+          if (settings.parameter5) value = settings."parameter${number}"
+          else if (settings.parameter5custom =~ /^([0-9]{1}|[0-9]{2}|[0-9]{3})$/) value = hueValueToZwaveValue(settings.parameter5custom.toInteger())
           else value = settings."parameter${number}"
       break
       case "8-1":
@@ -1103,10 +1143,22 @@ void zwaveEvent(hubitat.zwave.commands.centralscenev1.CentralSceneNotification c
 }
 
 void buttonEvent(button, value, type = "digital") {
-    if(button != 6)
-        sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Tap '.padRight(button+5, '▼'):' Tap '.padRight(button+5, '▲')}", displayed:false)
-    else
-        sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Hold ▼':' Hold ▲'}", displayed:false)
+    switch (button) {
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+            sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Tap '.padRight(button+5, '▼'):' Tap '.padRight(button+5, '▲')}", displayed:false)
+        break
+        case 6:
+            sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Released ▼':' Released ▲'}", displayed:false)
+        break
+        case 8:
+            sendEvent(name:"lastEvent", value: "${value != 'pushed'?' Hold ▼':' Hold ▲'}", displayed:false)
+        break
+    }
+        
     if (infoEnable) log.info "${device.label?device.label:device.name}: Button ${button} was ${value}"
     
     sendEvent(name: value, value: button, isStateChange:true)
@@ -1163,27 +1215,7 @@ def refresh() {
 }
 
 private command(hubitat.zwave.Command cmd) {
-    if (getDataValue("zwaveSecurePairingComplete") != "true") {
-        return cmd.format()
-    }
-    Short S2 = getDataValue("S2")?.toInteger()
-    String encap = ""
-    String keyUsed = "S0"
-    if (S2 == null) { //S0 existing device
-        encap = "988100"
-    } else if ((S2 & 0x04) == 0x04) { //S2_ACCESS_CONTROL
-        keyUsed = "S2_ACCESS_CONTROL"
-        encap = "9F0304"
-    } else if ((S2 & 0x02) == 0x02) { //S2_AUTHENTICATED
-        keyUsed = "S2_AUTHENTICATED"
-        encap = "9F0302"
-    } else if ((S2 & 0x01) == 0x01) { //S2_UNAUTHENTICATED
-        keyUsed = "S2_UNAUTHENTICATED"
-        encap = "9F0301"
-    } else if ((S2 & 0x80) == 0x80) { //S0 on C7
-        encap = "988100"
-    }
-    return "${encap}${cmd.format()}"
+    return zwaveSecureEncap(cmd)
 }
 
 void zwaveEvent(hubitat.zwave.commands.supervisionv1.SupervisionGet cmd){
@@ -1199,55 +1231,71 @@ private commands(commands, delay=500) {
 }
 
 def pressUpX1() {
-    sendEvent(buttonEvent(1, "pushed"))
+    buttonEvent(1, "pushed")
 }
 
 def pressDownX1() {
-    sendEvent(buttonEvent(1, "held"))
+    buttonEvent(1, "held")
 }
 
 def pressUpX2() {
-    sendEvent(buttonEvent(2, "pushed"))
+    buttonEvent(2, "pushed")
 }
 
 def pressDownX2() {
-    sendEvent(buttonEvent(2, "held"))
+    buttonEvent(2, "held")
 }
 
 def pressUpX3() {
-    sendEvent(buttonEvent(3, "pushed"))
+    buttonEvent(3, "pushed")
 }
 
 def pressDownX3() {
-    sendEvent(buttonEvent(3, "held"))
+    buttonEvent(3, "held")
 }
 
 def pressUpX4() {
-    sendEvent(buttonEvent(4, "pushed"))
+    buttonEvent(4, "pushed")
 }
 
 def pressDownX4() {
-    sendEvent(buttonEvent(4, "held"))
+    buttonEvent(4, "held")
 }
 
 def pressUpX5() {
-    sendEvent(buttonEvent(5, "pushed"))
+    buttonEvent(5, "pushed")
 }
 
 def pressDownX5() {
-    sendEvent(buttonEvent(5, "held"))
+    buttonEvent(5, "held")
 }
 
 def holdUp() {
-    sendEvent(buttonEvent(6, "pushed"))
+    buttonEvent(8, "pushed")
 }
 
 def holdDown() {
-    sendEvent(buttonEvent(6, "held"))
+    buttonEvent(8, "held")
+}
+
+def releaseUp() {
+    buttonEvent(6, "pushed")
+}
+
+def releaseDown() {
+    buttonEvent(6, "held")
 }
 
 def pressConfig() {
-    sendEvent(buttonEvent(7, "pushed"))
+    buttonEvent(7, "pushed")
+}
+
+void push(button) {
+   sendEvent(name: "pushed", value: button, isStateChange: true, type: "digital")
+}
+
+void hold(button) {
+   sendEvent(name: "held", value: button, isStateChange: true, type: "digital")
 }
 
 def setDefaultAssociations() {
