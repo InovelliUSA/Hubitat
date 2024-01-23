@@ -4,6 +4,12 @@
    "payPalUrl": "",
    "packages": [
    	{
+   		"name": "Inovelli Drivers (Gen 1)",
+   		"category": "Control",
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/driversG1.json",
+   		"description": "Drivers provided by Inovelli"
+   	},
+      {      
    		"name": "Inovelli Drivers (Gen 2)",
    		"category": "Control",
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/driversG2.json",
