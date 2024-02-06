@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-01-22" /*+ orangeRed(" (beta)")*/ }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-02-06" /*+ orangeRed(" (beta)")*/ }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM35-SN Blue Series Zigbee Fan Switch
@@ -18,6 +18,7 @@ def getDriverDate() { return "2024-01-22" /*+ orangeRed(" (beta)")*/ }	// **** D
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2024-02-06(EM) updating P120 to UINT8 for firmware 1.06
 * 2024-01-22(MA) add Fan Control Cluster and more code cleanup
 * 2024-01-21(MA) remove quickstart emulation code since its now supported in the firmware
 * 2024-01-20(MA) add parsing for new parameters and other updates for firmware 1.05
