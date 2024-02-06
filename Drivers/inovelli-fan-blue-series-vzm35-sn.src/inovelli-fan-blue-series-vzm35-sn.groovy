@@ -3156,10 +3156,10 @@ def releaseConfig()  {buttonEvent(14, "released", "digital")}
     parameter120 : [
         number: 120,
         name: "Single Tap Behavior",
-        description: "Behavior of single tapping the on or off button. Old behavior turns the switch on or off. New behavior cycles through the levels set by P131-133 (Firmware 1.05+)",
-        range: ["0":"Old Behavior (default)","1":"New Behavior"],
+        description: "Behavior of single tapping the on or off button. Old behavior turns the switch on or off. Single Tap cycles through the levels set by P131-133 (Firmware 1.05+). Tap Down Always Off will cycle through the speeds when pressing up, but will always turn off when tapping down. (Firmware 1.06+)",
+        range: ["0":"Old Behavior (default)","1":"Single Tap Cycle","2":"Tap Down Always Off"],
         default: 0,
-        size: 1,
+        size: 8,
         type: "enum",
         value: null
         ],
