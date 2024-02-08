@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-01-15" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-02-08" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW31-SN Red Series Z-Wave 2-in-1 Dimmer
@@ -18,6 +18,7 @@ def getDriverDate() { return "2024-01-15" /** + orangeRed(" (beta)") **/ }	// **
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2024-02-08(EM) fixing calculateParam restricting parameter 15 from being changed to 100
 * 2024-01-15(EM) fixing incorrect range for parameter 15
 * 2023-12-18(EM) adding associaiton processing to configure and updated methods
 * 2023-11-11(MA) merge changes between beta/production and changes with Blue series (individual LED logging)
@@ -1252,7 +1253,6 @@ def calculateParameter(paramNum) {
             break
         case 13:    //Default Level (local)
         case 14:    //Default Level (remote)
-        case 15:    //Level after power restored
 		case 55:	//Double-Tap UP Level
 		case 56:	//Double-Tap DOWN Level
 			value = Math.min(Math.max(value.toInteger(),0),99)
