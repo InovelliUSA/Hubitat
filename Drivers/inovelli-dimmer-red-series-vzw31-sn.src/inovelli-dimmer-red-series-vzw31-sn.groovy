@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-02-08" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-02-13" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW31-SN Red Series Z-Wave 2-in-1 Dimmer
@@ -18,6 +18,7 @@ def getDriverDate() { return "2024-02-08" /** + orangeRed(" (beta)") **/ }	// **
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2024-02-13(EM) adding 22, 52, 158 to "validConfigParams()"
 * 2024-02-08(EM) fixing calculateParam restricting parameter 15 from being changed to 100
 * 2024-01-15(EM) fixing incorrect range for parameter 15
 * 2023-12-18(EM) adding associaiton processing to configure and updated methods
@@ -306,7 +307,7 @@ metadata {
 }
 
 def validConfigParams() {	//all valid parameters for this specific device (configParams MAP contains definitions for all parameters for all devices)
-	return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,25,50,53,54,55,56,58,59,64,69,74,79,84,89,94,95,96,97,98,99,100,123,159,160,161,162]
+	return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,22,25,50,52,53,54,55,56,58,59,64,69,74,79,84,89,94,95,96,97,98,99,100,123,158,159,160,161,162]
 }
 
 def userSettableParams() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
