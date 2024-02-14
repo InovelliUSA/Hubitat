@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-02-07" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-02-14" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM31-SN Blue Series Zigbee 2-in-1 Dimmer
@@ -24,6 +24,7 @@ def getDriverDate() { return "2024-02-07" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2024-02-14(MA) fix bindGroup not sending commands
 * 2024-02-07(MA) add support for Signal Strength
 * 2024-02-02(MA) don't log unknown cluster if no logging is enabled (requested by S.Viel)
 * 2024-01-21(MA) remove quickstart emulation code since its now supported in the firmware
@@ -430,7 +431,7 @@ def bindGroup(action="", group=0) {
 		if (infoEnable) log.warn "${device.displayName} " + fireBrick("Invalid Bind action: '$action'")
 		}
     if (debugEnable) log.debug "${device.displayName} bindGroup $cmds"
-    return cmds
+    sendHubCommand(new HubMultiAction(cmds, Protocol.ZIGBEE))
 }
 
 def bindInitiator() {
