@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-02-07" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-02-13" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM35-SN Blue Series Zigbee Fan Switch
@@ -24,6 +24,9 @@ def getDriverDate() { return "2024-02-07" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2024-02-13(MA) temporarily hard-code model name due to bug in fw 1.06 not reporting it.
+* 2024_02-12(MA) remove unused fields in configParams map
+* 2024-02-11(MA) convert P131-133 to percent levels instead of byte levels; fix some inconsistencies with percentValue reporting
 * 2024-02-07(MA) add support for Signal Strength; don't log unknown cluster if no logging is enabled; misc. code updates to stay in sync with VZM36 Canopy Fan driver
 * 2024-02-06(EM) updating P120 to UINT8 for firmware 1.06
 * 2024-01-22(MA) add Fan Control Cluster and more code cleanup
@@ -419,6 +422,9 @@ def calculateParameter(Integer paramNum) {
 		case 24:	//QuickStart Level
 		case 55:	//Double-Tap UP Level
 		case 56:	//Double-Tap DOWN Level
+		case 131:	//Low Level For Fan Control Mode
+		case 132:	//Med Level For Fan Control Mode
+		case 133:	//High Level For Fan Control Mode
             value = convertPercentToByte(value.toInteger())    //convert levels from percent to byte values before sending to the device
             break
         case 18:    //Active Power Reports (percent change)
@@ -476,7 +482,7 @@ def clusterLookup(cluster) {
 											  cluster==0x8022?"UNBinding Cluster":
 										      cluster==0x8032?"Routing Table Cluster":
 										      cluster==0xFC31?"Private Cluster":
-											  "Cluster:0x${zigbee.convertToHexString(cluster,4)}"
+											  "0x${zigbee.convertToHexString(cluster,4)}"
 	}
 }
 
@@ -546,12 +552,17 @@ def cycleSpeed() {    // FOR FAN ONLY
 		boolean smartMode = device.currentValue("smartFan")=="Enabled"
         def newLevel = 0
 		def newSpeed =""
-		if      (currentLevel<=0 ) {newLevel=20;                 newSpeed="low" }
-		else if (currentLevel<=20) {newLevel=(smartMode?40:60);  newSpeed=(smartMode?"medium-low":"medium")}
-		else if (currentLevel<=40) {newLevel=60;                 newSpeed="medium"}
-		else if (currentLevel<=60) {newLevel=(smartMode?80:100); newSpeed=(smartMode?"medium-high":"high")}
-		else if (currentLevel<=80) {newLevel=100;                newSpeed="high"}
-        else                       {newLevel=0;                  newSpeed="off"}
+		if (smartMode)
+			if      (currentLevel<=0 ) {newLevel=20;  newSpeed="low" }
+			else if (currentLevel<=20) {newLevel=40;  newSpeed=(smartMode?"medium-low":"medium")}
+			else if (currentLevel<=40) {newLevel=60;  newSpeed="medium"}
+			else if (currentLevel<=60) {newLevel=80;  newSpeed=(smartMode?"medium-high":"high")}
+			else if (currentLevel<=80) {newLevel=100; newSpeed="high"}
+			else                       {newLevel=0;   newSpeed="off"}
+		else if     (currentLevel<=0 ) {newLevel=33;  newSpeed="low" }
+			else if (currentLevel<=33) {newLevel=66;  newSpeed="medium"}
+			else if (currentLevel<=66) {newLevel=100; newSpeed="high"}
+			else                       {newLevel=0;   newSpeed="off"}
         if (infoEnable) log.info "${device.displayName} cycleSpeed(${device.currentValue("speed")?:off}->${newSpeed})"
         state.lastCommandSent =                        "cycleSpeed(${device.currentValue("speed")?:off}->${newSpeed})"
         state.lastCommandTime = nowFormatted()
@@ -606,7 +617,7 @@ def initialize() {    //CALLED DURING HUB BOOTUP IF "INITIALIZE" CAPABILITY IS D
     state.lastCommandSent = "initialize()"
     state.lastCommandTime = nowFormatted()
     state.driverDate = getDriverDate()
-	state.model = device.getDataValue('model')
+	state.model = "VZM35-SN"
     device.removeSetting("parameter95custom")
     device.removeSetting("parameter96custom")
 	ledEffectOne(1234567,255,0,0,0)	//clear any outstanding oneLED Effects
@@ -619,9 +630,9 @@ def installed() {    //THIS IS CALLED WHEN A DEVICE IS INSTALLED
     state.lastCommandSent =        "installed()"
     state.lastCommandTime = nowFormatted()
     state.driverDate = getDriverDate()
-	state.model = device.getDataValue('model')
+	state.model = "VZM35-SN"
     log.info "${device.displayName} Driver Date $state.driverDate"
-    log.info "${device.displayName} Model=$state.model"
+    log.info "${device.displayName} Model=${state.model}"
     //configure()     //I confirmed configure() gets called at Install time so this isn't needed here
     return
 }
@@ -801,13 +812,15 @@ def parse(String description) {
                     break
                 case 0x0004:
                     if (infoEnable) log.info "${device.displayName} Mfg=$valueStr"
-                    state.manufacturer = valueStr
+					if (valueStr=="unknown" || valueStr==null) valueStr = "Inovelli"
 					if (device.getDataValue('manufacturer')!= valueStr) device.updateDataValue('manufacturer',valueStr)
+                    state.manufacturer = valueStr
                     break
                 case 0x0005:
                     if (infoEnable) log.info "${device.displayName} Model=$valueStr"
+					if (valueStr=="unknown" || valueStr==null) valueStr = "VZM35-SN"
+					if (device.getDataValue('model')!=valueStr) device.updateDataValue('model',valueStr)
                     state.model = valueStr
-					if (device.getDataValue('model')!= valueStr) device.updateDataValue('model',valueStr)
                     break
                 case 0x0006:
                     if (infoEnable) log.info "${device.displayName} FW Date=$valueStr"
@@ -1255,6 +1268,9 @@ def parse(String description) {
             } else if (descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
                 valueInt = Integer.parseInt(descMap['value'],16)
 				def valueHex = intTo32bitUnsignedHex(valueInt)
+				def infoDev = "${device.displayName} "
+				def infoTxt = "P${attrInt}=${valueInt}"
+				def infoMsg = infoDev + infoTxt
                 if ((attrInt==9)
 				|| (attrInt==10)
 				|| (attrInt==13)
@@ -1262,12 +1278,12 @@ def parse(String description) {
 				|| (attrInt==15)
 				|| (attrInt==24)
 				|| (attrInt==55)
-				|| (attrInt==56)) {
+				|| (attrInt==56)
+				|| (attrInt==131)
+				|| (attrInt==132)
+				|| (attrInt==133)) {
 					valueInt = convertByteToPercent(valueInt) //these attributes are stored as bytes but displayed as percentages
 				}
-				def infoDev = "${device.displayName} "
-				def infoTxt = "P${attrInt}=${valueInt}"
-				def infoMsg = infoDev + infoTxt
                 switch (attrInt){
                     case 0:
 						infoMsg += " (temporarily stored level during transitions)"
@@ -1309,14 +1325,14 @@ def parse(String description) {
                         infoMsg += " (Auto Off Timer " + (valueInt==0?red("disabled"):"${valueInt}s") + ")"
                         break
                     case 13:    //Default Level (local)
-                        infoMsg += " (default local level " + (valueInt==255?" = previous)":" ${valueInt}%)")
-						sendEvent(name:"levelPreset", value:convertByteToPercent(valueInt))
+                        infoMsg += " (default local level " + (valueInt==101?" = previous)":" ${valueInt}%)")
+						sendEvent(name:"levelPreset", value:valueInt)
                         break
                     case 14:    //Default Level (remote)
-                        infoMsg += " (default remote level " + (valueInt==255?" = previous)":"${valueInt}%)")
+                        infoMsg += " (default remote level " + (valueInt==101?" = previous)":"${valueInt}%)")
                         break
                     case 15:    //Level After Power Restored
-                        infoMsg += " (power-on level " + (valueInt==255?" = previous)":"${valueInt}%)")
+                        infoMsg += " (power-on level " + (valueInt==101?" = previous)":"${valueInt}%)")
                         break
                     case 17:    //Load Level Timeout
                         infoMsg += (valueInt==0?" (do not display load level)":(valueInt==11?" (always display load level)":"s load level timeout"))
@@ -1346,8 +1362,8 @@ def parse(String description) {
                                 state.auxType =   valueInt==0? "No Aux":  "Smart Aux"
                                 break
                             default:
-                                infoMsg = infoDev + indianRed(infoTxt + " unknown model $state.model")
-                                state.auxType = "unknown model ${state.model}"
+                                infoMsg = infoDev + indianRed(infoTxt + " unknown model ${state.model}")
+                                state.auxType =                          "unknown model ${state.model}"
                                 break
                         }
                         break
@@ -1355,7 +1371,7 @@ def parse(String description) {
                             infoMsg += " (Quick Start Time " + (valueInt==0?red("disabled"):"${valueInt}") + ")"
                         break
                     case 24:    //Quick Start Level
-                            infoMsg += " (Quick Start Level " + (valueInt==0?red("disabled"):"${valueInt}") + ")"
+                            infoMsg += " (Quick Start Level " + (valueInt==0?red("disabled"):"${valueInt}%") + ")"
                         break
                     case 25:    //Higher Output in non-Neutral
                         infoMsg += " (non-Neutral High Output " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
@@ -1497,13 +1513,13 @@ def parse(String description) {
                         infoMsg += " (EP3 Fan Control " + (valueInt==1?"multi-tap cycle":valueInt==2?"single-tap cycle":"disabled") + ")"
 						break
 					case 131:	//Config Button Low Level
-                        infoMsg += " (EP3 Low Level)"
+                        infoMsg += " (EP3 Low Level ${valueInt}%)"
 						break
 					case 132:	//Config Button Medium Level
-                        infoMsg += " (EP3 Med. Level)"
+                        infoMsg += " (EP3 Med. Level ${valueInt}%)"
 						break
 					case 133:	//Config Button High Level
-                        infoMsg += " (EP3 High Level)"
+                        infoMsg += " (EP3 High Level ${valueInt}%)"
 						break
 					case 134:	//EP3 LED Bar Color
                         infoMsg += " (" + hue(valueInt,"EP3 LED Bar Color") + ")"
@@ -1538,7 +1554,7 @@ def parse(String description) {
 								}
 								break
                             default:
-                                infoMsg += " " + red(" unknown model $state.model")
+                                infoMsg += " " + red(" unknown model '$state.model'")
                                 sendEvent(name:"switchMode", value:"unknown model")
                                 break
                         }
@@ -1748,7 +1764,7 @@ def refresh(option) {
     state.lastCommandSent =                        "refresh(${option})"
     state.lastCommandTime = nowFormatted()
     state.driverDate = getDriverDate()
-	state.model = device.getDataValue('model')
+	state.model = "VZM35-SN"
     if (infoEnable||traceEnable||debugEnable) log.info "${device.displayName} Driver Date $state.driverDate"
 	readDeviceAttributes()
 	configParams.each {	//loop through all parameters
@@ -1808,12 +1824,15 @@ def setAttribute(Integer cluster, Integer attrInt, Integer dataType, Integer val
 			case 24:	//Quick Start Level
 			case 55:	//Double-Tap UP Level
 			case 56:	//Double-Tap DOWN Level
+			case 131:	//Low Level For Fan Control Mode
+			case 132:	//Med Level For Fan Control Mode
+			case 133:	//High Level For Fan Control Mode
                 infoMsg += "${value} = ${convertByteToPercent(value)}% on 255 scale"
                 break
-            case 23:
-                quickStartVariables()
-                infoMsg = ""
-                break
+            //case 23:
+            //    quickStartVariables()
+            //    infoMsg = ""
+            //    break
 			case 60:	//LED1 color when on
 			case 61:	//LED1 color when off
 			case 65:	//LED2 color when on
@@ -2017,7 +2036,7 @@ def updated(option) { // called when "Save Preferences" is requested
 		int i = it.value.number.toInteger()
 		newValue = calculateParameter(i).toInteger()
 		defaultValue=getDefaultValue(i).toInteger()
-		if ([9,10,13,14,15,24,55,56].contains(i)) defaultValue=convertPercentToByte(defaultValue) //convert percent values back to byte values
+		if ([9,10,13,14,15,24,55,56,131,132,133].contains(i)) defaultValue=convertPercentToByte(defaultValue) //convert percent values back to byte values
 		if ((i==95 && parameter95custom!=null)||(i==96 && parameter96custom!=null)) {                                         //IF   a custom hue value is set
 			if ((Math.round(settings?."parameter${i}custom"?.toInteger()/360*255)==settings?."parameter${i}"?.toInteger())) { //AND  custom setting is same as normal setting
 				device.removeSetting("parameter${i}custom")                                                                   //THEN clear custom hue and use normal color 
@@ -2027,7 +2046,7 @@ def updated(option) { // called when "Save Preferences" is requested
 		switch (option) {
 			case "":
 				if ((userSettableParams().contains(i))		//IF   this is a valid parameter for this device mode
-				&& (settings."parameter$i"!=null)			//AND  this is a non-default setting
+				&& (settings."parameter$i"!=null)			//AND  User entered a setting
 				&& (!readOnlyParams().contains(i))) {		//AND  this is not a read-only parameter
 					setParameter(i, newValue)				//THEN set the new value
 					nothingChanged = false
@@ -2037,6 +2056,7 @@ def updated(option) { // called when "Save Preferences" is requested
 			case "Default":
 				if (option=="Default") newValue = defaultValue	//if user selected "Default" then set the new value to the default value
 				if (((i!=158)&&(i!=258))					//IF   we are not changing Switch Mode
+				&& (userSettableParams().contains(i))		//AND  this is a valid parameter for this device
 				&& (!readOnlyParams().contains(i))) {		//AND  this is not a read-only parameter
 					setParameter(i, newValue)				//THEN Set the new value
 					nothingChanged = false
@@ -2389,8 +2409,7 @@ def readOnlyParams() {
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s (default)","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s"],
         default: 25,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter002 : [
         number: 2,
@@ -2399,8 +2418,7 @@ def readOnlyParams() {
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s","127":"Sync with parameter1"],
         default: 127,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter003 : [
         number: 3,
@@ -2409,8 +2427,7 @@ def readOnlyParams() {
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s","127":"Sync with parameter1"],
         default: 127,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter004 : [
         number: 4,
@@ -2419,8 +2436,7 @@ def readOnlyParams() {
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s","127":"Sync with parameter3"],
         default: 127,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter005 : [
         number: 5,
@@ -2429,8 +2445,7 @@ def readOnlyParams() {
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s","127":"Sync with parameter1"],
         default: 127,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter006 : [
         number: 6,
@@ -2439,8 +2454,7 @@ def readOnlyParams() {
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s","127":"Sync with parameter2"],
         default: 127,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter007 : [
         number: 7,
@@ -2449,8 +2463,7 @@ def readOnlyParams() {
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s","127":"Sync with parameter3"],
         default: 127,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter008 : [
         number: 8,
@@ -2459,8 +2472,7 @@ def readOnlyParams() {
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s","127":"Sync with parameter4"],
         default: 127,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter009 : [
         number: 9,
@@ -2469,8 +2481,7 @@ def readOnlyParams() {
         range: "1..99",
         default: 1,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter010 : [
         number: 10,
@@ -2479,8 +2490,7 @@ def readOnlyParams() {
         range: "2..100",
         default: 100,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter011 : [
         number: 11,
@@ -2489,8 +2499,7 @@ def readOnlyParams() {
         range: ["0":"No (default)", "1":"Yes"],
         default: 0,
         size: 1,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter012 : [
         number: 12,
@@ -2499,8 +2508,7 @@ def readOnlyParams() {
         range: "0..32767",
         default: 0,
         size: 16,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter013 : [
         number: 13,
@@ -2509,8 +2517,7 @@ def readOnlyParams() {
         range: "1..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter014 : [
         number: 14,
@@ -2519,8 +2526,7 @@ def readOnlyParams() {
         range: "1..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter015 : [
         number: 15,
@@ -2529,8 +2535,7 @@ def readOnlyParams() {
         range: "0..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter017 : [
         number: 17,
@@ -2539,8 +2544,7 @@ def readOnlyParams() {
         range: ["0":"Do not display Load Level","1":"1 Second","2":"2 Seconds","3":"3 Seconds","4":"4 Seconds","5":"5 Seconds","6":"6 Seconds","7":"7 Seconds","8":"8 Seconds","9":"9 Seconds","10":"10 Seconds","11":"Display Load Level with no timeout (default)"],
         default: 11,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter018 : [
         number: 18,
@@ -2549,8 +2553,7 @@ def readOnlyParams() {
         range: "0..100",
         default: 10,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter019 : [
         number: 19,
@@ -2559,8 +2562,7 @@ def readOnlyParams() {
         range: "0..32767",
         default: 3600,
         size: 16,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter020 : [
         number: 20,
@@ -2569,8 +2571,7 @@ def readOnlyParams() {
         range: "0..32767",
         default: 10,
         size: 16,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter021 : [
         number: 21,
@@ -2579,18 +2580,16 @@ def readOnlyParams() {
         range: [0:"Non Neutral", 1:"Neutral"],
         default: 1,
         size: 1,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter022 : [
         number: 22,
         name: "Aux Switch Type",
-        description: "Set the Aux switch type. If you are selecting the, \"Smart Aux Switch\" and do not have a neutral wire you may have to program your switch accordingly. Instructions can be found here: https://inov.li/vzm35snauxnn",
+        description: "Set the Aux switch type. If you are selecting the \"Smart Aux Switch\" and do not have a neutral wire you may have to program your switch accordingly. Instructions can be found here: https://inov.li/vzm35snauxnn",
         range: ["0":"No Aux (default)", "1":"Smart Aux Switch"],
         default: 0,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter023 : [
         number: 23,
@@ -2599,8 +2598,7 @@ def readOnlyParams() {
         range: "0..60",
         default: 0,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter024 : [
         number: 24,
@@ -2609,8 +2607,7 @@ def readOnlyParams() {
         range: "0..100",
         default: 0,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter025 : [
         number: 25,
@@ -2619,8 +2616,7 @@ def readOnlyParams() {
         range: ["0":"Disabled (default)","1":"Enabled"],
         default:0,
         size: 1,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter026 : [
         number: 26,
@@ -2629,8 +2625,7 @@ def readOnlyParams() {
         range: ["0":"Leading (default)","1":"Trailing"],
         default:0,
         size: 1,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter030 : [
         number: 30,
@@ -2639,8 +2634,7 @@ def readOnlyParams() {
         range: "0..255",
         default: 90,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter031 : [
         number: 31,
@@ -2649,8 +2643,7 @@ def readOnlyParams() {
         range: "0..255",
         default: 110,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter032 : [
         number: 32,
@@ -2659,8 +2652,7 @@ def readOnlyParams() {
         range: "0..100",
         default: 25,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter033 : [
         number: 33,
@@ -2669,8 +2661,7 @@ def readOnlyParams() {
         range: "0..1",
         default: 0,
         size: 1,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter050 : [
         number: 50,
@@ -2679,8 +2670,7 @@ def readOnlyParams() {
         range: ["0":"0ms","3":"300ms","4":"400ms","5":"500ms (default)","6":"600ms","7":"700ms","8":"800ms","9":"900ms"],
         default: 5,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter051 : [
         number: 51,
@@ -2689,8 +2679,7 @@ def readOnlyParams() {
         range: "0..255",
         default: 0,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter052 : [
         number: 52,
@@ -2699,8 +2688,7 @@ def readOnlyParams() {
         range: ["0":"Disabled (default)", "1":"Enabled"],
         default: 0,
         size: 1,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter053 : [
         number: 53,
@@ -2709,8 +2697,7 @@ def readOnlyParams() {
         range: ["0":"Disabled (default)", "1":"Enabled"],
         default: 0,
         size: 1,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter054 : [
         number: 54,
@@ -2719,8 +2706,7 @@ def readOnlyParams() {
         range: ["0":"Disabled (default)", "1":"Enabled"],
         default: 0,
         size: 1,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter055 : [
         number: 55,
@@ -2729,8 +2715,7 @@ def readOnlyParams() {
         range: "1..100",
         default: 100,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter056 : [
         number: 56,
@@ -2739,8 +2724,7 @@ def readOnlyParams() {
         range: "0..100",
         default: 1,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter058 : [
         number: 58,
@@ -2749,8 +2733,7 @@ def readOnlyParams() {
         range: ["0":"LED Bar does not pulse", "1":"LED Bar pulses blue (default)", "2":"Device does not enter exclusion mode (requires factory reset to leave network or change this parameter)"],
         default: 1,
         size: 1,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter059 : [
         number: 59,
@@ -2759,8 +2742,7 @@ def readOnlyParams() {
         range: ["0":"Never", "1":"Local (default)", "2":"Z-Wave", "3":"Both"],
         default: 1,
         size: 1,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter060 : [
         number: 60,
@@ -2769,8 +2751,7 @@ def readOnlyParams() {
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
         default: 255,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter061 : [
         number: 61,
@@ -2779,8 +2760,7 @@ def readOnlyParams() {
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
         default: 255,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter062 : [
         number: 62,
@@ -2789,8 +2769,7 @@ def readOnlyParams() {
         range: "0..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter063 : [
         number: 63,
@@ -2799,8 +2778,7 @@ def readOnlyParams() {
         range: "0..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter064 : [
         number: 64,
@@ -2808,9 +2786,8 @@ def readOnlyParams() {
         description: "4-byte encoded LED1 Notification",
         range: "0..4294967295",
         default: 0,
-        size: 4,
-        type: "number",
-        value: null
+        size: 32,
+        type: "number"
         ],
     parameter065 : [
         number: 65,
@@ -2819,8 +2796,7 @@ def readOnlyParams() {
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
         default: 255,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter066 : [
         number: 66,
@@ -2829,8 +2805,7 @@ def readOnlyParams() {
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
         default: 255,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter067 : [
         number: 67,
@@ -2839,8 +2814,7 @@ def readOnlyParams() {
         range: "0..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter068 : [
         number: 68,
@@ -2849,8 +2823,7 @@ def readOnlyParams() {
         range: "0..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter069 : [
         number: 69,
@@ -2858,9 +2831,8 @@ def readOnlyParams() {
         description: "4-byte encoded LED2 Notification",
         range: "0..4294967295",
         default: 0,
-        size: 4,
-        type: "number",
-        value: null
+        size: 32,
+        type: "number"
         ],
     parameter070 : [
         number: 70,
@@ -2869,8 +2841,7 @@ def readOnlyParams() {
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
         default: 255,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter071 : [
         number: 71,
@@ -2879,8 +2850,7 @@ def readOnlyParams() {
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
         default: 255,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter072 : [
         number: 72,
@@ -2889,8 +2859,7 @@ def readOnlyParams() {
         range: "0..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter073 : [
         number: 73,
@@ -2899,8 +2868,7 @@ def readOnlyParams() {
         range: "0..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter074 : [
         number: 74,
@@ -2908,9 +2876,8 @@ def readOnlyParams() {
         description: "4-byte encoded LED3 Notification",
         range: "0..4294967295",
         default: 0,
-        size: 4,
-        type: "number",
-        value: null
+        size: 32,
+        type: "number"
         ],
     parameter075 : [
         number: 75,
@@ -2919,8 +2886,7 @@ def readOnlyParams() {
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
         default: 255,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter076 : [
         number: 76,
@@ -2929,8 +2895,7 @@ def readOnlyParams() {
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
         default: 255,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter077 : [
         number: 77,
@@ -2939,8 +2904,7 @@ def readOnlyParams() {
         range: "0..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter078 : [
         number: 78,
@@ -2949,8 +2913,7 @@ def readOnlyParams() {
         range: "0..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter079 : [
         number: 79,
@@ -2958,9 +2921,8 @@ def readOnlyParams() {
         description: "4-byte encoded LED4 Notification",
         range: "0..4294967295",
         default: 0,
-        size: 4,
-        type: "number",
-        value: null
+        size: 32,
+        type: "number"
         ],
     parameter080 : [
         number: 80,
@@ -2969,8 +2931,7 @@ def readOnlyParams() {
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
         default: 255,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter081 : [
         number: 81,
@@ -2979,8 +2940,7 @@ def readOnlyParams() {
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
         default: 255,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter082 : [
         number: 82,
@@ -2989,8 +2949,7 @@ def readOnlyParams() {
         range: "0..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter083 : [
         number: 83,
@@ -2999,8 +2958,7 @@ def readOnlyParams() {
         range: "0..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter084 : [
         number: 84,
@@ -3008,9 +2966,8 @@ def readOnlyParams() {
         description: "4-byte encoded LED5 Notification",
         range: "0..4294967295",
         default: 0,
-        size: 4,
-        type: "number",
-        value: null
+        size: 32,
+        type: "number"
         ],
     parameter085 : [
         number: 85,
@@ -3019,8 +2976,7 @@ def readOnlyParams() {
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
         default: 255,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter086 : [
         number: 86,
@@ -3029,8 +2985,7 @@ def readOnlyParams() {
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
         default: 255,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter087 : [
         number: 87,
@@ -3039,8 +2994,7 @@ def readOnlyParams() {
         range: "0..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter088 : [
         number: 88,
@@ -3049,8 +3003,7 @@ def readOnlyParams() {
         range: "0..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter089 : [
         number: 89,
@@ -3058,9 +3011,8 @@ def readOnlyParams() {
         description: "4-byte encoded LED6 Notification",
         range: "0..4294967295",
         default: 0,
-        size: 4,
-        type: "number",
-        value: null
+        size: 32,
+        type: "number"
         ],
     parameter090 : [
         number: 90,
@@ -3069,8 +3021,7 @@ def readOnlyParams() {
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
         default: 255,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter091 : [
         number: 91,
@@ -3079,8 +3030,7 @@ def readOnlyParams() {
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
         default: 255,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter092 : [
         number: 92,
@@ -3089,8 +3039,7 @@ def readOnlyParams() {
         range: "0..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter093 : [
         number: 93,
@@ -3099,8 +3048,7 @@ def readOnlyParams() {
         range: "0..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter094 : [
         number: 94,
@@ -3108,9 +3056,8 @@ def readOnlyParams() {
         description: "4-byte encoded LED Notification",
         range: "0..4294967295",
         default: 0,
-        size: 4,
-        type: "number",
-        value: null
+        size: 32,
+        type: "number"
         ],
     parameter095 : [
         number: 95,
@@ -3119,8 +3066,7 @@ def readOnlyParams() {
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
         default: 170,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter096 : [
         number: 96,
@@ -3129,8 +3075,7 @@ def readOnlyParams() {
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
         default: 170,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter097 : [
         number: 97,
@@ -3139,8 +3084,7 @@ def readOnlyParams() {
         range: "0..100",
         default: 33,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter098 : [
         number: 98,
@@ -3149,8 +3093,7 @@ def readOnlyParams() {
         range: "0..100",
         default: 3,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter099 : [
         number: 99,
@@ -3158,9 +3101,8 @@ def readOnlyParams() {
         description: "4-byte encoded LED Notification (see Inovelli LED Notification Calculator)",
         range: "0..4294967295",
         default: 0,
-        size: 4,
-        type: "number",
-        value: null
+        size: 32,
+        type: "number"
         ],
     parameter100 : [
         number: 100,
@@ -3169,8 +3111,7 @@ def readOnlyParams() {
         range: ["0":"Gen3 method (VZM-style)","1":"Gen2 method (LZW-style)"],
         default: 0,
         size: 1,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter120 : [
         number: 120,
@@ -3179,8 +3120,7 @@ def readOnlyParams() {
         range: ["0":"Old Behavior (default)","1":"Single Tap Cycle","2":"Tap Down Always Off"],
         default: 0,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter121 : [
         number: 121,
@@ -3189,8 +3129,7 @@ def readOnlyParams() {
         range: ["0":"Disabled (default)","1":"Enabled"],
         default: 0,
         size: 1,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter123 : [
         number: 123,
@@ -3199,8 +3138,7 @@ def readOnlyParams() {
         range: ["0":"Disabled (default)","1":"Enabled"],
         default: 0,
         size: 1,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter125 : [
         number: 125,
@@ -3209,8 +3147,7 @@ def readOnlyParams() {
         range: ["0":"Disabled (default)","1":"Enabled"],
         default: 0,
         size: 1,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter129 : [
         number: 129,
@@ -3219,8 +3156,7 @@ def readOnlyParams() {
         range: "0..4294967295",
         default: 0,
         size: 32,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter130 : [
         number: 130,
@@ -3229,38 +3165,34 @@ def readOnlyParams() {
         range: ["0":"Disabled (default)","1":"Multi Tap", "2":"Cycle"],
         default: 0,
         size: 8,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter131 : [
         number: 131,
         name: "Low Level For Fan Control Mode",
         description: "Level to send to device bound to EP3 when set to low (Firmware 1.05+)",
-        range: "2..254",
-        default: 63,
+        range: "1..100",
+        default: 33,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter132 : [
         number: 132,
         name: "Medium Level For Fan Control Mode",
         description: "Level to send to device bound to EP3 when set to medium (Firmware 1.05+)",
-        range: "2..254",
-        default: 128,
+        range: "1..100",
+        default: 66,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter133 : [
         number: 133,
         name: "High Level For Fan Control Mode",
         description: "Level to send to device bound to EP3 when set to high (Firmware 1.05+)",
-        range: "2..254",
-        default: 254,
+        range: "1..100",
+        default: 100,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter134 : [
         number: 134,
@@ -3269,8 +3201,7 @@ def readOnlyParams() {
         range: "0..255",
         default: 212,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ],
     parameter256 : [
         number: 256,
@@ -3279,8 +3210,7 @@ def readOnlyParams() {
         range: ["0":"Local control enabled (default)", "1":"Local control disabled"],
         default: 0,
         size: 1,
-        type: "enum",
-        value: null
+        type: "enum"
         ] ,
     parameter257 : [
         number: 257,
@@ -3289,8 +3219,7 @@ def readOnlyParams() {
         range: ["0":"Remote control enabled (default)", "1":"Remote control disabled"],
         default: 0,
         size: 1,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter258 : [
         number: 258,
@@ -3299,8 +3228,7 @@ def readOnlyParams() {
         range: ["0":"Ceiling Fan (Multi-Speed)", "1":"Exhaust Fan (On/Off) (default)"],
         default: 1,
         size: 1,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter259 : [
         number: 259,
@@ -3309,8 +3237,7 @@ def readOnlyParams() {
         range: ["0":"Full bar (default)", "1":"One LED"],
         default: 0,
         size: 1,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter260 : [
         number: 260,
@@ -3319,8 +3246,7 @@ def readOnlyParams() {
         range: ["1":"Enabled (default)", "0":"Disabled"],
         default: 1,
         size: 1,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter261 : [	//not valid for fan switch
         number: 261,
@@ -3329,8 +3255,7 @@ def readOnlyParams() {
         range: ["0":"Enabled (default)", "1":"Disabled"],
         default: 0,
         size: 1,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter262 : [
         number: 262,
@@ -3339,8 +3264,7 @@ def readOnlyParams() {
         range: ["0":"Enabled (default)", "1":"Disabled"],
         default: 0,
         size: 1,
-        type: "enum",
-        value: null
+        type: "enum"
         ],
     parameter263 : [	//not valid for dimmer
         number: 263,
@@ -3349,8 +3273,7 @@ def readOnlyParams() {
         range: "0..9",
         default: 3,
         size: 8,
-        type: "number",
-        value: null
+        type: "number"
         ]
 ]
 
@@ -3403,7 +3326,7 @@ String underline(s) { return "<u>$s</u>" }
 String hue(Integer h, String s) {
     h = Math.min(Math.max((h!=null?h:170),1),255)    //170 is Inovelli factory default blue
 	def result =  '<font '
-	if (h==255)     result += 'style="background-color:Gray" '
+	if (h==255)     result += 'style="background-color:DarkGray" '
 	if (h>30&&h<70) result += 'style="background-color:DarkGray" '
     if (h==255)     result += 'color="White"'
 	else            result += 'color="' + hubitat.helper.ColorUtils.rgbToHEX(hubitat.helper.ColorUtils.hsvToRGB([(h/255*100), 100, 100])) + '"' 
