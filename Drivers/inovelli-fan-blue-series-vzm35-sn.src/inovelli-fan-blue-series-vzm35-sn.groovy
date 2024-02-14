@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-02-13" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-02-14" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM35-SN Blue Series Zigbee Fan Switch
@@ -24,6 +24,7 @@ def getDriverDate() { return "2024-02-13" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2024-02-14(EM) fix bindGroup not sending commands
 * 2024-02-13(MA) temporarily hard-code model name due to bug in fw 1.06 not reporting it.
 * 2024_02-12(MA) remove unused fields in configParams map
 * 2024-02-11(MA) convert P131-133 to percent levels instead of byte levels; fix some inconsistencies with percentValue reporting
@@ -390,7 +391,7 @@ def bindGroup(action="", group=0) {
 		if (infoEnable) log.warn "${device.displayName} " + fireBrick("Invalid Bind action: '$action'")
 		}
     if (debugEnable) log.debug "${device.displayName} bindGroup $cmds"
-    return cmds
+    sendHubCommand(new HubMultiAction(cmds, Protocol.ZIGBEE))
 }
 
 def bindInitiator() {
