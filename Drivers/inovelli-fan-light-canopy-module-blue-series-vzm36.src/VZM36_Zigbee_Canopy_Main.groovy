@@ -281,6 +281,8 @@ metadata {
         //input name: "groupBinding1", type: "number", title: bold("Group Bind #1"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind"), defaultValue: null, range: "1..65527"
         //input name: "groupBinding2", type: "number", title: bold("Group Bind #2"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind"), defaultValue: null, range: "1..65527"
         //input name: "groupBinding3", type: "number", title: bold("Group Bind #3"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind"), defaultValue: null, range: "1..65527"
+        input name: "group1",			   type:"STRING",  title: bold("EP 1 Groups"), description: italic("Add the light endpoint (1) to these groups. Comma separated")
+        input name: "group2",			   type:"STRING",  title: bold("EP 2 Groups"), description: italic("Add the fan endpoint (2) to these groups. Comma separated")
 
         input name: "infoEnable",          type: "bool",   title: bold("Enable Info Logging"),   defaultValue: true,  description: italic("Log general device activity<br>(optional and not required for normal operation)")
         input name: "traceEnable",         type: "bool",   title: bold("Enable Trace Logging"),  defaultValue: false, description: italic("Additional info for trouble-shooting (not needed unless having issues)")
@@ -341,7 +343,7 @@ def group1(groups) {
     groups.toString().split(',').each {
         cmds += zigbee.command(0x0004,0x00,[destEndpoint:1],0,"${byteReverseParameters(zigbee.convertToHexString(it.toInteger(),4))} 00")
     }
-    return cmds
+    sendHubCommand(new HubMultiAction(cmds, Protocol.ZIGBEE))
 }
 
 def group2(groups) {
@@ -353,7 +355,7 @@ def group2(groups) {
     groups.toString().split(',').each {
         cmds += zigbee.command(0x0004,0x00,[destEndpoint:2],0,"${byteReverseParameters(zigbee.convertToHexString(it.toInteger(),4))} 00")
     }
-    return cmds
+    sendHubCommand(new HubMultiAction(cmds, Protocol.ZIGBEE))
 }
 
 //def bind(cmds=[]) {
@@ -2074,6 +2076,16 @@ def updated(option) { // called when "Save Preferences" is requested
             quickStartVariables()
 		}
     }
+    
+    if (settings?.group1 && !state?.group1) {
+        group1(settings.group1)
+    }
+    
+    if (settings?.group2 && !state?.group2) {
+        group2(settings.group2)
+    }
+
+    
     if (settings?.groupBinding1 && !state?.groupBinding1) {
         bindGroup("bind",settings.groupBinding1?.toInteger())
 		//device.updateSetting("groupBinding1",[value:settings.groupBinding1?.toInteger(),type:"number"])
