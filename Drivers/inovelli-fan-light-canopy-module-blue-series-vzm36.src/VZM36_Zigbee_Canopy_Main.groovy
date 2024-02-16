@@ -41,7 +41,7 @@ import hubitat.helper.HexUtils
 import java.security.MessageDigest
 
 metadata {
-    definition (name: "Inovelli VZM36 Zigbee Canopy", namespace: "InovelliUSA", author: "M.Amber/E.Maycock", filename: "Inovelli-Zigbee-Canopy", importUrl:"https://github.com/InovelliUSA/Beta-VZM36/raw/main/hubitat/inovelli-fan-light-canopy-module-blue-series-vzm36.src/VZM36_Zigbee_Canopy_Main.groovy") 
+    definition (name: "Inovelli VZM36 Zigbee Canopy", namespace: "InovelliUSA", author: "M.Amber/E.Maycock", filename: "Inovelli-Zigbee-Canopy", importUrl:"https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-canopy-module-blue-series-vzm36.src/VZM36_Zigbee_Canopy_Main.groovy") 
 	{
 		capability "Actuator"	//device can "do" something (has commands)
         capability "Sensor"		//device can "report" something (has attributes)
@@ -98,6 +98,9 @@ metadata {
         command "holdConfig"
         command "releaseConfig"
         **/
+        
+        command "group1",				   [[name:"EP 1 Groups", type:"STRING", description: "Add the light endpoint (1) to these groups. Comma separated"]]
+        command "group2",				   [[name:"EP 2 Groups", type:"STRING", description: "Add the fan endpoint (2) to these groups. Comma separated"]]
         
         //command "bind",				   [[name:"Command String", type:"STRING", description: "passthru for Binding Apps but may be used to manually enter ZDO Bind/Unbind commands"]]
         //command "bindInitiator",       [[name:"use this 2nd on source (initiator) switch to COMPLETE binding with slave switch"]]
