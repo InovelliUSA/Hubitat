@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-02-15" + orangeRed(" (beta)") }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-02-16" + orangeRed(" (beta)") }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM36 Zigbee Canopy
@@ -22,6 +22,7 @@ def getDriverDate() { return "2024-02-15" + orangeRed(" (beta)") }	// **** DATE 
 *           CHANGE LOG          
 * ------------------------------
 *
+* 2024-02-16(EM) optimize processing of adding and removing from groups
 * 2024-02-15(EM) adding ability to add ep1 and ep2 to a group directly from the driver
 * 2024-01-23(EM) fix parameter 26 wrong size (Github Issue #28)
 * 2024-01-04(MA) fix bindTarget (Github Issue #24)
@@ -98,9 +99,6 @@ metadata {
         command "holdConfig"
         command "releaseConfig"
         **/
-        
-        command "group1",				   [[name:"EP 1 Groups", type:"STRING", description: "Add the light endpoint (1) to these groups. Comma separated"]]
-        command "group2",				   [[name:"EP 2 Groups", type:"STRING", description: "Add the fan endpoint (2) to these groups. Comma separated"]]
         
         //command "bind",				   [[name:"Command String", type:"STRING", description: "passthru for Binding Apps but may be used to manually enter ZDO Bind/Unbind commands"]]
         //command "bindInitiator",       [[name:"use this 2nd on source (initiator) switch to COMPLETE binding with slave switch"]]
@@ -338,10 +336,17 @@ def group1(groups) {
     if (infoEnable) log.info "${device.displayName} group1(${groups})"
     state.lastCommandSent =						   "group1(${groups})"
     state.lastCommandTime = nowFormatted()
+    addGroup = (groups?.split(',')?: []) - (state.groups1?.split(',')?: [])
+    delGroup = (state.groups1?.split(',')?: []) - (groups?.split(',')?: [])
     state.groups1=groups
     def cmds = []
-    groups.toString().split(',').each {
+    addGroup.each {
+        if (infoEnable) log.info "${device.displayName} Adding endpoint 1 to group ${it}"
         cmds += zigbee.command(0x0004,0x00,[destEndpoint:1],0,"${byteReverseParameters(zigbee.convertToHexString(it.toInteger(),4))} 00")
+    }
+    delGroup.each {
+        if (infoEnable) log.info "${device.displayName} Deleting endpoint 1 from group ${it}"
+        cmds += zigbee.command(0x0004,0x03,[destEndpoint:1],0,"${byteReverseParameters(zigbee.convertToHexString(it.toInteger(),4))} 00")
     }
     sendHubCommand(new HubMultiAction(cmds, Protocol.ZIGBEE))
 }
@@ -350,10 +355,17 @@ def group2(groups) {
     if (infoEnable) log.info "${device.displayName} group2(${groups})"
     state.lastCommandSent =						   "group2(${groups})"
     state.lastCommandTime = nowFormatted()
+    addGroup = (groups?.split(',')?: []) - (state.groups2?.split(',')?: [])
+    delGroup = (state.groups2?.split(',')?: []) - (groups?.split(',')?: [])
     state.groups2=groups
     def cmds = []
-    groups.toString().split(',').each {
+    addGroup.each {
+        if (infoEnable) log.info "${device.displayName} Adding endpoint 2 to group ${it}"
         cmds += zigbee.command(0x0004,0x00,[destEndpoint:2],0,"${byteReverseParameters(zigbee.convertToHexString(it.toInteger(),4))} 00")
+    }
+    delGroup.each {
+        if (infoEnable) log.info "${device.displayName} Deleting endpoint 2 from group ${it}"
+        cmds += zigbee.command(0x0004,0x03,[destEndpoint:2],0,"${byteReverseParameters(zigbee.convertToHexString(it.toInteger(),4))} 00")
     }
     sendHubCommand(new HubMultiAction(cmds, Protocol.ZIGBEE))
 }
@@ -2076,15 +2088,9 @@ def updated(option) { // called when "Save Preferences" is requested
             quickStartVariables()
 		}
     }
-    
-    if (settings?.group1 && !state?.group1) {
-        group1(settings.group1)
-    }
-    
-    if (settings?.group2 && !state?.group2) {
-        group2(settings.group2)
-    }
 
+    group1(settings.group1)
+    group2(settings.group2)
     
     if (settings?.groupBinding1 && !state?.groupBinding1) {
         bindGroup("bind",settings.groupBinding1?.toInteger())
