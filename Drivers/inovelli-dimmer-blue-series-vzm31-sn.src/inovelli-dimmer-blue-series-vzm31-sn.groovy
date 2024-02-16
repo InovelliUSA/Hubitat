@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-02-14" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-02-15" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM31-SN Blue Series Zigbee 2-in-1 Dimmer
@@ -24,7 +24,8 @@ def getDriverDate() { return "2024-02-14" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
-* 2024-02-14(MA) fix bindGroup not sending commands
+* 2024-02-15(EM) adding endpoint to group binding for firmware 2.16+
+* 2024-02-14(EM) fix bindGroup not sending commands
 * 2024-02-07(MA) add support for Signal Strength
 * 2024-02-02(MA) don't log unknown cluster if no logging is enabled (requested by S.Viel)
 * 2024-01-21(MA) remove quickstart emulation code since its now supported in the firmware
@@ -380,9 +381,9 @@ metadata {
             }
         }
 		
-        input name: "groupBinding1", type: "number", title: bold("Group Bind #1"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind"), defaultValue: null, range: "1..65527"
-        input name: "groupBinding2", type: "number", title: bold("Group Bind #2"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind"), defaultValue: null, range: "1..65527"
-        input name: "groupBinding3", type: "number", title: bold("Group Bind #3"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind"), defaultValue: null, range: "1..65527"
+        input name: "groupBinding1", type: "number", title: bold("Group Bind #1"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind. To specify the source endpoint proceed the group with \"ep#.\". So if you want to bind ep 3 to group 9 you would input 3.9"), defaultValue: null, range: "1..65527"
+        input name: "groupBinding2", type: "number", title: bold("Group Bind #2"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind. To specify the source endpoint proceed the group with \"ep#.\". So if you want to bind ep 3 to group 9 you would input 3.9"), defaultValue: null, range: "1..65527"
+        input name: "groupBinding3", type: "number", title: bold("Group Bind #3"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind. To specify the source endpoint proceed the group with \"ep#.\". So if you want to bind ep 3 to group 9 you would input 3.9"), defaultValue: null, range: "1..65527"
 
         input name: "infoEnable",          type: "bool",   title: bold("Enable Info Logging"),   defaultValue: true,  description: italic("Log general device activity<br>(optional and not required for normal operation)")
         input name: "traceEnable",         type: "bool",   title: bold("Enable Trace Logging"),  defaultValue: false, description: italic("Additional info for trouble-shooting (not needed unless having issues)")
@@ -422,10 +423,17 @@ def bindGroup(action="", group=0) {
     if (infoEnable) log.info "${device.displayName} bindGroup($action, $group))"
     state.lastCommandSent =                        "bindGroup($action, $group))"
     state.lastCommandTime = nowFormatted()
+    if (group.toString().split('\\.').length > 1) {
+        endpoint = group.toString().split('\\.')[0]
+        group = group.toString().split('\\.')[1]
+    } else {
+        group = group
+        endpoint = 2
+    }
 	def cmds = []
 	if (action=="bind" || action=="unbind") {
-		cmds += ["zdo $action 0x${device.deviceNetworkId} 0x02 0x01 0x0006 {${device.zigbeeId}} {${zigbee.convertToHexString(group.toInteger(),4)}}"]
-		cmds += ["zdo $action 0x${device.deviceNetworkId} 0x02 0x01 0x0008 {${device.zigbeeId}} {${zigbee.convertToHexString(group.toInteger(),4)}}"]
+        cmds += ["zdo $action 0x${device.deviceNetworkId} 0x0${endpoint} 0x01 0x0006 {${device.zigbeeId}} {${zigbee.convertToHexString(group.toInteger(),4)}}"]
+        cmds += ["zdo $action 0x${device.deviceNetworkId} 0x0${endpoint} 0x01 0x0008 {${device.zigbeeId}} {${zigbee.convertToHexString(group.toInteger(),4)}}"]
 		cmds += "delay 60000"		//binding can take up to 60 seconds
 	} else {
 		if (infoEnable) log.warn "${device.displayName} " + fireBrick("Invalid Bind action: '$action'")
@@ -2094,39 +2102,39 @@ def updated(option) { // called when "Save Preferences" is requested
 		}
     }
     if (settings?.groupBinding1 && !state?.groupBinding1) {
-        bindGroup("bind",settings.groupBinding1?.toInteger())
+        bindGroup("bind",settings.groupBinding1)
 		//device.updateSetting("groupBinding1",[value:settings.groupBinding1?.toInteger(),type:"number"])
-		state.groupBinding1=settings.groupBinding1?.toInteger()
+		state.groupBinding1=settings.groupBinding1
         nothingChanged = false
     } else {
         if (!settings?.groupBinding1 && state?.groupBinding1) {
-            bindGroup("unbind",state.groupBinding1?.toInteger())
+            bindGroup("unbind",state.groupBinding1)
 			device.removeSetting("groupBinding1")
 			state.groupBinding1=null
             nothingChanged = false
         }
     }
     if (settings?.groupBinding2 && !state?.groupBinding2) {
-        bindGroup("bind",settings.groupBinding2?.toInteger())
+        bindGroup("bind",settings.groupBinding2)
 		//device.updateSetting("groupBinding2",[value:settings.groupBinding2?.toInteger(),type:"number"])
-		state.groupBinding2=settings.groupBinding2?.toInteger()
+		state.groupBinding2=settings.groupBinding2
         nothingChanged = false
     } else {
         if (!settings?.groupBinding2 && state?.groupBinding2) {
-            bindGroup("unbind",state.groupBinding2?.toInteger())
+            bindGroup("unbind",state.groupBinding2)
 			device.removeSetting("groupBinding2")
 			state.groupBinding2=null
             nothingChanged = false
         }
     }
     if (settings?.groupBinding3 && !state?.groupBinding3) {
-        bindGroup("bind",settings.groupBinding3?.toInteger())
+        bindGroup("bind",settings.groupBinding3)
 		//device.updateSetting("groupBinding3",[value:state.groupBinding3?.toInteger(),type:"number"])
-		state.groupBinding3=state.groupBinding3?.toInteger()
+		state.groupBinding3=state.groupBinding3
         nothingChanged = false
     } else {
         if (!settings?.groupBinding3 && state?.groupBinding3) {
-            bindGroup("unbind",state.groupBinding3?.toInteger())
+            bindGroup("unbind",state.groupBinding3)
 			device.removeSetting("groupBinding3")
 			state.groupBinding3=null
             nothingChanged = false
@@ -2414,8 +2422,8 @@ def holdConfig()     {buttonEvent(13, "held", "digital")}
 def releaseConfig()  {buttonEvent(14, "released", "digital")}
 
 def userSettableParams() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
-    if (parameter258 == "1") return [258,22,52,                  10,11,12,      15,17,18,19,20,21,25,50,51,            95,96,97,98,100,123,125,256,257,259,260,261,262]  //on/off mode
-    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,25,50,51,53,54,55,56,95,96,97,98,100,123,125,256,257,    260,    262]  //dimmer mode
+    if (parameter258 == "1") return [258,22,52,                  10,11,12,      15,17,18,19,20,21,25,50,51,            95,96,97,98,100,120,121,123,125,130,131,132,133,256,257,259,260,261,262]  //on/off mode
+    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,25,50,51,53,54,55,56,95,96,97,98,100,120,121,123,125,130,131,132,133,256,257,    260,    262]  //dimmer mode
 }
 
 def readOnlyParams() {
