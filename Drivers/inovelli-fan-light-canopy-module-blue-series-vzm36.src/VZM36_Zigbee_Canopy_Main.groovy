@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-01-04" + orangeRed(" (beta)") }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-02-15" + orangeRed(" (beta)") }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM36 Zigbee Canopy
@@ -22,6 +22,7 @@ def getDriverDate() { return "2024-01-04" + orangeRed(" (beta)") }	// **** DATE 
 *           CHANGE LOG          
 * ------------------------------
 *
+* 2024-02-15(EM) adding ability to add ep1 and ep2 to a group directly from the driver
 * 2024-01-23(EM) fix parameter 26 wrong size (Github Issue #28)
 * 2024-01-04(MA) fix bindTarget (Github Issue #24)
 * 2023-12-20(MA) fix cycleSpeed and setSpeed
@@ -312,6 +313,44 @@ def debugLogsOff() {
     log.warn "${device.displayName} " + fireBrick("Disabling Debug logging after timeout")
     device.updateSetting("debugEnable",[value:"false",type:"bool"])
     //device.updateSetting("disableDebugLogging",[value:"",type:"number"])
+}
+
+private String byteReverseParameters(String oneString) { byteReverseParameters([] << oneString) }
+private String byteReverseParameters(List<String> parameters) {
+	StringBuilder rStr = new StringBuilder(128)
+	
+	for (hexString in parameters) {
+		if (hexString.length() % 2) throw new Exception("In method reverseParametersZCL, trying to reverse a hex string that is not an even number of characters in length. Error in Hex String: ${hexString}, All method parameters were ${parameters}.")
+		
+		for(Integer i = hexString.length() -1 ; i > 0 ; i -= 2) {
+			rStr << hexString[i-1..i]
+		}	
+	}
+	return rStr
+}
+
+def group1(groups) {
+    if (infoEnable) log.info "${device.displayName} group1(${groups})"
+    state.lastCommandSent =						   "group1(${groups})"
+    state.lastCommandTime = nowFormatted()
+    state.groups1=groups
+    def cmds = []
+    groups.toString().split(',').each {
+        cmds += zigbee.command(0x0004,0x00,[destEndpoint:1],0,"${byteReverseParameters(zigbee.convertToHexString(it.toInteger(),4))} 00")
+    }
+    return cmds
+}
+
+def group2(groups) {
+    if (infoEnable) log.info "${device.displayName} group2(${groups})"
+    state.lastCommandSent =						   "group2(${groups})"
+    state.lastCommandTime = nowFormatted()
+    state.groups2=groups
+    def cmds = []
+    groups.toString().split(',').each {
+        cmds += zigbee.command(0x0004,0x00,[destEndpoint:2],0,"${byteReverseParameters(zigbee.convertToHexString(it.toInteger(),4))} 00")
+    }
+    return cmds
 }
 
 //def bind(cmds=[]) {
@@ -865,17 +904,17 @@ def parse(String description) {
 						switch (descMap.command) {
 							case "00":
 								if (infoEnable) log.info "${currentChild.displayName} Add Group $groupNumInt (0x$groupNumHex)"
-								bindGroup("bind",groupNumInt)
-								if (currentChild.settings.groupBinding1==null || currentChild.settings.groupBinding1?.toInteger()==groupNumInt || state.groupBinding1?.toInteger()==groupNumInt) {
-									currentChild.updateSetting("groupBinding1",[value:groupNumInt,type:"number"])
-									state.groupBinding1=groupNumInt
-								} else if (currentChild.settings.groupBinding2==null || currentChild.settings.groupBinding2?.toInteger()==groupNumInt || state.groupBinding2?.toInteger()==groupNumInt) {
-									currentChild.updateSetting("groupBinding2",[value:groupNumInt,type:"number"])
-									state.groupBinding2=groupNumInt
-								} else if (currentChild.settings.groupBinding3==null || currentChild.settings.groupBinding3?.toInteger()==groupNumInt || state.groupBinding3?.toInteger()==groupNumInt) {
-									currentChild.updateSetting("groupBinding3",[value:groupNumInt,type:"number"])
-									state.groupBinding3=groupNumInt
-								}
+								//bindGroup("bind",groupNumInt)
+								//if (currentChild.settings.groupBinding1==null || currentChild.settings.groupBinding1?.toInteger()==groupNumInt || state.groupBinding1?.toInteger()==groupNumInt) {
+								//	currentChild.updateSetting("groupBinding1",[value:groupNumInt,type:"number"])
+								//	state.groupBinding1=groupNumInt
+								//} else if (currentChild.settings.groupBinding2==null || currentChild.settings.groupBinding2?.toInteger()==groupNumInt || state.groupBinding2?.toInteger()==groupNumInt) {
+								//	currentChild.updateSetting("groupBinding2",[value:groupNumInt,type:"number"])
+								//	state.groupBinding2=groupNumInt
+								//} else if (currentChild.settings.groupBinding3==null || currentChild.settings.groupBinding3?.toInteger()==groupNumInt || state.groupBinding3?.toInteger()==groupNumInt) {
+								//	currentChild.updateSetting("groupBinding3",[value:groupNumInt,type:"number"])
+								//	state.groupBinding3=groupNumInt
+								//}
 								break
 							case "01":
 								if (infoEnable) log.info "${currentChild.displayName} View Group $groupNumInt (0x$groupNumHex)"
@@ -884,17 +923,17 @@ def parse(String description) {
 								if (infoEnable) log.info "${currentChild.displayName} Get Group $groupNumInt (0x$groupNumHex)"
 								break
 							case "03":
-								if (infoEnable) log.info "${currentChild.displayName} Remove Group $groupNumInt (0x$groupNumHex)"
-								bindGroup("unbind",groupNumInt)
-								if      (currentChild.settings.groupBinding1?.toInteger()==groupNumInt || state.groupBinding1?.toInteger()==groupNumInt) {currentChild.removeSetting("groupBinding1"); state.remove(groupBinding1)}
-								else if (currentChild.settings.groupBinding2?.toInteger()==groupNumInt || state.groupBinding2?.toInteger()==groupNumInt) {currentChild.removeSetting("groupBinding2"); state.remove(groupBinding2)}
-								else if (currentChild.settings.groupBinding3?.toInteger()==groupNumInt || state.groupBinding3?.toInteger()==groupNumInt) {currentChild.removeSetting("groupBinding3"); state.remove(groupBinding3)}
+								//if (infoEnable) log.info "${currentChild.displayName} Remove Group $groupNumInt (0x$groupNumHex)"
+								//bindGroup("unbind",groupNumInt)
+								//if      (currentChild.settings.groupBinding1?.toInteger()==groupNumInt || state.groupBinding1?.toInteger()==groupNumInt) {currentChild.removeSetting("groupBinding1"); state.remove(groupBinding1)}
+								//else if (currentChild.settings.groupBinding2?.toInteger()==groupNumInt || state.groupBinding2?.toInteger()==groupNumInt) {currentChild.removeSetting("groupBinding2"); state.remove(groupBinding2)}
+								//else if (currentChild.settings.groupBinding3?.toInteger()==groupNumInt || state.groupBinding3?.toInteger()==groupNumInt) {currentChild.removeSetting("groupBinding3"); state.remove(groupBinding3)}
 								break
 							case "04":
 								if (infoEnable) log.info "${currentChild.displayName} Remove All Groups"
-								currentChild.removeSetting("groupBinding1"); state.remove(groupBinding1)
-								currentChild.removeSetting("groupBinding2"); state.remove(groupBinding2)
-								currentChild.removeSetting("groupBinding3"); state.remove(groupBinding3)
+								//currentChild.removeSetting("groupBinding1"); state.remove(groupBinding1)
+								//currentChild.removeSetting("groupBinding2"); state.remove(groupBinding2)
+								//currentChild.removeSetting("groupBinding3"); state.remove(groupBinding3)
 								break
 							case "05":
 								if (infoEnable) log.info "${currentChild.displayName} Add group if Identifying"
@@ -904,9 +943,9 @@ def parse(String description) {
 								break
 						}
 						// remove duplicate groups
-						if (currentChild.settings.groupBinding3!=null && currentChild.settings.groupBinding3==currentChild.settings.groupBinding2) {currentChild.removeSetting("groupBinding3"); state.remove(groupBinding3); log.info "${currentChild.displayName} Removed duplicate Group Bind #3"}
-						if (currentChild.settings.groupBinding2!=null && currentChild.settings.groupBinding2==currentChild.settings.groupBinding1) {currentChild.removeSetting("groupBinding2"); state.remove(groupBinding2); log.info "${currentChild.displayName} Removed duplicate Group Bind #2"}
-						if (currentChild.settings.groupBinding1!=null && currentChild.settings.groupBinding1==currentChild.settings.groupBinding3) {currentChild.removeSetting("groupBinding3"); state.remove(groupBinding3); log.info "${currentChild.displayName} Removed duplicate Group Bind #3"}
+						//if (currentChild.settings.groupBinding3!=null && currentChild.settings.groupBinding3==currentChild.settings.groupBinding2) {currentChild.removeSetting("groupBinding3"); state.remove(groupBinding3); log.info "${currentChild.displayName} Removed duplicate Group Bind #3"}
+						//if (currentChild.settings.groupBinding2!=null && currentChild.settings.groupBinding2==currentChild.settings.groupBinding1) {currentChild.removeSetting("groupBinding2"); state.remove(groupBinding2); log.info "${currentChild.displayName} Removed duplicate Group Bind #2"}
+						//if (currentChild.settings.groupBinding1!=null && currentChild.settings.groupBinding1==currentChild.settings.groupBinding3) {currentChild.removeSetting("groupBinding3"); state.remove(groupBinding3); log.info "${currentChild.displayName} Removed duplicate Group Bind #3"}
 					} else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Attribute:$attrInt ") //+ descMap
                     break
             }
