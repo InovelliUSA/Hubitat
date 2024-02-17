@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "VZM31-SN: add support for Signal Strength. VZ35-SN: Temporary hard code device name for bug in firmware 1.06.",
+   "releaseNotes": "VZM31-SN: adding endpoint to group binding for firmware 2.16+. VZ35-SN: fix bug that was preventing parameters from being set to 0.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -99,7 +99,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-blue-series-vzm31-sn.src/inovelli-dimmer-blue-series-vzm31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "24.2.14",
+                "version": "24.2.15",
 		"releaseNotes": "" 
    	},
 	   {
@@ -109,7 +109,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-blue-series-vzm35-sn.src/inovelli-fan-blue-series-vzm35-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "24.2.14",
+                "version": "24.2.16",
 		"releaseNotes": "" 
    	},
 	{
