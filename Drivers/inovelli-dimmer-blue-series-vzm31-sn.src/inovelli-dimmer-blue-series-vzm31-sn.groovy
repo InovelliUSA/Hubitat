@@ -461,7 +461,7 @@ def bindTarget(Integer timeout=30) {
 def calculateParameter(Integer paramNum) {
 	paramNum = (paramNum?:0).toInteger()
     //def value = Math.round((settings?."parameter${paramNum}"!=null?settings?."parameter${paramNum}":getDefaultValue(paramNum))?.toFloat())?.toInteger()
-	def value = settings."parameter${paramNum}"?:getDefaultValue(paramNum)
+    def value = settings."parameter${paramNum}"!=null?settings."parameter${paramNum}":getDefaultValue(paramNum)
     switch (paramNum){
         case 9:     //Min Level
         case 10:    //Max Level
