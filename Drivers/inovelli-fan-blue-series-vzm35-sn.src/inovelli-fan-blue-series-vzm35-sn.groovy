@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-02-14" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-02-16" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM35-SN Blue Series Zigbee Fan Switch
@@ -24,8 +24,9 @@ def getDriverDate() { return "2024-02-14" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2024-02-16(EM) fix bug that was preventing parameters from being set to 0
 * 2024-02-14(EM) fix bindGroup not sending commands
-* 2024-02-13(MA) temporarily hard-code model name due to bug in fw 1.06 not reporting it.
+* 2024-02-13(MA) temporarily hard-code model name due to bug in fw 1.06 not reporting it
 * 2024_02-12(MA) remove unused fields in configParams map
 * 2024-02-11(MA) convert P131-133 to percent levels instead of byte levels; fix some inconsistencies with percentValue reporting
 * 2024-02-07(MA) add support for Signal Strength; don't log unknown cluster if no logging is enabled; misc. code updates to stay in sync with VZM36 Canopy Fan driver
@@ -413,7 +414,8 @@ def bindTarget(Integer timeout=30) {
 def calculateParameter(Integer paramNum) {
 	paramNum = (paramNum?:0).toInteger()
     //def value = Math.round((settings?."parameter${paramNum}"!=null?settings?."parameter${paramNum}":getDefaultValue(paramNum))?.toFloat())?.toInteger()
-	def value = settings."parameter${paramNum}"?:getDefaultValue(paramNum)
+	def value = settings."parameter${paramNum}"!=null?settings."parameter${paramNum}":getDefaultValue(paramNum)
+    
     switch (paramNum){
         case 9:     //Min Level
         case 10:    //Max Level
