@@ -22,6 +22,7 @@ def getDriverDate() { return "2023-01-04" + orangeRed(" (beta)") }	// **** DATE 
 *           CHANGE LOG          
 * ------------------------------
 *
+* 2024-03-14(EM) changing parameter 258 description and default
 * 2023-12-20(MA) fix cycleSpeed and setSpeed
 * 2023-12-18(MA) Move configParams Map down to the bottom
 * 2023-12-14(MA) Initial BETA release ***VERY ROUGH*** this is a copy of the VZM31 driver, modified to be a child device of the canopy parent
@@ -3095,7 +3096,7 @@ def releaseConfig()  {buttonEvent(14, "released", "digital")}
         number: 258,
         name: "Switch Mode",
         description: "Dimmer or On/Off only",
-        range: ["0":"Dimmer", "1":"On/Off (default)"],
+        range: ["0":"Dimmer (default)", "1":"On/Off"],
         default: 0,
         size: 1,
         type: "enum",
