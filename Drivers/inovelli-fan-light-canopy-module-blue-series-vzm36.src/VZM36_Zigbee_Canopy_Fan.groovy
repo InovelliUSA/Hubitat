@@ -1,4 +1,4 @@
-def getDriverDate() { return "2023-01-04" + orangeRed(" (beta)") }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-03-14" + orangeRed(" (beta)") }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM36 Zigbee Canopy Fan
@@ -22,6 +22,7 @@ def getDriverDate() { return "2023-01-04" + orangeRed(" (beta)") }	// **** DATE 
 *           CHANGE LOG          
 * ------------------------------
 *
+* 2024-03-14(EM) changing parameter 258 description and default
 * 2023-12-20(MA) fix cycleSpeed and setSpeed
 * 2023-12-18(MA) Move configParams Map down to the bottom
 * 2023-12-14(MA) Initial BETA release ***VERY ROUGH*** this is a copy of the VZM35 driver, modified to be a child device of the canopy parent
@@ -3095,8 +3096,8 @@ def releaseConfig()  {buttonEvent(14, "released", "digital")}
     parameter258 : [
         number: 258,
         name: "Switch Mode",
-        description: "Ceiling Fan (Multi-Speed) or Exhaust Fan (On/Off). Ceiling Fan mode with neutral wire will have 3-Speeds. If there is no neutral wire there will only be 2-Speeds",
-        range: ["0":"Ceiling Fan (Multi-Speed)", "1":"Exhaust Fan (On/Off) (default)"],
+        description: "Ceiling Fan (Multi-Speed) or Exhaust Fan (On/Off).",
+        range: ["0":"Ceiling Fan (Multi-Speed) (default)", "1":"Exhaust Fan (On/Off)"],
         default: 0,
         size: 1,
         type: "enum",
