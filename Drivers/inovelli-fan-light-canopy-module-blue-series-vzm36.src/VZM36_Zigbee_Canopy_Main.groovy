@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-02-16" + orangeRed(" (beta)") }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-03-20" + orangeRed(" (beta)") }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM36 Zigbee Canopy
@@ -22,6 +22,7 @@ def getDriverDate() { return "2024-02-16" + orangeRed(" (beta)") }	// **** DATE 
 *           CHANGE LOG          
 * ------------------------------
 *
+* 2024-03-20(EM) fix endpoint binding and child device creation upon device pairing
 * 2024-02-16(EM) optimize processing of adding and removing from groups
 * 2024-02-15(EM) adding ability to add ep1 and ep2 to a group directly from the driver
 * 2024-01-23(EM) fix parameter 26 wrong size (Github Issue #28)
@@ -492,18 +493,18 @@ def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS A
     //sendEvent(name: "numberOfButtons", value: 14)
     def cmds = []
 	if (infoEnable) log.info "${device.displayName} re-establish lifeline bindings to hub"
-//  cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0000 {${device.zigbeeId}} {}"] //Basic Cluster
-//  cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0x0000 {${device.zigbeeId}} {}"] //Basic Cluster ep2
-//  cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0003 {${device.zigbeeId}} {}"] //Identify Cluster
-//  cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0x0003 {${device.zigbeeId}} {}"] //Identify Cluster ep2
-//  cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0004 {${device.zigbeeId}} {}"] //Group Cluster
-//  cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0x0004 {${device.zigbeeId}} {}"] //Group Cluster ep2
-//  cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0005 {${device.zigbeeId}} {}"] //Scenes Cluster
-//  cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0x0005 {${device.zigbeeId}} {}"] //Scenes Cluster ep2
+    cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0000 {${device.zigbeeId}} {}"] //Basic Cluster
+    cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0x0000 {${device.zigbeeId}} {}"] //Basic Cluster ep2
+    cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0003 {${device.zigbeeId}} {}"] //Identify Cluster
+    cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0x0003 {${device.zigbeeId}} {}"] //Identify Cluster ep2
+    cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0004 {${device.zigbeeId}} {}"] //Group Cluster
+    cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0x0004 {${device.zigbeeId}} {}"] //Group Cluster ep2
+    cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0005 {${device.zigbeeId}} {}"] //Scenes Cluster
+    cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0x0005 {${device.zigbeeId}} {}"] //Scenes Cluster ep2
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0006 {${device.zigbeeId}} {}"] //On_Off Cluster
-//  cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0x0006 {${device.zigbeeId}} {}"] //On_Off Cluster ep2
+    cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0x0006 {${device.zigbeeId}} {}"] //On_Off Cluster ep2
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0008 {${device.zigbeeId}} {}"] //Level Control Cluster
-//  cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0x0008 {${device.zigbeeId}} {}"] //Level Control Cluster ep2
+    cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0x0008 {${device.zigbeeId}} {}"] //Level Control Cluster ep2
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0019 {${device.zigbeeId}} {}"] //OTA Upgrade Cluster
 	if (state.model?.substring(0,5)!="VZM35") {  //Fan does not support power/energy reports
 		cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0702 {${device.zigbeeId}} {}"] //Simple Metering - to get energy reports
@@ -513,6 +514,30 @@ def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS A
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x8022 {${device.zigbeeId}} {}"] //UnBinding Cluster
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0xFC31 {${device.zigbeeId}} {}"] //Private Cluster
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0xFC31 {${device.zigbeeId}} {}"] //Private Cluster ep2
+    
+    // Delete obsolete children
+    getChildDevices().each {child->
+        if (!child.deviceNetworkId.startsWith(device.id) || child.deviceNetworkId == "${device.id}-00") {
+            log.info "Deleting ${child.deviceNetworkId}"
+  		    deleteChildDevice(child.deviceNetworkId)
+        }
+    }
+	// Create Child Devices
+    for (i in 1..2) {
+        def childId = "${device.id}-0${i}"
+        def existingChild = getChildDevices()?.find { it.deviceNetworkId == childId}
+        if (existingChild) {
+            log.info "${device.displayName} Child device ${childId} already exists (${existingChild})"
+        } else {
+			log.info "Creating device ${childId}"
+            if(i == 1) {
+				addChildDevice("InovelliUSA","Inovelli VZM36 Zigbee Canopy Light",childId,[isComponent:true,name:"Canopy Light EP0${i}",label: "${device.displayName} Light"])
+            } else { if(i == 2) {
+				addChildDevice("InovelliUSA","Inovelli VZM36 Zigbee Canopy Fan",  childId,[isComponent:true,name:"Canopy Fan EP0${i}",  label: "${device.displayName} Fan"])
+				}
+            }
+        }
+    }
 
     if (option=="") {		//IF   we didn't pick an option 
 		refresh()	//THEN refresh read-only and key parameters
@@ -628,29 +653,7 @@ def initialize() {    //CALLED DURING HUB BOOTUP IF "INITIALIZE" CAPABILITY IS D
 	//cmds += ledEffectOne(1234567,255,0,0,0)	//clear any outstanding oneLED Effects
 	//cmds += ledEffectAll(255,0,0,0)			//clear any outstanding allLED Effects
 
-	// Delete obsolete children
-    getChildDevices().each {child->
-        if (!child.deviceNetworkId.startsWith(device.id) || child.deviceNetworkId == "${device.id}-00") {
-            log.info "Deleting ${child.deviceNetworkId}"
-  		    deleteChildDevice(child.deviceNetworkId)
-        }
-    }
-	// Create Child Devices
-    for (i in 1..2) {
-        def childId = "${device.id}-0${i}"
-        def existingChild = getChildDevices()?.find { it.deviceNetworkId == childId}
-        if (existingChild) {
-            log.info "${device.displayName} Child device ${childId} already exists (${existingChild})"
-        } else {
-			log.info "Creating device ${childId}"
-            if(i == 1) {
-				addChildDevice("InovelliUSA","Inovelli VZM36 Zigbee Canopy Light",childId,[isComponent:true,name:"Canopy Light EP0${i}",label: "${device.displayName} Light"])
-            } else { if(i == 2) {
-				addChildDevice("InovelliUSA","Inovelli VZM36 Zigbee Canopy Fan",  childId,[isComponent:true,name:"Canopy Fan EP0${i}",  label: "${device.displayName} Fan"])
-				}
-            }
-        }
-    }
+	
     refresh()
     if (debugEnable) log.debug "${device.displayName} initialize $cmds"
     return
