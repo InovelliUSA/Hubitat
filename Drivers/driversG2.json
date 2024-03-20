@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "VZM36: adding new device vzm36 fan and light module.",
+   "releaseNotes": "VZM36: fix endpoint binding and child device creation upon device pairing",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -129,7 +129,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-canopy-module-blue-series-vzm36.src/VZM36_Zigbee_Canopy_Main.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "24.2.16",
+                "version": "24.3.20",
 		"releaseNotes": "" 
    	},
 	{
