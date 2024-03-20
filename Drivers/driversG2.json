@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "VZM31-SN: adding endpoint to group binding for firmware 2.16+. VZ35-SN: fix bug that was preventing parameters from being set to 0.",
+   "releaseNotes": "VZM36: adding new device vzm36 fan + light module.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
