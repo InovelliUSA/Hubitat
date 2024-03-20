@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-03-14" + orangeRed(" (beta)") }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-03-16" + orangeRed(" (beta)") }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM36 Zigbee Canopy Fan
@@ -22,6 +22,7 @@ def getDriverDate() { return "2024-03-14" + orangeRed(" (beta)") }	// **** DATE 
 *           CHANGE LOG          
 * ------------------------------
 *
+* 2024-03-20(EM) model number, cycleSpeed and setSpeed fixes
 * 2024-03-14(EM) changing parameter 258 description and default
 * 2023-12-20(MA) fix cycleSpeed and setSpeed
 * 2023-12-18(MA) Move configParams Map down to the bottom
@@ -495,12 +496,18 @@ def cycleSpeed() {    // FOR FAN ONLY
 		boolean smartMode = device.currentValue("smartFan")=="Enabled"
         def newLevel = 0
 		def newSpeed =""
-		if      (currentLevel<=0 ) {newLevel=20;                 newSpeed="low" }
-		else if (currentLevel<=20) {newLevel=(smartMode?40:60);  newSpeed=(smartMode?"medium-low":"medium")}
-		else if (currentLevel<=40) {newLevel=60;                 newSpeed="medium"}
-		else if (currentLevel<=60) {newLevel=(smartMode?80:100); newSpeed=(smartMode?"medium-high":"high")}
-		else if (currentLevel<=80) {newLevel=100;                newSpeed="high"}
-        else                       {newLevel=0;                  newSpeed="off"}
+		if (smartMode)
+			if      (currentLevel<=0 ) {newLevel=20;  newSpeed="low" }
+			else if (currentLevel<=20) {newLevel=40;  newSpeed=(smartMode?"medium-low":"medium")}
+			else if (currentLevel<=40) {newLevel=60;  newSpeed="medium"}
+			else if (currentLevel<=60) {newLevel=80;  newSpeed=(smartMode?"medium-high":"high")}
+			else if (currentLevel<=80) {newLevel=100; newSpeed="high"}
+			else                       {newLevel=0;   newSpeed="off"}
+		else 
+            if      (currentLevel<=0 ) {newLevel=33;  newSpeed="low" }
+			else if (currentLevel<=33) {newLevel=66;  newSpeed="medium"}
+			else if (currentLevel<=66) {newLevel=100; newSpeed="high"}
+			else                       {newLevel=0;   newSpeed="off"}
         if (infoEnable) log.info "${device.displayName} cycleSpeed(${device.currentValue("speed")?:off}->${newSpeed})"
         state.lastCommandSent =                        "cycleSpeed(${device.currentValue("speed")?:off}->${newSpeed})"
         state.lastCommandTime = nowFormatted()
@@ -887,7 +894,7 @@ def parse(String description) {
                         if (infoEnable) log.info "${device.displayName} Switch=$valueInt ($valueStr)"
                         sendEvent(name:"switch", value: valueStr)
 						def currentLevel = device.currentValue("level")==null?0:device.currentValue("level").toInteger()
-                        if (state.model?.substring(3,5)!="31") { //FOR FANs ONLY 
+                        if (state.model?.substring(0,5)=="VZM36") { //FOR FANs ONLY 
 							if (device.currentValue("smartFan")=="Enabled") {
 								if      (currentLevel<=20)  newSpeed="low"
 								else if (currentLevel<=40)  newSpeed="medium-low"
@@ -956,7 +963,7 @@ def parse(String description) {
                         if (infoEnable) log.info "${device.displayName} Level=$valueInt ($valueStr)"
                         sendEvent(name:"level", value: percentValue, unit: "%")
 		                def newSpeed =""
-                        if (state.model?.substring(3,5)!="31") { //FOR FANs ONLY
+                        if (state.model?.substring(0,5)=="VZM36") { //FOR FANs ONLY
 							if (device.currentValue("smartFan")=="Enabled") {
 								if      (percentValue<=20)  newSpeed="low"
 								else if (percentValue<=40)  newSpeed="medium-low"
@@ -1838,7 +1845,7 @@ def setSpeed(value) {  // FOR FAN ONLY
             break
         case "medium-low":             //placeholder since Hubitat natively supports 5-speed fans
             //cmds += zigbee.setLevel(40) 
-	        cmds += "he cmd 0x${parent.deviceNetworkId} 0x${device.deviceNetworkId?.substring(device.deviceNetworkId.length()-2)?:"00"} 0x0008 0x04 {${zigbee.convertToHexString(convertPercentToByte(40),2)} 0xFFFF}"
+	        cmds += "he cmd 0x${parent.deviceNetworkId} 0x${device.deviceNetworkId?.substring(device.deviceNetworkId.length()-2)?:"00"} 0x0008 0x04 {${zigbee.convertToHexString(convertPercentToByte(smartMode?40:33),2)} 0xFFFF}"
             break
         case "medium": 
             //cmds += zigbee.setLevel(smartMode?60:66) 
@@ -1846,7 +1853,7 @@ def setSpeed(value) {  // FOR FAN ONLY
             break
         case "medium-high":            //placeholder since Hubitat natively supports 5-speed fans
             //cmds += zigbee.setLevel(80)
-	        cmds += "he cmd 0x${parent.deviceNetworkId} 0x${device.deviceNetworkId?.substring(device.deviceNetworkId.length()-2)?:"00"} 0x0008 0x04 {${zigbee.convertToHexString(convertPercentToByte(80),2)} 0xFFFF}"
+	        cmds += "he cmd 0x${parent.deviceNetworkId} 0x${device.deviceNetworkId?.substring(device.deviceNetworkId.length()-2)?:"00"} 0x0008 0x04 {${zigbee.convertToHexString(convertPercentToByte(smartMode?80:66),2)} 0xFFFF}"
             break
         case "high": 
             //cmds += zigbee.setLevel(100) 
