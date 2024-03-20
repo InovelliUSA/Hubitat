@@ -124,7 +124,7 @@
    	},
 	{
    		"id" : "e4af254b-0bcf-4c2f-acdb-d0595233c78c",
-   		"name": "Inovelli Fan + Light Blue Series VZM36 (Main)",
+   		"name": "Inovelli Fan + Light Blue Series VZM36",
                 "namespace": "InovelliUSA",
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-canopy-module-blue-series-vzm36.src/VZM36_Zigbee_Canopy_Main.groovy",
    		"required": false,
@@ -139,7 +139,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-canopy-module-blue-series-vzm36.src/VZM36_Zigbee_Canopy_Light.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "24.2.16",
+                "version": "24.3.20",
 		"releaseNotes": "" 
    	},
 	{
