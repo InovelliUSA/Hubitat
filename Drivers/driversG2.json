@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "VZM31-SN: change groupbinding setting to a string to allow larger group numbers",
+   "releaseNotes": "VZM31-SN: change groupbinding setting to a string to allow larger group numbers, adding parameter 134 (ep3 binding led color)",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
