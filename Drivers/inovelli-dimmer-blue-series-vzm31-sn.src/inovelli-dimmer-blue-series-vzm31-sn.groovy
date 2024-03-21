@@ -24,6 +24,7 @@ def getDriverDate() { return "2024-03-21" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2024-03-21(EM) adding parameter 134 (ep3 binding led color)
 * 2024-03-21(EM) change groupbinding setting to a string to allow larger group numbers
 * 2024-02-15(EM) adding endpoint to group binding for firmware 2.16+
 * 2024-02-14(EM) fix bindGroup not sending commands
@@ -2423,8 +2424,8 @@ def holdConfig()     {buttonEvent(13, "held", "digital")}
 def releaseConfig()  {buttonEvent(14, "released", "digital")}
 
 def userSettableParams() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
-    if (parameter258 == "1") return [258,22,52,                  10,11,12,      15,17,18,19,20,21,25,50,51,            95,96,97,98,100,120,121,123,125,130,131,132,133,256,257,259,260,261,262]  //on/off mode
-    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,25,50,51,53,54,55,56,95,96,97,98,100,120,121,123,125,130,131,132,133,256,257,    260,    262]  //dimmer mode
+    if (parameter258 == "1") return [258,22,52,                  10,11,12,      15,17,18,19,20,21,25,50,51,            95,96,97,98,100,120,121,123,125,130,131,132,133,134,256,257,259,260,261,262]  //on/off mode
+    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,25,50,51,53,54,55,56,95,96,97,98,100,120,121,123,125,130,131,132,133,134,256,257,    260,    262]  //dimmer mode
 }
 
 def readOnlyParams() {
@@ -3228,7 +3229,7 @@ def readOnlyParams() {
     parameter120 : [
         number: 120,
         name: "Single Tap Behavior",
-        description: "Behavior of single tapping the on or off button. Old behavior turns the switch on or off. Single Tap cycles through the levels set by P131-133 (Firmware 1.05+). Tap Down Always Off will cycle through the speeds when pressing up, but will always turn off when tapping down. (Firmware 1.06+)",
+        description: "Behavior of single tapping the on or off button. Old behavior turns the switch on or off. Single Tap cycles through the levels set by P131-133 (Firmware 2.16+). Tap Down Always Off will cycle through the speeds when pressing up, but will always turn off when tapping down. (Firmware 2.16+)",
         range: ["0":"Old Behavior (default)","1":"Single Tap Cycle","2":"Tap Down Always Off"],
         default: 0,
         size: 8,
@@ -3238,7 +3239,7 @@ def readOnlyParams() {
     parameter121 : [
         number: 121,
         name: "Advanced Timer Mode",
-        description: "Tap Up 1x = Fan turns on<br>Tap Up 2x = 5 min.<br>Tap Up 3x = 10 min.<br>Tap Up 4x = 15 min.<br>Tap Up 5x = 30 min.<br>(Firmware 1.05+)",
+        description: "Tap Up 1x = Fan turns on<br>Tap Up 2x = 5 min.<br>Tap Up 3x = 10 min.<br>Tap Up 4x = 15 min.<br>Tap Up 5x = 30 min.<br>(Firmware 2.17+)",
         range: ["0":"Disabled (default)","1":"Enabled"],
         default: 0,
         size: 1,
@@ -3278,7 +3279,7 @@ def readOnlyParams() {
     parameter130 : [
         number: 130,
         name: "Fan Control Mode",
-        description: "Which mode to use when binding EP3 to a fan module (Firmware 1.05+)",
+        description: "Which mode to use when binding EP3 to a fan module (Firmware 2.17+)",
         range: ["0":"Disabled (default)","1":"Multi Tap", "2":"Cycle"],
         default: 0,
         size: 8,
@@ -3288,7 +3289,7 @@ def readOnlyParams() {
     parameter131 : [
         number: 131,
         name: "Low Level For Fan Control Mode",
-        description: "Level to send to device bound to EP3 when set to low (Firmware 1.05+)",
+        description: "Level to send to device bound to EP3 when set to low (Firmware 2.17+)",
         range: "2..254",
         default: 63,
         size: 8,
@@ -3298,7 +3299,7 @@ def readOnlyParams() {
     parameter132 : [
         number: 132,
         name: "Medium Level For Fan Control Mode",
-        description: "Level to send to device bound to EP3 when set to medium (Firmware 1.05+)",
+        description: "Level to send to device bound to EP3 when set to medium (Firmware 2.17+)",
         range: "2..254",
         default: 128,
         size: 8,
@@ -3308,7 +3309,7 @@ def readOnlyParams() {
     parameter133 : [
         number: 133,
         name: "High Level For Fan Control Mode",
-        description: "Level to send to device bound to EP3 when set to high (Firmware 1.05+)",
+        description: "Level to send to device bound to EP3 when set to high (Firmware 2.17+)",
         range: "2..254",
         default: 254,
         size: 8,
@@ -3318,7 +3319,7 @@ def readOnlyParams() {
     parameter134 : [
         number: 134,
         name: "LED Color For Fan Control Mode",
-        description: "LED color used to display fan control mode (Firmware 1.05+)",
+        description: "LED color used to display fan control mode (Firmware 2.17+)",
         range: "0..255",
         default: 212,
         size: 8,
