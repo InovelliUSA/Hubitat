@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-02-15" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-03-21" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM31-SN Blue Series Zigbee 2-in-1 Dimmer
@@ -24,6 +24,7 @@ def getDriverDate() { return "2024-02-15" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2024-03-21(EM) change groupbinding setting to a string to allow larger group numbers
 * 2024-02-15(EM) adding endpoint to group binding for firmware 2.16+
 * 2024-02-14(EM) fix bindGroup not sending commands
 * 2024-02-07(MA) add support for Signal Strength
@@ -381,9 +382,9 @@ metadata {
             }
         }
 		
-        input name: "groupBinding1", type: "number", title: bold("Group Bind #1"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind. To specify the source endpoint proceed the group with \"ep#.\". So if you want to bind ep 3 to group 9 you would input 3.9"), defaultValue: null, range: "1..65527"
-        input name: "groupBinding2", type: "number", title: bold("Group Bind #2"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind. To specify the source endpoint proceed the group with \"ep#.\". So if you want to bind ep 3 to group 9 you would input 3.9"), defaultValue: null, range: "1..65527"
-        input name: "groupBinding3", type: "number", title: bold("Group Bind #3"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind. To specify the source endpoint proceed the group with \"ep#.\". So if you want to bind ep 3 to group 9 you would input 3.9"), defaultValue: null, range: "1..65527"
+        input name: "groupBinding1", type: "string", title: bold("Group Bind #1"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind. To specify the source endpoint proceed the group with \"ep#.\". So if you want to bind ep 3 to group 9 you would input 3.9"), defaultValue: null, range: "1..65527"
+        input name: "groupBinding2", type: "string", title: bold("Group Bind #2"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind. To specify the source endpoint proceed the group with \"ep#.\". So if you want to bind ep 3 to group 9 you would input 3.9"), defaultValue: null, range: "1..65527"
+        input name: "groupBinding3", type: "string", title: bold("Group Bind #3"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind. To specify the source endpoint proceed the group with \"ep#.\". So if you want to bind ep 3 to group 9 you would input 3.9"), defaultValue: null, range: "1..65527"
 
         input name: "infoEnable",          type: "bool",   title: bold("Enable Info Logging"),   defaultValue: true,  description: italic("Log general device activity<br>(optional and not required for normal operation)")
         input name: "traceEnable",         type: "bool",   title: bold("Enable Trace Logging"),  defaultValue: false, description: italic("Additional info for trouble-shooting (not needed unless having issues)")
