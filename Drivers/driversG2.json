@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "VZM36: fix endpoint binding and child device creation upon device pairing; model number, cycleSpeed and setSpeed fixes",
+   "releaseNotes": "VZM31-SN: change groupbinding setting to a string to allow larger group numbers",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -99,7 +99,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-blue-series-vzm31-sn.src/inovelli-dimmer-blue-series-vzm31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "24.2.15",
+                "version": "24.3.21",
 		"releaseNotes": "" 
    	},
 	   {
