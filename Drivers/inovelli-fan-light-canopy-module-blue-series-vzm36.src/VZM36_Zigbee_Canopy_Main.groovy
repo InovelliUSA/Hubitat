@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-03-20" + orangeRed(" (beta)") }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-03-26" + orangeRed(" (beta)") }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM36 Zigbee Canopy
@@ -22,6 +22,7 @@ def getDriverDate() { return "2024-03-20" + orangeRed(" (beta)") }	// **** DATE 
 *           CHANGE LOG          
 * ------------------------------
 *
+* 2024-03-26(EM) removing incorrect fingerprint
 * 2024-03-20(EM) fix endpoint binding and child device creation upon device pairing
 * 2024-02-16(EM) optimize processing of adding and removing from groups
 * 2024-02-15(EM) adding ability to add ep1 and ep2 to a group directly from the driver
@@ -165,10 +166,7 @@ metadata {
         */
         command "updateFirmware",	   [[name:"Firmware in this channel may be \"beta\" quality"]]
 
-		fingerprint profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,0702,0B04,0B05,FC57,FC31", outClusters:"0003,0019",           model:"VZM31-SN", manufacturer:"Inovelli"
-		fingerprint profileId:"0104", endpointId:"02", inClusters:"0000,0003",                                              outClusters:"0003,0019,0006,0008", model:"VZM31-SN", manufacturer:"Inovelli"
-		fingerprint profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,0B05,1000,FC31,FC57", outClusters:"0019", model:"VZM36", manufacturer:"Inovelli"
-//      fingerprint profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,0702,0B04,FC31",           outClusters:"0003,0019",           model:"VZM31-SN", manufacturer:"Inovelli"
+	fingerprint profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,0B05,1000,FC31,FC57", outClusters:"0019", model:"VZM36", manufacturer:"Inovelli"
     }
 
     preferences {
