@@ -41,7 +41,7 @@ import hubitat.helper.HexUtils
 import java.security.MessageDigest
 
 metadata {
-    definition (name: "Inovelli VZM36 Zigbee Canopy Fan", namespace: "InovelliUSA", author: "M.Amber/E.Maycock", importUrl:"https://github.com/InovelliUSA/Beta-VZM36/raw/main/hubitat/inovelli-fan-light-canopy-module-blue-series-vzm36.src/VZM36_Zigbee_Canopy_Fan.groovy")
+    definition (name: "Inovelli VZM36 Zigbee Canopy Fan", namespace: "InovelliUSA", author: "M.Amber/E.Maycock", importUrl:"https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-canopy-module-blue-series-vzm36.src/VZM36_Zigbee_Canopy_Fan.groovy")
 	{
 		capability "Actuator"	//device can "do" something (has commands)
         capability "Sensor"		//device can "report" something (has attributes)
