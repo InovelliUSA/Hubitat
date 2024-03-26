@@ -1,4 +1,4 @@
-def getDriverDate() { return "2023-01-04" + orangeRed(" (beta)") }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2023-03-26" + orangeRed(" (beta)") }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM36 Zigbee Canopy Light
@@ -22,6 +22,7 @@ def getDriverDate() { return "2023-01-04" + orangeRed(" (beta)") }	// **** DATE 
 *           CHANGE LOG          
 * ------------------------------
 *
+* 2024-03-26(EM) removing incorrect fingerprint
 * 2024-03-14(EM) changing parameter 258 description and default
 * 2023-12-20(MA) fix cycleSpeed and setSpeed
 * 2023-12-18(MA) Move configParams Map down to the bottom
@@ -154,9 +155,6 @@ metadata {
         
         //command "updateFirmware",	   [[name:"Firmware in this channel may be \"beta\" quality"]]
 
-		fingerprint profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,0702,0B04,0B05,FC57,FC31", outClusters:"0003,0019",           model:"VZM31-SN", manufacturer:"Inovelli"
-		fingerprint profileId:"0104", endpointId:"02", inClusters:"0000,0003",                                              outClusters:"0003,0019,0006,0008", model:"VZM31-SN", manufacturer:"Inovelli"
-//      fingerprint profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,0702,0B04,FC31",           outClusters:"0003,0019",           model:"VZM31-SN", manufacturer:"Inovelli"
     }
 
     preferences {
