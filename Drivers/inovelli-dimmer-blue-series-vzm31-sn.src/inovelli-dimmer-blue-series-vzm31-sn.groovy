@@ -1865,7 +1865,7 @@ def setAttribute(Integer cluster, Integer attrInt, Integer dataType, Integer val
                 infoMsg += "${value} = ${convertByteToPercent(value)}% on 255 scale"
                 break
             case 23:
-                quickStartVariables()
+                //quickStartVariables()
                 infoMsg = ""
                 break
 			case 60:	//LED1 color when on
