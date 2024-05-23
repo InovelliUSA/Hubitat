@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-02-13" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-05-22" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW31-SN Red Series Z-Wave 2-in-1 Dimmer
@@ -18,6 +18,7 @@ def getDriverDate() { return "2024-02-13" /** + orangeRed(" (beta)") **/ }	// **
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2024-05-20(MA) fix issue where Dimmer parameters were still displayed after switching mode from Dimmer to On/Off
 * 2024-02-13(EM) adding 22, 52, 158 to "validConfigParams()"
 * 2024-02-08(EM) fixing calculateParam restricting parameter 15 from being changed to 100
 * 2024-01-15(EM) fixing incorrect range for parameter 15
@@ -311,8 +312,8 @@ def validConfigParams() {	//all valid parameters for this specific device (confi
 }
 
 def userSettableParams() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
-    if (parameter158 == "1") return [158,22,52,                  10,11,12,      15,17,18,19,20,25,50,            58,59,95,96,97,98,100,123,159,160,161,162]  //on/off mode
-    else                     return [158,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,25,50,53,54,55,56,58,59,95,96,97,98,100,123,    160,    162]  //dimmer mode
+    if (state.parameter158value == 1) return [158,22,52,                  10,11,12,      15,17,18,19,20,25,50,            58,59,95,96,97,98,100,123,159,160,161,162]  //on/off mode
+    else                              return [158,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,25,50,53,54,55,56,58,59,95,96,97,98,100,123,    160,    162]  //dimmer mode
 }
 
 def readOnlyParams() {
