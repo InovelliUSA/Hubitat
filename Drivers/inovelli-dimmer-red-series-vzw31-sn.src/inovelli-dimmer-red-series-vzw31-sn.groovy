@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-05-25" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-05-28" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW31-SN Red Series Z-Wave 2-in-1 Dimmer
@@ -18,6 +18,7 @@ def getDriverDate() { return "2024-05-25" /** + orangeRed(" (beta)") **/ }	// **
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2024-05-28(MA) add support for unique scenes on Aux switch (P123)
 * 2024-05-25(MA) move configParams map to bottom to maintain similarity with other VZxxx drivers
 * 2024-05-20(MA) fix issue where Dimmer parameters were still displayed after switching mode from Dimmer to On/Off
 * 2024-02-13(EM) adding 22, 52, 158 to "validConfigParams()"
@@ -62,8 +63,11 @@ def getDriverDate() { return "2024-05-25" /** + orangeRed(" (beta)") **/ }	// **
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
 import groovy.transform.Field
+import hubitat.device.HubAction
+import hubitat.device.HubMultiAction
+import hubitat.device.Protocol
 import hubitat.helper.ColorUtils
-//import hubitat.helper.HexUtils
+import hubitat.helper.HexUtils
 import java.security.MessageDigest
 
 metadata {
@@ -83,7 +87,7 @@ metadata {
         capability "PushableButton"
         capability "Refresh"
         capability "ReleasableButton"
-        //capability "SignalStrength"			//placeholder for future testing to see if this can be implemented
+        //capability "SignalStrength"			//placeholder for future testing to see if this can be implemented for zwave (works for zigbee)
         capability "Switch"
         capability "SwitchLevel"
 
@@ -302,13 +306,13 @@ metadata {
         input name: "infoEnable",          type: "bool",   title: bold("Enable Info Logging"),   defaultValue: true,  description: italic("Log general device activity<br>(optional and not required for normal operation)")
         input name: "traceEnable",         type: "bool",   title: bold("Enable Trace Logging"),  defaultValue: false, description: italic("Additional info for trouble-shooting (not needed unless having issues)")
         input name: "debugEnable",         type: "bool",   title: bold("Enable Debug Logging"),  defaultValue: false, description: italic("Detailed diagnostic data<br>"+fireBrick("(only enable when asked by a developer)"))
-        input name: "disableInfoLogging",  type: "number", title: bold("Disable Info Logging after this number of minutes"),  description: italic("(0=Do not disable)"), defaultValue: 20
-        input name: "disableTraceLogging", type: "number", title: bold("Disable Trace Logging after this number of minutes"), description: italic("(0=Do not disable)"), defaultValue: 10
-        input name: "disableDebugLogging", type: "number", title: bold("Disable Debug Logging after this number of minutes"), description: italic("(0=Do not disable)"), defaultValue: 5
+        input name: "disableInfoLogging",  type: "number", title: bold("Disable Info Logging after this number of minutes"),  description: italic("(0=Do not disable, default=20)"), defaultValue: 20
+        input name: "disableTraceLogging", type: "number", title: bold("Disable Trace Logging after this number of minutes"), description: italic("(0=Do not disable, default=10)"), defaultValue: 10
+        input name: "disableDebugLogging", type: "number", title: bold("Disable Debug Logging after this number of minutes"), description: italic("(0=Do not disable, default=5)"), defaultValue: 5
     }
 }
 
-def validConfigParams() {	//all valid parameters for this specific device (configParams MAP contains definitions for all parameters for all devices)
+def validConfigParams() {	//all valid parameters for this specific device (configParams Map contains definitions for all parameters for all devices)
 	return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,22,25,50,52,53,54,55,56,58,59,64,69,74,79,84,89,94,95,96,97,98,99,100,123,158,159,160,161,162]
 }
 
@@ -1201,11 +1205,11 @@ def refresh(option) {
 				if (([22,52,158,258].contains(i))		//refresh primary settings
 				|| (readOnlyParams().contains(i))		//refresh read-only params
 				|| (settings."parameter${i}"!=null)) {	//refresh user settings
-					cmds += getParameter(i)
+					getParameter(i)
 				}
 				break
 			case "All":
-				cmds += getParameter(i) //if option is All then refresh all params
+				getParameter(i) //if option is All then refresh all params
 				break
 			default: 
 				if (traceEnable||debugEnable) log.error "${device.displayName} Unknonwn option 'refresh($option)'"
@@ -1404,8 +1408,8 @@ def updated(option) { // called when "Save Preferences" is requested
     int newValue
 	validConfigParams().each { i ->	//loop through all parameters
 		//int i = it.value.number.toInteger()
-		newValue = calculateParameter(i)
-		defaultValue=getDefaultValue(i)
+		newValue = calculateParameter(i).toInteger()
+		defaultValue=getDefaultValue(i).toInteger()
 		if ([9,10,13,14,15,55,56].contains(i)) defaultValue=convertPercentToByte(defaultValue) //convert percent values back to byte values
 		if ((i==95 && parameter95custom!=null)||(i==96 && parameter96custom!=null)) {                                         //IF   a custom hue value is set
 			if ((Math.round(settings?."parameter${i}custom"?.toInteger()/360*255)==settings?."parameter${i}"?.toInteger())) { //AND  custom setting is same as normal setting
@@ -1418,7 +1422,7 @@ def updated(option) { // called when "Save Preferences" is requested
 				if ((userSettableParams().contains(i))		//IF   this is a valid parameter for this device mode
 				&& (settings."parameter$i"!=null)			//AND  this is a non-default setting
 				&& (!readOnlyParams().contains(i))) {		//AND  this is not a read-only parameter
-					cmds += setParameter(i, newValue)		//THEN set the new value
+					setParameter(i, newValue)				//THEN set the new value
 					nothingChanged = false
 				}
 				break
@@ -1427,10 +1431,10 @@ def updated(option) { // called when "Save Preferences" is requested
 				if (option=="Default") newValue = defaultValue	//if user selected "Default" then set the new value to the default value
 				if (((i!=158)&&(i!=258))					//IF   we are not changing Switch Mode
 				&& (!readOnlyParams().contains(i))) {		//AND  this is not a read-only parameter
-					cmds += setParameter(i, newValue)		//THEN Set the new value
+					setParameter(i, newValue)				//THEN Set the new value
 					nothingChanged = false
 				} else {									//ELSE this is a read-only parameter or Switch Mode parameter
-					cmds += getParameter(i)					//so Get current value from device
+					getParameter(i)							//so Get current value from device
 				}
 				break
 			default: 
@@ -1441,54 +1445,13 @@ def updated(option) { // called when "Save Preferences" is requested
             quickStartVariables()
 		}
     }
-    if (settings?.groupBinding1 && !state?.groupBinding1) {
-        bindGroup("bind",settings.groupBinding1?.toInteger())
-		//device.updateSetting("groupBinding1",[value:settings.groupBinding1?.toInteger(),type:"number"])
-		state.groupBinding1=settings.groupBinding1?.toInteger()
-        nothingChanged = false
-    } else {
-        if (!settings?.groupBinding1 && state?.groupBinding1) {
-            bindGroup("unbind",state.groupBinding1?.toInteger())
-			device.removeSetting("groupBinding1")
-			state.groupBinding1=null
-            nothingChanged = false
-        }
-    }
-    if (settings?.groupBinding2 && !state?.groupBinding2) {
-        bindGroup("bind",settings.groupBinding2?.toInteger())
-		//device.updateSetting("groupBinding2",[value:settings.groupBinding2?.toInteger(),type:"number"])
-		state.groupBinding2=settings.groupBinding2?.toInteger()
-        nothingChanged = false
-    } else {
-        if (!settings?.groupBinding2 && state?.groupBinding2) {
-            bindGroup("unbind",state.groupBinding2?.toInteger())
-			device.removeSetting("groupBinding2")
-			state.groupBinding2=null
-            nothingChanged = false
-        }
-    }
-    if (settings?.groupBinding3 && !state?.groupBinding3) {
-        bindGroup("bind",settings.groupBinding3?.toInteger())
-		//device.updateSetting("groupBinding3",[value:state.groupBinding3?.toInteger(),type:"number"])
-		state.groupBinding3=state.groupBinding3?.toInteger()
-        nothingChanged = false
-    } else {
-        if (!settings?.groupBinding3 && state?.groupBinding3) {
-            bindGroup("unbind",state.groupBinding3?.toInteger())
-			device.removeSetting("groupBinding3")
-			state.groupBinding3=null
-            nothingChanged = false
-        }
-    }
-	// remove duplicate groups
-	if (settings.groupBinding3!=null && settings.groupBinding3==settings.groupBinding2) {device.removeSetting("groupBinding3"); state.groupBinding3 = null; if (infoEnable) log.info "${device.displayName} Removed duplicate Group Bind #3"}
-	if (settings.groupBinding2!=null && settings.groupBinding2==settings.groupBinding1) {device.removeSetting("groupBinding2"); state.groupBinding2 = null; if (infoEnable) log.info "${device.displayName} Removed duplicate Group Bind #2"}
-	if (settings.groupBinding1!=null && settings.groupBinding1==settings.groupBinding3) {device.removeSetting("groupBinding3"); state.groupBinding3 = null; if (infoEnable) log.info "${device.displayName} Removed duplicate Group Bind #3"}
 	
-    if (nothingChanged && (infoEnable||traceEnable||debugEnable)) log.info "${device.displayName} No DEVICE settings were changed"
-	log.info  "${device.displayName} Info logging  " + (infoEnable?limeGreen("Enabled"):red("Disabled"))
-	log.trace "${device.displayName} Trace logging " + (traceEnable?limeGreen("Enabled"):red("Disabled"))
-	log.debug "${device.displayName} Debug logging " + (debugEnable?limeGreen("Enabled"):red("Disabled"))
+    if (nothingChanged && (infoEnable||traceEnable||debugEnable)) {
+		log.info "${device.displayName} No DEVICE settings were changed"
+		log.info  "${device.displayName} Info logging  " + (infoEnable?limeGreen("Enabled"):red("Disabled"))
+		log.trace "${device.displayName} Trace logging " + (traceEnable?limeGreen("Enabled"):red("Disabled"))
+		log.debug "${device.displayName} Debug logging " + (debugEnable?limeGreen("Enabled"):red("Disabled"))
+	}
 
     if (infoEnable && disableInfoLogging) {
 		log.info "${device.displayName} Info Logging will be disabled in $disableInfoLogging minutes"
@@ -1545,6 +1508,35 @@ void buttonEvent(button, action, type = "digital") {
             break
         case 14:
             sendEvent(name:"lastButton", value: "Release ►")
+            break
+        case 15:
+        case 16:
+        case 17:
+        case 18:
+        case 19:
+            sendEvent(name:"lastButton", value: "${action=='pushed'?'Aux Tap '.padRight(button-6, '▲'):'Aux Tap '.padRight(button-6, '▼')}")
+            break
+        case 20:
+            sendEvent(name:"lastButton", value: "${action=='pushed'?'Aux Hold ▲':'Aux Hold ▼'}")
+            break
+        case 21:
+            sendEvent(name:"lastButton", value: "${action=='pushed'?'Aux Release ▲':'Aux Release ▼'}")
+            break
+        case 22:
+        case 23:
+        case 24:
+        case 25:
+        case 26:
+            sendEvent(name:"lastButton", value: "Aux Tap ".padRight(button-13, "►"))
+            break
+        case 27:
+            sendEvent(name:"lastButton", value: "Aux Hold ►")
+            break
+        case 28:
+            sendEvent(name:"lastButton", value: "Aux Release ►")
+            break
+        default:       //undefined button event
+            log.warn "${device.displayName} " + fireBrick("Undefined Button=$button Action=$action Type=$type")
             break
     }
 }
@@ -1771,7 +1763,7 @@ def processAssociations(){
 //*******************************************************************************/
 
 @Field static Integer shortDelay = 500		//default delay to use for zwave commands (in milliseconds)
-@Field static Integer longDelay = 1000		//long delay to use for changing modes (in milliseconds)
+@Field static Integer longDelay = 1500		//long delay to use for changing modes (in milliseconds)
 @Field static Integer defaultQuickLevel=50	//default startup level for QuickStart emulation
 @Field static List ledNotificationEndpoints = [99]
 
@@ -1952,10 +1944,26 @@ def processAssociations(){
         size: 1,
         type: "number"
         ],
+    parameter024 : [
+        name: "Quick Start Level",
+        description: "Level of higher power needed to illuminate the bulb before lowering to desired brightness (0=disabled)",
+        range: "0..100",
+        default: 0,
+        size: 8,
+        type: "number"
+        ],
     parameter025 : [
         name: "Higher Output in non-Neutral",
         description: "Ability to increase level in non-neutral mode but may cause problems with high level ficker or aux switch detection. Adjust max level (P10) if you have problems with this enabled.",
         range: ["0":"Disabled (default)","1":"Enabled"],
+        default:0,
+        size: 1,
+        type: "enum"
+        ],
+    parameter026 : [
+        name: "Dimming Method",
+        description: "Select Leading Edge or Trailing Edge dimming method",
+        range: ["0":"Leading (default)","1":"Trailing"],
         default:0,
         size: 1,
         type: "enum"
@@ -2392,6 +2400,22 @@ def processAssociations(){
         size: 1,
         type: "enum"
         ],
+    parameter120 : [
+        name: "Single Tap Behavior",
+        description: "Behavior of single tapping the on or off button. Old behavior turns the switch on or off. Single Tap cycles through the levels set by P131-133 (Firmware 2.16+). Tap Down Always Off will cycle through the levels when pressing up, but will always turn off when tapping down. (Firmware 2.16+)",
+        range: ["0":"Old Behavior (default)","1":"Single Tap Cycle","2":"Tap Down Always Off"],
+        default: 0,
+        size: 8,
+        type: "enum"
+        ],
+    parameter121 : [
+        name: "Advanced Timer Mode",
+        description: "Tap Up 1x = Switch turns on<br>Tap Up 2x = 5 min.<br>Tap Up 3x = 10 min.<br>Tap Up 4x = 15 min.<br>Tap Up 5x = 30 min.<br>(Firmware 2.17+)",
+        range: ["0":"Disabled (default)","1":"Enabled"],
+        default: 0,
+        size: 1,
+        type: "enum"
+        ],
     parameter123 : [
         name: "Aux Switch Unique Scenes",
         description: "Have unique scene numbers for scenes activated with the aux switch",
@@ -2407,6 +2431,56 @@ def processAssociations(){
         default: 0,
         size: 1,
         type: "enum"
+        ],
+    parameter129 : [
+        name: "Breeze and Wind Down Mode",
+        description: "4-byte encoded Breeze and Wind Down Mode. For now use the "+
+					'''<a href="https://inovelli-my.sharepoint.com/:x:/p/ericm/ETQi0QfqAD5BotKTW0QyDqEB-XozdRJTkghBEkB_l9YT8Q" target="_blank">'''+
+					"Breeze Mode Calculator</a> to determine value",
+        range: "0..4294967295",
+        default: 0,
+        size: 32,
+        type: "number"
+        ],
+    parameter130 : [
+        name: "Fan Control Mode",
+        description: "Which mode to use when binding EP3 to a fan module (Firmware 2.17+)",
+        range: ["0":"Disabled (default)","1":"Multi Tap", "2":"Cycle"],
+        default: 0,
+        size: 8,
+        type: "enum"
+        ],
+    parameter131 : [
+        name: "Low Level For Fan Control Mode",
+        description: "Level to send to device bound to EP3 when set to low (Firmware 2.17+)",
+        range: "0..100",
+        default: 33,
+        size: 8,
+        type: "number"
+        ],
+    parameter132 : [
+        name: "Medium Level For Fan Control Mode",
+        description: "Level to send to device bound to EP3 when set to medium (Firmware 2.17+)",
+        range: "0..100",
+        default: 66,
+        size: 8,
+        type: "number"
+        ],
+    parameter133 : [
+        name: "High Level For Fan Control Mode",
+        description: "Level to send to device bound to EP3 when set to high (Firmware 2.17+)",
+        range: "0..100",
+        default: 100,
+        size: 8,
+        type: "number"
+        ],
+    parameter134 : [
+        name: "LED Color For Fan Control Mode",
+        description: "LED color used to display fan control mode (Firmware 2.17+)",
+        range: "0..255",
+        default: 212,
+        size: 8,
+        type: "number"
         ],
     parameter156 : [
         name: "Local Protection",
@@ -2482,9 +2556,9 @@ String strike(s)    { return "<s>$s</s>" }
 String underline(s) { return "<u>$s</u>" }
 String hue(Integer h, String s) {
     h = Math.min(Math.max((h!=null?h:170),1),255)    //170 is Inovelli factory default blue
-	def result =  '<font '
-	if (h==255)     result += 'style="background-color:Gray" '
+	def result =  '<font '														   
 	if (h>30&&h<70) result += 'style="background-color:DarkGray" '
+	if (h==255)     result += 'style="background-color:LightGray" '
     if (h==255)     result += 'color="White"'
 	else            result += 'color="' + hubitat.helper.ColorUtils.rgbToHEX(hubitat.helper.ColorUtils.hsvToRGB([(h/255*100), 100, 100])) + '"' 
 	result += ">$s</font>"
