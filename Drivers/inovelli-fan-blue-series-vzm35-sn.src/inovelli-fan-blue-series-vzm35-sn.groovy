@@ -2414,8 +2414,8 @@ def holdConfig()     {buttonEvent(13, "held", "digital")}
 def releaseConfig()  {buttonEvent(14, "released", "digital")}
 
 def userSettableParams() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
-    if (parameter258 == "1") return [258,22,52,                  10,11,12,      15,17,      50,            95,96,97,98,100,    121,123,125,                    256,257,259,260,262,263]  //on/off mode
-    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,23,24,50,53,54,55,56,95,96,97,98,100,120,121,123,125,129,                256,257,    260,262,263]  //multi-speed mode
+    if (parameter258 == "1") return [258,22,52,                  10,11,12,      15,17,      50,            95,96,97,98,100,    121,123,125,129,130,131,132,133,134,256,257,259,260,262,263]  //on/off mode
+    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,23,24,50,53,54,55,56,95,96,97,98,100,120,121,123,125,129,130,131,132,133,134,256,257,    260,262,263]  //multi-speed mode
 }
 
 def readOnlyParams() {
