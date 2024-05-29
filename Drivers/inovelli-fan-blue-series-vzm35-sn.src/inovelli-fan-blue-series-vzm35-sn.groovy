@@ -1,5 +1,5 @@
-def getDriverDate() { return "2024-02-16" }	// **** DATE OF THE DEVICE DRIVER
-//  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
+def getDriverDate() { return "2024-05-28" }	// **** DATE OF THE DEVICE DRIVER
+//  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM35-SN Blue Series Zigbee Fan Switch
 *
@@ -24,6 +24,9 @@ def getDriverDate() { return "2024-02-16" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2024-05-28(MA) misc. code cleanup
+* 2024-04-26(MA) add option to automatically bind group when created with the Groups and Scenes App
+* 2024-04-25(MA) move parsePrivateCluster() into its own method to reduce 'parse method too large' compiler errors
 * 2024-02-16(EM) fix bug that was preventing parameters from being set to 0
 * 2024-02-14(EM) fix bindGroup not sending commands
 * 2024-02-13(MA) temporarily hard-code model name due to bug in fw 1.06 not reporting it
@@ -166,7 +169,7 @@ metadata {
         attribute "lastButton", "String"		//last button event
         attribute "ledEffect", "String"			//last LED effect requested (may have timed-out and not necessarily displaying currently)
 		attribute "internalTemp", "String"		//Internal Temperature in Celsius	(read-only P32)
-        attribute "numberOfBindings", "String"	//Group bindings count as 2			(read only P51)
+        //attribute "numberOfBindings", "String"	//Group bindings count as 2		(commented out since this number is unreliable)
 		attribute "overHeat", "String"			//Overheat Indicator				(read-only P33)
 		attribute "powerSource", "String"		//Neutral/non-Neutral				(read-only P21)
 		attribute "remoteProtection", "String"	//Enabled or Disabled				(read-only P257)
@@ -341,9 +344,10 @@ metadata {
             }
         }
 		
-        input name: "groupBinding1", type: "number", title: bold("Group Bind #1"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind"), defaultValue: null, range: "1..65527"
-        input name: "groupBinding2", type: "number", title: bold("Group Bind #2"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind"), defaultValue: null, range: "1..65527"
-        input name: "groupBinding3", type: "number", title: bold("Group Bind #3"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind"), defaultValue: null, range: "1..65527"
+        input name: "groupBinding1", type: "string", title: bold("Group Bind #1"),   description: italic("Enter the Zigbee Group ID or leave blank to UNBind. To specify the source endpoint preceed the group with \"ep#.\" To bind ep 3 to group 9 you would input 3.9"), defaultValue: null, range: "1..65527"
+        input name: "groupBinding2", type: "string", title: bold("Group Bind #2"),   description: italic("Enter the Zigbee Group ID or leave blank to UNBind. To specify the source endpoint preceed the group with \"ep#.\" To bind ep 3 to group 9 you would input 3.9"), defaultValue: null, range: "1..65527"
+        input name: "groupBinding3", type: "string", title: bold("Group Bind #3"),   description: italic("Enter the Zigbee Group ID or leave blank to UNBind. To specify the source endpoint preceed the group with \"ep#.\" To bind ep 3 to group 9 you would input 3.9"), defaultValue: null, range: "1..65527"
+        input name: "autoGroupBind", type: "bool",   title: bold("Auto Group Bind"), description: italic("Automatically bind to group when created with the Groups and Scenes App"), defaultValue: false
 
         input name: "infoEnable",          type: "bool",   title: bold("Enable Info Logging"),   defaultValue: true,  description: italic("Log general device activity<br>(optional and not required for normal operation)")
         input name: "traceEnable",         type: "bool",   title: bold("Enable Trace Logging"),  defaultValue: false, description: italic("Additional info for trouble-shooting (not needed unless having issues)")
@@ -383,10 +387,17 @@ def bindGroup(action="", group=0) {
     if (infoEnable) log.info "${device.displayName} bindGroup($action, $group))"
     state.lastCommandSent =                        "bindGroup($action, $group))"
     state.lastCommandTime = nowFormatted()
+    if (group.toString().split('\\.').length > 1) {
+        endpoint = group.toString().split('\\.')[0]
+        group = group.toString().split('\\.')[1]
+    } else {
+        group = group
+        endpoint = 2
+    }
 	def cmds = []
 	if (action=="bind" || action=="unbind") {
-		cmds += ["zdo $action 0x${device.deviceNetworkId} 0x02 0x01 0x0006 {${device.zigbeeId}} {${zigbee.convertToHexString(group.toInteger(),4)}}"]
-		cmds += ["zdo $action 0x${device.deviceNetworkId} 0x02 0x01 0x0008 {${device.zigbeeId}} {${zigbee.convertToHexString(group.toInteger(),4)}}"]
+        cmds += ["zdo $action 0x${device.deviceNetworkId} 0x0${endpoint} 0x01 0x0006 {${device.zigbeeId}} {${zigbee.convertToHexString(group.toInteger(),4)}}"]
+        cmds += ["zdo $action 0x${device.deviceNetworkId} 0x0${endpoint} 0x01 0x0008 {${device.zigbeeId}} {${zigbee.convertToHexString(group.toInteger(),4)}}"]
 		cmds += "delay 60000"		//binding can take up to 60 seconds
 	} else {
 		if (infoEnable) log.warn "${device.displayName} " + fireBrick("Invalid Bind action: '$action'")
@@ -415,7 +426,6 @@ def calculateParameter(Integer paramNum) {
 	paramNum = (paramNum?:0).toInteger()
     //def value = Math.round((settings?."parameter${paramNum}"!=null?settings?."parameter${paramNum}":getDefaultValue(paramNum))?.toFloat())?.toInteger()
 	def value = settings."parameter${paramNum}"!=null?settings."parameter${paramNum}":getDefaultValue(paramNum)
-    
     switch (paramNum){
         case 9:     //Min Level
         case 10:    //Max Level
@@ -470,7 +480,7 @@ def calculateSize(size) {
 }
 
 def clearSetting(i) {
-	i = i?:0
+	//i = i?:0
 	def cleared = false
 	if (settings."parameter${i}"!=null)   {cleared=true; device.removeSetting("parameter" + i)}
 	if (state."parameter${i}value"!=null) {cleared=true; state.remove("parameter" + i + "value")}
@@ -497,19 +507,19 @@ def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS A
     sendEvent(name: "numberOfButtons", value: settings.parmeter23?28:14)
     def cmds = []
 	if (infoEnable) log.info "${device.displayName} re-establish lifeline bindings to hub"
-//	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0000 {${device.zigbeeId}} {}"] //Basic Cluster
-//	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0003 {${device.zigbeeId}} {}"] //Identify Cluster
-//	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0004 {${device.zigbeeId}} {}"] //Group Cluster
-//	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0005 {${device.zigbeeId}} {}"] //Scenes Cluster
+	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0000 {${device.zigbeeId}} {}"] //Basic Cluster
+	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0003 {${device.zigbeeId}} {}"] //Identify Cluster
+	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0004 {${device.zigbeeId}} {}"] //Group Cluster
+	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0005 {${device.zigbeeId}} {}"] //Scenes Cluster
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0006 {${device.zigbeeId}} {}"] //On_Off Cluster
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0008 {${device.zigbeeId}} {}"] //Level Control Cluster
-//	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0019 {${device.zigbeeId}} {}"] //OTA Upgrade Cluster
+	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0019 {${device.zigbeeId}} {}"] //OTA Upgrade Cluster
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0202 {${device.zigbeeId}} {}"] //Fan Control Cluster
 //	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0702 {${device.zigbeeId}} {}"] //Simple Metering - to get energy reports
 //	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0B04 {${device.zigbeeId}} {}"] //Electrical Measurement - to get power reports
-	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0B05 {${device.zigbeeId}} {}"] //Diagnostics Cluster
-//	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x8021 {${device.zigbeeId}} {}"] //Binding Cluster
-//	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x8022 {${device.zigbeeId}} {}"] //UnBinding Cluster
+	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0B05 {${device.zigbeeId}} {}"] //Diagnostics Cluster - to get signal reports
+	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x8021 {${device.zigbeeId}} {}"] //Binding Cluster
+	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x8022 {${device.zigbeeId}} {}"] //UnBinding Cluster
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0xFC31 {${device.zigbeeId}} {}"] //Private Cluster
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0xFC31 {${device.zigbeeId}} {}"] //Private Cluster ep2
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0xFC57 {${device.zigbeeId}} {}"] //???? ???? (listed in fingerprint)
@@ -787,13 +797,8 @@ def parse(String description) {
     def clusterInt=	descMap.clusterInt
 	def clusterName=clusterLookup(clusterInt)
 	def valueInt	//declared empty at top level so values can be assigned in each case and then displayed at the bottom
-    //try {
-	//	def valueInt=Integer.parseInt(descMap['value'],16)
-	//} catch (e) {
-	//	def valueInt=null
-	//}
     def valueStr =   descMap['value']?:"unknown"
-    switch (clusterInt){
+    switch (clusterInt) {
         case 0x0000:    //BASIC CLUSTER
             if (traceEnable||debugEnable) traceCluster(description)
             switch (attrInt) {
@@ -876,17 +881,19 @@ def parse(String description) {
 						switch (descMap.command) {
 							case "00":
 								if (infoEnable) log.info "${device.displayName} Add Group $groupNumInt (0x$groupNumHex)"
-								//bindGroup("bind",groupNumInt)
-								//if (settings.groupBinding1==null || settings.groupBinding1?.toInteger()==groupNumInt || state.groupBinding1?.toInteger()==groupNumInt) {
-								//	device.updateSetting("groupBinding1",[value:groupNumInt,type:"number"])
-								//	state.groupBinding1=groupNumInt
-								//} else if (settings.groupBinding2==null || settings.groupBinding2?.toInteger()==groupNumInt || state.groupBinding2?.toInteger()==groupNumInt) {
-								//	device.updateSetting("groupBinding2",[value:groupNumInt,type:"number"])
-								//	state.groupBinding2=groupNumInt
-								//} else if (settings.groupBinding3==null || settings.groupBinding3?.toInteger()==groupNumInt || state.groupBinding3?.toInteger()==groupNumInt) {
-								//	device.updateSetting("groupBinding3",[value:groupNumInt,type:"number"])
-								//	state.groupBinding3=groupNumInt
-								//}
+								if (autoGroupBind) {
+									bindGroup("bind",groupNumInt)
+									if (settings.groupBinding1==null || settings.groupBinding1?.toInteger()==groupNumInt || state.groupBinding1?.toInteger()==groupNumInt) {
+										device.updateSetting("groupBinding1",[value:groupNumInt,type:"number"])
+										state.groupBinding1=groupNumInt
+									} else if (settings.groupBinding2==null || settings.groupBinding2?.toInteger()==groupNumInt || state.groupBinding2?.toInteger()==groupNumInt) {
+										device.updateSetting("groupBinding2",[value:groupNumInt,type:"number"])
+										state.groupBinding2=groupNumInt
+									} else if (settings.groupBinding3==null || settings.groupBinding3?.toInteger()==groupNumInt || state.groupBinding3?.toInteger()==groupNumInt) {
+										device.updateSetting("groupBinding3",[value:groupNumInt,type:"number"])
+										state.groupBinding3=groupNumInt
+									}
+								}
 								break
 							case "01":
 								if (infoEnable) log.info "${device.displayName} View Group $groupNumInt (0x$groupNumHex)"
@@ -896,10 +903,10 @@ def parse(String description) {
 								break
 							case "03":
 								if (infoEnable) log.info "${device.displayName} Remove Group $groupNumInt (0x$groupNumHex)"
-								//bindGroup("unbind",groupNumInt)
-								//if      (settings.groupBinding1?.toInteger()==groupNumInt || state.groupBinding1?.toInteger()==groupNumInt) {device.removeSetting("groupBinding1"); state.remove(groupBinding1)}
-								//else if (settings.groupBinding2?.toInteger()==groupNumInt || state.groupBinding2?.toInteger()==groupNumInt) {device.removeSetting("groupBinding2"); state.remove(groupBinding2)}
-								//else if (settings.groupBinding3?.toInteger()==groupNumInt || state.groupBinding3?.toInteger()==groupNumInt) {device.removeSetting("groupBinding3"); state.remove(groupBinding3)}
+								bindGroup("unbind",groupNumInt)
+								if      (settings.groupBinding1?.toInteger()==groupNumInt || state.groupBinding1?.toInteger()==groupNumInt) {device.removeSetting("groupBinding1"); state.remove(groupBinding1)}
+								else if (settings.groupBinding2?.toInteger()==groupNumInt || state.groupBinding2?.toInteger()==groupNumInt) {device.removeSetting("groupBinding2"); state.remove(groupBinding2)}
+								else if (settings.groupBinding3?.toInteger()==groupNumInt || state.groupBinding3?.toInteger()==groupNumInt) {device.removeSetting("groupBinding3"); state.remove(groupBinding3)}
 								break
 							case "04":
 								if (infoEnable) log.info "${device.displayName} Remove All Groups"
@@ -1257,11 +1264,32 @@ def parse(String description) {
             if (traceEnable) traceCluster(description)
             break
         case 0x8032:    //ROUTING TABLE CLUSTER
-            //if (infoEnable||debugEnable) log.info "${device.displayName} "+darkOrange("Routing_Table Cluster ") + (debugEnable?descMap:"")
             if (infoEnable||traceEnable||debugEnable) traceCluster(description)
             break
         case 0xfc31:    //PRIVATE CLUSTER
             if (traceEnable||debugEnable) traceCluster(description)
+            parsePrivateCluster(description)
+            break
+		default:
+			if (infoEnable||traceEnable||debugEnable) log.warn "${device.displayName} " + fireBrick("Unknown Cluster:$clusterName  ") + description
+			break
+	}
+    state.lastEventCluster =   clusterName
+    state.lastEventTime =      nowFormatted()
+    state.lastEventAttribute = descMap.attrInt
+    state.lastEventValue =     descMap.value
+}
+
+def parsePrivateCluster(description) {
+    if (traceEnable||debugEnable) traceCluster(description)
+    Map descMap = zigbee.parseDescriptionAsMap(description)
+	def attrId=		descMap.attrId
+    def attrInt=	descMap.attrInt
+    def clusterId=	descMap.clusterId!=null?descMap.clusterId:descMap.cluster
+    def clusterInt=	descMap.clusterInt
+	def clusterName=clusterLookup(clusterInt)
+	def valueInt	//declared empty at top level so values can be assigned in each case and then displayed at the bottom
+    def valueStr =   descMap['value']?:"unknown"
             if (attrInt == null) {
                 if (descMap.isClusterSpecific) {
                     if (descMap.command == "00") ZigbeePrivateCommandEvent(descMap.data)        //Button Events
@@ -1271,9 +1299,6 @@ def parse(String description) {
             } else if (descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
                 valueInt = Integer.parseInt(descMap['value'],16)
 				def valueHex = intTo32bitUnsignedHex(valueInt)
-				def infoDev = "${device.displayName} "
-				def infoTxt = "P${attrInt}=${valueInt}"
-				def infoMsg = infoDev + infoTxt
                 if ((attrInt==9)
 				|| (attrInt==10)
 				|| (attrInt==13)
@@ -1287,6 +1312,9 @@ def parse(String description) {
 				|| (attrInt==133)) {
 					valueInt = convertByteToPercent(valueInt) //these attributes are stored as bytes but displayed as percentages
 				}
+				def infoDev = "${device.displayName} "
+				def infoTxt = "P${attrInt}=${valueInt}"
+				def infoMsg = infoDev + infoTxt
                 switch (attrInt){
                     case 0:
 						infoMsg += " (temporarily stored level during transitions)"
@@ -1622,15 +1650,6 @@ def parse(String description) {
 				}
 			}
 			else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command:$descMap.command ") //+ descMap
-			break
-		default:
-			if (infoEnable||traceEnable||debugEnable) log.warn "${device.displayName} " + fireBrick("Unknown Cluster:$clusterName  ") + description
-			break
-	}
-    state.lastEventCluster =   clusterName
-    state.lastEventTime =      nowFormatted()
-    state.lastEventAttribute = attrInt
-    state.lastEventValue =     descMap.value
 }
 
 def presetLevel(value) {
@@ -1771,7 +1790,7 @@ def refresh(option) {
     if (infoEnable||traceEnable||debugEnable) log.info "${device.displayName} Driver Date $state.driverDate"
 	readDeviceAttributes()
 	configParams.each {	//loop through all parameters
-		int i = it.value.number.toInteger()
+		int i = it.toString().substring(9,12).toInteger()
 		switch (option) {
 			case "":									//option is blank or null 
 				if (([22,52,158,258].contains(i))		//refresh primary settings
@@ -1827,8 +1846,8 @@ def setAttribute(Integer cluster, Integer attrInt, Integer dataType, Integer val
 			case 24:	//Quick Start Level
 			case 55:	//Double-Tap UP Level
 			case 56:	//Double-Tap DOWN Level
-			case 131:	//Low Level For Fan Control Mode
-			case 132:	//Med Level For Fan Control Mode
+			case 131:	//Low  Level For Fan Control Mode
+			case 132:	//Med  Level For Fan Control Mode
 			case 133:	//High Level For Fan Control Mode
                 infoMsg += "${value} = ${convertByteToPercent(value)}% on 255 scale"
                 break
@@ -2036,7 +2055,7 @@ def updated(option) { // called when "Save Preferences" is requested
     int defaultValue
     int newValue
 	configParams.each {	//loop through all parameters
-		int i = it.value.number.toInteger()
+		int i = it.toString().substring(9,12).toInteger()
 		newValue = calculateParameter(i).toInteger()
 		defaultValue=getDefaultValue(i).toInteger()
 		if ([9,10,13,14,15,24,55,56,131,132,133].contains(i)) defaultValue=convertPercentToByte(defaultValue) //convert percent values back to byte values
@@ -2073,39 +2092,39 @@ def updated(option) { // called when "Save Preferences" is requested
 		}
     }
     if (settings?.groupBinding1 && !state?.groupBinding1) {
-        bindGroup("bind",settings.groupBinding1?.toInteger())
+        bindGroup("bind",settings.groupBinding1)
 		//device.updateSetting("groupBinding1",[value:settings.groupBinding1?.toInteger(),type:"number"])
-		state.groupBinding1=settings.groupBinding1?.toInteger()
+		state.groupBinding1=settings.groupBinding1
         nothingChanged = false
     } else {
         if (!settings?.groupBinding1 && state?.groupBinding1) {
-            bindGroup("unbind",state.groupBinding1?.toInteger())
+            bindGroup("unbind",state.groupBinding1)
 			device.removeSetting("groupBinding1")
 			state.groupBinding1=null
             nothingChanged = false
         }
     }
     if (settings?.groupBinding2 && !state?.groupBinding2) {
-        bindGroup("bind",settings.groupBinding2?.toInteger())
+        bindGroup("bind",settings.groupBinding2)
 		//device.updateSetting("groupBinding2",[value:settings.groupBinding2?.toInteger(),type:"number"])
-		state.groupBinding2=settings.groupBinding2?.toInteger()
+		state.groupBinding2=settings.groupBinding2
         nothingChanged = false
     } else {
         if (!settings?.groupBinding2 && state?.groupBinding2) {
-            bindGroup("unbind",state.groupBinding2?.toInteger())
+            bindGroup("unbind",state.groupBinding2)
 			device.removeSetting("groupBinding2")
 			state.groupBinding2=null
             nothingChanged = false
         }
     }
     if (settings?.groupBinding3 && !state?.groupBinding3) {
-        bindGroup("bind",settings.groupBinding3?.toInteger())
+        bindGroup("bind",settings.groupBinding3)
 		//device.updateSetting("groupBinding3",[value:state.groupBinding3?.toInteger(),type:"number"])
-		state.groupBinding3=state.groupBinding3?.toInteger()
+		state.groupBinding3=state.groupBinding3
         nothingChanged = false
     } else {
         if (!settings?.groupBinding3 && state?.groupBinding3) {
-            bindGroup("unbind",state.groupBinding3?.toInteger())
+            bindGroup("unbind",state.groupBinding3)
 			device.removeSetting("groupBinding3")
 			state.groupBinding3=null
             nothingChanged = false
@@ -2116,10 +2135,12 @@ def updated(option) { // called when "Save Preferences" is requested
 	if (settings.groupBinding2!=null && settings.groupBinding2==settings.groupBinding1) {device.removeSetting("groupBinding2"); state.groupBinding2 = null; if (infoEnable) log.info "${device.displayName} Removed duplicate Group Bind #2"}
 	if (settings.groupBinding1!=null && settings.groupBinding1==settings.groupBinding3) {device.removeSetting("groupBinding3"); state.groupBinding3 = null; if (infoEnable) log.info "${device.displayName} Removed duplicate Group Bind #3"}
 	
-    if (nothingChanged && (infoEnable||traceEnable||debugEnable)) log.info "${device.displayName} No DEVICE settings were changed"
-	log.info  "${device.displayName} Info logging  " + (infoEnable?limeGreen("Enabled"):red("Disabled"))
-	log.trace "${device.displayName} Trace logging " + (traceEnable?limeGreen("Enabled"):red("Disabled"))
-	log.debug "${device.displayName} Debug logging " + (debugEnable?limeGreen("Enabled"):red("Disabled"))
+    if (nothingChanged && (infoEnable||traceEnable||debugEnable)) {
+		log.info "${device.displayName} No DEVICE settings were changed"
+		log.info  "${device.displayName} Info logging  " + (infoEnable?limeGreen("Enabled"):red("Disabled"))
+		log.trace "${device.displayName} Trace logging " + (traceEnable?limeGreen("Enabled"):red("Disabled"))
+		log.debug "${device.displayName} Debug logging " + (debugEnable?limeGreen("Enabled"):red("Disabled"))
+	}
 
     if (infoEnable && disableInfoLogging) {
 		log.info "${device.displayName} Info Logging will be disabled in $disableInfoLogging minutes"
@@ -2393,20 +2414,18 @@ def holdConfig()     {buttonEvent(13, "held", "digital")}
 def releaseConfig()  {buttonEvent(14, "released", "digital")}
 
 def userSettableParams() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
-    if (parameter258 == "1") return [258,22,52,                  10,11,12,      15,17,23,50,            95,96,97,98,100,    121,123,125,    130,131,132,133,134,256,257,259,260,262,263]  //on/off mode
-    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,23,50,53,54,55,56,95,96,97,98,100,120,121,123,125,129,130,131,132,133,134,256,257,    260,262,263]  //multi-speed mode
+    if (parameter258 == "1") return [258,22,52,                  10,11,12,      15,17,      50,            95,96,97,98,100,    121,123,125,                    256,257,259,260,262,263]  //on/off mode
+    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,23,24,50,53,54,55,56,95,96,97,98,100,120,121,123,125,129,                256,257,    260,262,263]  //multi-speed mode
 }
 
 def readOnlyParams() {
-	return [0,21,32,33,51,157,257]
+	return [0,21,30,31,32,33,51,157,257]
 }
 
 @Field static Integer shortDelay = 333		//default delay to use for zigbee commands (in milliseconds)
 @Field static Integer longDelay = 1000		//long delay to use for changing modes (in milliseconds)
-@Field static Integer defaultQuickLevel=50	//default startup level for QuickStart emulation
 @Field static Map configParams = [
     parameter001 : [
-        number: 1,
         name: "Dimming Speed - Up (Remote)",
         description: "Sets the rate that the fan speeds up when controlled from the hub. A setting of 'instant' turns the fan immediately on.<br>Default=2.5s",
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s (default)","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s"],
@@ -2415,7 +2434,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter002 : [
-        number: 2,
         name: "Dimming Speed - Up (Local)",
         description: "Sets the rate that the fan speeds up when controlled at the switch. A setting of 'instant' turns the fan immediately on.<br>Default=Sync with parameter1",
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s","127":"Sync with parameter1"],
@@ -2424,7 +2442,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter003 : [
-        number: 3,
         name: "Ramp Rate - Off to On (Remote)",
         description: "Sets the rate that the fan fades on when controlled from the hub. A setting of 'instant' turns the fan immediately on.<br>Default=Sync with parameter1",
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s","127":"Sync with parameter1"],
@@ -2433,7 +2450,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter004 : [
-        number: 4,
         name: "Ramp Rate - Off to On (Local)",
         description: "Sets the rate that the fan fades on when controlled at the switch. A setting of 'instant' turns the fan immediately on.<br>Default=Sync with parameter3",
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s","127":"Sync with parameter3"],
@@ -2442,7 +2458,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter005 : [
-        number: 5,
         name: "Dimming Speed - Down (Remote)",
         description: "Sets the rate that the fan slows down when controlled from the hub. A setting of 'instant' turns the fan immediately off.<br>Default=Sync with parameter1",
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s","127":"Sync with parameter1"],
@@ -2451,7 +2466,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter006 : [
-        number: 6,
         name: "Dimming Speed - Down (Local)",
         description: "Sets the rate that the fan slows down when controlled at the switch. A setting of 'instant' turns the fan immediately off.<br>Default=Sync with parameter2",
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s","127":"Sync with parameter2"],
@@ -2460,7 +2474,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter007 : [
-        number: 7,
         name: "Ramp Rate - On to Off (Remote)",
         description: "Sets the rate that the fan fades off when controlled from the hub. A setting of 'instant' turns the fan immediately off.<br>Default=Sync with parameter3",
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s","127":"Sync with parameter3"],
@@ -2469,7 +2482,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter008 : [
-        number: 8,
         name: "Ramp Rate - On to Off (Local)",
         description: "Sets the rate that the fan fades off when controlled at the switch. A setting of 'instant' turns the fan immediately off.<br>Default=Sync with parameter4",
         range: ["0":"instant","5":"500ms","6":"600ms","7":"700ms","8":"800ms","9":"900ms","10":"1.0s","11":"1.1s","12":"1.2s","13":"1.3s","14":"1.4s","15":"1.5s","16":"1.6s","17":"1.7s","18":"1.8s","19":"1.9s","20":"2.0s","21":"2.1s","22":"2.2s","23":"2.3s","24":"2.4s","25":"2.5s","26":"2.6s","27":"2.7s","28":"2.8s","29":"2.9s","30":"3.0s","31":"3.1s","32":"3.2s","33":"3.3s","34":"3.4s","35":"3.5s","36":"3.6s","37":"3.7s","38":"3.8s","39":"3.9s","40":"4.0s","41":"4.1s","42":"4.2s","43":"4.3s","44":"4.4s","45":"4.5s","46":"4.6s","47":"4.7s","48":"4.8s","49":"4.9s","50":"5.0s","51":"5.1s","52":"5.2s","53":"5.3s","54":"5.4s","55":"5.5s","56":"5.6s","57":"5.7s","58":"5.8s","59":"5.9s","60":"6.0s","61":"6.1s","62":"6.2s","63":"6.3s","64":"6.4s","65":"6.5s","66":"6.6s","67":"6.7s","68":"6.8s","69":"6.9s","70":"7.0s","71":"7.1s","72":"7.2s","73":"7.3s","74":"7.4s","75":"7.5s","76":"7.6s","77":"7.7s","78":"7.8s","79":"7.9s","80":"8.0s","81":"8.1s","82":"8.2s","83":"8.3s","84":"8.4s","85":"8.5s","86":"8.6s","87":"8.7s","88":"8.8s","89":"8.9s","90":"9.0s","91":"9.1s","92":"9.2s","93":"9.3s","94":"9.4s","95":"9.5s","96":"9.6s","97":"9.7s","98":"9.8s","99":"9.9s","100":"10.0s","101":"10.1s","102":"10.2s","103":"10.3s","104":"10.4s","105":"10.5s","106":"10.6s","107":"10.7s","108":"10.8s","109":"10.9s","110":"11.0s","111":"11.1s","112":"11.2s","113":"11.3s","114":"11.4s","115":"11.5s","116":"11.6s","117":"11.7s","118":"11.8s","119":"11.9s","120":"12.0s","121":"12.1s","122":"12.2s","123":"12.3s","124":"12.4s","125":"12.5s","126":"12.6s","127":"Sync with parameter4"],
@@ -2478,7 +2490,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter009 : [
-        number: 9,
         name: "Minimum Level",
         description: "Sets the minimum fan speed",
         range: "1..99",
@@ -2487,7 +2498,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter010 : [
-        number: 10,
         name: "Maximum Level",
         description: "Sets the maximum fan speed",
         range: "2..100",
@@ -2496,7 +2506,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter011 : [
-        number: 11,
         name: "Invert Switch",
         description: "Inverts the orientation of the switch. Useful when the switch is installed upside down. Essentially up becomes down and down becomes up.",
         range: ["0":"No (default)", "1":"Yes"],
@@ -2505,7 +2514,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter012 : [
-        number: 12,
         name: "Auto Off Timer",
         description: "Automatically turns the switch off after this many seconds. When the switch is turned on a timer is started. When the timer expires the switch turns off.<br>0=Auto Off Disabled.",
         range: "0..32767",
@@ -2514,7 +2522,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter013 : [
-        number: 13,
         name: "Default Level (Local)",
         description: "Default level for the fan when turned on at the switch.<br>1-100=Set Level<br>101=Use previous level.",
         range: "1..101",
@@ -2523,7 +2530,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter014 : [
-        number: 14,
         name: "Default Level (Remote)",
         description: "Default level for the fan when turned on from the hub.<br>1-100=Set Level<br>101=Use previous level.",
         range: "1..101",
@@ -2532,7 +2538,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter015 : [
-        number: 15,
         name: "Level After Power Restored",
         description: "Level the fan will return to when power is restored after power failure (if Switch is in On/Off Mode any level 1-100 will convert to 100).<br>0=Off<br>1-100=Set Level<br>101=Use previous level.",
         range: "0..101",
@@ -2541,7 +2546,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter017 : [
-        number: 17,
         name: "Load Level Indicator Timeout",
         description: "Shows the level that the load is at for x number of seconds after the load is adjusted and then returns to the Default LED state.",
         range: ["0":"Do not display Load Level","1":"1 Second","2":"2 Seconds","3":"3 Seconds","4":"4 Seconds","5":"5 Seconds","6":"6 Seconds","7":"7 Seconds","8":"8 Seconds","9":"9 Seconds","10":"10 Seconds","11":"Display Load Level with no timeout (default)"],
@@ -2550,7 +2554,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter018 : [
-        number: 18,
         name: "Active Power Reports",
         description: "Percent power level change that will result in a new power report being sent.<br>0 = Disabled",
         range: "0..100",
@@ -2559,7 +2562,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter019 : [
-        number: 19,
         name: "Periodic Power & Energy Reports",
         description: "Time period between consecutive power & energy reports being sent (in seconds). The timer is reset after each report is sent.",
         range: "0..32767",
@@ -2568,7 +2570,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter020 : [
-        number: 20,
         name: "Active Energy Reports",
         description: "Energy level change that will result in a new energy report being sent.<br>0 = Disabled<br>1-32767 = 0.01kWh-327.67kWh.",
         range: "0..32767",
@@ -2577,7 +2578,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter021 : [
-        number: 21,
         name: "Power Source (read only)",
         description: "Neutral or Non-Neutral wiring is automatically sensed. (Hi speed is disabled in Non-Neutral)",
         range: [0:"Non Neutral", 1:"Neutral"],
@@ -2586,16 +2586,14 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter022 : [
-        number: 22,
-        name: "Aux Switch Type",
-        description: "Set the Aux switch type. If you are selecting the \"Smart Aux Switch\" and do not have a neutral wire you may have to program your switch accordingly. Instructions can be found here: https://inov.li/vzm35snauxnn",
-        range: ["0":"No Aux (default)", "1":"Smart Aux Switch"],
+        name: "Switch Type",
+        description: "Set the switch type. If you are selecting the \"Multi-way Aux Switch\" and do not have a neutral wire you may have to program your switch accordingly. Instructions can be found here: https://inov.li/vzm35snauxnn",
+        range: ["0":"Single-pole (default)", "1":"Multi-way with Aux Switch"],
         default: 0,
         size: 8,
         type: "enum"
         ],
     parameter023 : [
-        number: 23,
         name: "Quick Start Time",
         description: "Duration (in seconds) of higher power output (Parameter24) needed to run the motor before lowering to desired speed (0=disabled)",
         range: "0..60",
@@ -2604,7 +2602,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter024 : [
-        number: 24,
         name: "Quick Start Level",
         description: "Level of higher power needed to start the motor before lowering to desired speed (0=disabled)",
         range: "0..100",
@@ -2613,7 +2610,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter025 : [
-        number: 25,
         name: "Higher Output in non-Neutral",
         description: "Ability to increase level in non-neutral mode but may cause problems with high level ficker or aux switch detection. Adjust max level (P10) if you have problems with this enabled.",
         range: ["0":"Disabled (default)","1":"Enabled"],
@@ -2622,7 +2618,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter026 : [
-        number: 26,
         name: "Dimming Method",
         description: "Select Leading Edge or Trailing Edge dimming method",
         range: ["0":"Leading (default)","1":"Trailing"],
@@ -2631,7 +2626,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter030 : [
-        number: 30,
         name: "non-Neutral AUX medium gear learn value (read only)",
         description: "In the case of non-neutral, to make the AUX switch better compatible.",
         range: "0..255",
@@ -2640,7 +2634,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter031 : [
-        number: 31,
         name: "non-Neutral AUX low gear learn value (read only)",
         description: "In the case of non-neutral, to make the AUX switch better compatible.",
         range: "0..255",
@@ -2649,7 +2642,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter032 : [
-        number: 32,
         name: "Internal Temperature (read only)",
         description: "Internal temperature in Celsius",
         range: "0..100",
@@ -2658,7 +2650,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter033 : [
-        number: 33,
         name: "Overheat indicator (read only)",
         description: "Indicates if switch is in overheat protection mode",
         range: "0..1",
@@ -2667,7 +2658,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter050 : [
-        number: 50,
         name: "Button Press Delay",
         description: "Adjust the button delay used in scene control. 0=no delay (disables multi-tap scenes), Default=500ms",
         range: ["0":"0ms","3":"300ms","4":"400ms","5":"500ms (default)","6":"600ms","7":"700ms","8":"800ms","9":"900ms"],
@@ -2676,7 +2666,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter051 : [
-        number: 51,
         name: "Device Bind Number (read only)",
         description: "Number of devices currently bound and counts one group as two devices.",
         range: "0..255",
@@ -2685,7 +2674,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter052 : [
-        number: 52,
         name: "Smart Fan Mode",
         description: "For use with Smart Fans that need constant power and are controlled via commands rather than power (Does not work in 3-way dumb mode)",
         range: ["0":"Disabled (default)", "1":"Enabled"],
@@ -2694,7 +2682,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter053 : [
-        number: 53,
         name: "Double-Tap UP to parameter 55",
         description: "Enable or Disable setting speed to parameter 55 on double-tap UP.",
         range: ["0":"Disabled (default)", "1":"Enabled"],
@@ -2703,7 +2690,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter054 : [
-        number: 54,
         name: "Double-Tap DOWN to parameter 56",
         description: "Enable or Disable setting speed to parameter 56 on double-tap DOWN.",
         range: ["0":"Disabled (default)", "1":"Enabled"],
@@ -2712,7 +2698,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter055 : [
-        number: 55,
         name: "Speed level for Double-Tap UP",
         description: "Set this level on double-tap UP (if enabled by P53)",
         range: "1..100",
@@ -2721,7 +2706,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter056 : [
-        number: 56,
         name: "Speed level for Double-Tap DOWN",
         description: "Set this level on double-tap DOWN (if enabled by P54)",
         range: "0..100",
@@ -2730,7 +2714,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter058 : [
-        number: 58,
         name: "Exclusion Behavior",
         description: "How device behaves during Exclusion",
         range: ["0":"LED Bar does not pulse", "1":"LED Bar pulses blue (default)", "2":"Device does not enter exclusion mode (requires factory reset to leave network or change this parameter)"],
@@ -2739,7 +2722,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter059 : [
-        number: 59,
         name: "Association Behavior",
         description: "Choose when the switch sends commands to associated devices",
         range: ["0":"Never", "1":"Local (default)", "2":"Z-Wave", "3":"Both"],
@@ -2748,7 +2730,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter060 : [
-        number: 60,
         name: "LED1 Color (when On)",
         description: "Set the color of LED1 when the load is on.",
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
@@ -2757,7 +2738,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter061 : [
-        number: 61,
         name: "LED1 Color (when Off)",
         description: "Set the color of LED1 when the load is off.",
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
@@ -2766,7 +2746,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter062 : [
-        number: 62,
         name: "LED1 Intensity (when On)",
         description: "Set the intensity of LED1 when the load is on.",
         range: "0..101",
@@ -2775,7 +2754,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter063 : [
-        number: 63,
         name: "LED1 Intensity (when Off)",
         description: "Set the intensity of LED1 when the load is off.",
         range: "0..101",
@@ -2784,7 +2762,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter064 : [
-        number: 64,
         name: "LED1 Notification",
         description: "4-byte encoded LED1 Notification",
         range: "0..4294967295",
@@ -2793,7 +2770,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter065 : [
-        number: 65,
         name: "LED2 Color (when On)",
         description: "Set the color of LED2 when the load is on.",
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
@@ -2802,7 +2778,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter066 : [
-        number: 66,
         name: "LED2 Color (when Off)",
         description: "Set the color of LED2 when the load is off.",
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
@@ -2811,7 +2786,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter067 : [
-        number: 67,
         name: "LED2 Intensity (when On)",
         description: "Set the intensity of LED2 when the load is on.",
         range: "0..101",
@@ -2820,7 +2794,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter068 : [
-        number: 68,
         name: "LED2 Intensity (when Off)",
         description: "Set the intensity of LED2 when the load is off.",
         range: "0..101",
@@ -2829,7 +2802,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter069 : [
-        number: 69,
         name: "LED2 Notification",
         description: "4-byte encoded LED2 Notification",
         range: "0..4294967295",
@@ -2838,7 +2810,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter070 : [
-        number: 70,
         name: "LED3 Color (when On)",
         description: "Set the color of LED3 when the load is on.",
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
@@ -2847,7 +2818,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter071 : [
-        number: 71,
         name: "LED3 Color (when Off)",
         description: "Set the color of LED3 when the load is off.",
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
@@ -2856,7 +2826,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter072 : [
-        number: 72,
         name: "LED3 Intensity (when On)",
         description: "Set the intensity of LED3 when the load is on.",
         range: "0..101",
@@ -2865,7 +2834,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter073 : [
-        number: 73,
         name: "LED3 Intensity (when Off)",
         description: "Set the intensity of LED3 when the load is off.",
         range: "0..101",
@@ -2874,7 +2842,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter074 : [
-        number: 74,
         name: "LED3 Notification",
         description: "4-byte encoded LED3 Notification",
         range: "0..4294967295",
@@ -2883,7 +2850,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter075 : [
-        number: 75,
         name: "LED4 Color (when On)",
         description: "Set the color of LED4 when the load is on.",
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
@@ -2892,7 +2858,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter076 : [
-        number: 76,
         name: "LED4 Color (when Off)",
         description: "Set the color of LED4 when the load is off.",
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
@@ -2901,7 +2866,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter077 : [
-        number: 77,
         name: "LED4 Intensity (when On)",
         description: "Set the intensity of LED4 when the load is on.",
         range: "0..101",
@@ -2910,7 +2874,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter078 : [
-        number: 78,
         name: "LED4 Intensity (when Off)",
         description: "Set the intensity of LED4 when the load is off.",
         range: "0..101",
@@ -2919,7 +2882,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter079 : [
-        number: 79,
         name: "LED4 Notification",
         description: "4-byte encoded LED4 Notification",
         range: "0..4294967295",
@@ -2928,7 +2890,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter080 : [
-        number: 80,
         name: "LED5 Color (when On)",
         description: "Set the color of LED5 when the load is on.",
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
@@ -2937,7 +2898,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter081 : [
-        number: 81,
         name: "LED5 Color (when Off)",
         description: "Set the color of LED5 when the load is off.",
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
@@ -2946,7 +2906,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter082 : [
-        number: 82,
         name: "LED5 Intensity (when On)",
         description: "Set the intensity of LED5 when the load is on.",
         range: "0..101",
@@ -2955,7 +2914,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter083 : [
-        number: 83,
         name: "LED5 Intensity (when Off)",
         description: "Set the intensity of LED5 when the load is off.",
         range: "0..101",
@@ -2964,7 +2922,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter084 : [
-        number: 84,
         name: "LED5 Notification",
         description: "4-byte encoded LED5 Notification",
         range: "0..4294967295",
@@ -2973,7 +2930,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter085 : [
-        number: 85,
         name: "LED6 Color (when On)",
         description: "Set the color of LED6 when the load is on.",
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
@@ -2982,7 +2938,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter086 : [
-        number: 86,
         name: "LED6 Color (when Off)",
         description: "Set the color of LED6 when the load is off.",
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
@@ -2991,7 +2946,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter087 : [
-        number: 87,
         name: "LED6 Intensity (when On)",
         description: "Set the intensity of LED6 when the load is on.",
         range: "0..101",
@@ -3000,7 +2954,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter088 : [
-        number: 88,
         name: "LED6 Intensity (when Off)",
         description: "Set the intensity of LED6 when the load is off.",
         range: "0..101",
@@ -3009,7 +2962,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter089 : [
-        number: 89,
         name: "LED6 Notification",
         description: "4-byte encoded LED6 Notification",
         range: "0..4294967295",
@@ -3018,7 +2970,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter090 : [
-        number: 90,
         name: "LED7 Color (when On)",
         description: "Set the color of LED7 when the load is on.",
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
@@ -3027,7 +2978,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter091 : [
-        number: 91,
         name: "LED7 Color (when Off)",
         description: "Set the color of LED7 when the load is off.",
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
@@ -3036,7 +2986,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter092 : [
-        number: 92,
         name: "LED7 Intensity (when On)",
         description: "Set the intensity of LED7 when the load is on.",
         range: "0..101",
@@ -3045,7 +2994,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter093 : [
-        number: 93,
         name: "LED7 Intensity (when Off)",
         description: "Set the intensity of LED7 when the load is off.",
         range: "0..101",
@@ -3054,7 +3002,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter094 : [
-        number: 94,
         name: "LED7 Notification",
         description: "4-byte encoded LED Notification",
         range: "0..4294967295",
@@ -3063,7 +3010,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter095 : [
-        number: 95,
         name: "LED Bar Color (when On)",
         description: "Set the color of the LED Bar when the load is on.",
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
@@ -3072,7 +3018,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter096 : [
-        number: 96,
         name: "LED Bar Color (when Off)",
         description: "Set the color of the LED Bar when the load is off.",
         range: ["0":"Red","14":"Orange","35":"Lemon","64":"Lime","85":"Green","106":"Teal","127":"Cyan","149":"Aqua","170":"Blue (default)","191":"Violet","212":"Magenta","234":"Pink","255":"White"],
@@ -3081,7 +3026,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter097 : [
-        number: 97,
         name: "LED Bar Intensity (when On)",
         description: "Set the intensity of the LED Bar when the load is on.",
         range: "0..100",
@@ -3090,7 +3034,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter098 : [
-        number: 98,
         name: "LED Bar Intensity (when Off)",
         description: "Set the intensity of the LED Bar when the load is off.",
         range: "0..100",
@@ -3099,7 +3042,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter099 : [
-        number: 99,
         name: "All LED Notification",
         description: "4-byte encoded LED Notification (see Inovelli LED Notification Calculator)",
         range: "0..4294967295",
@@ -3108,7 +3050,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter100 : [
-        number: 100,
         name: "LED Bar Scaling",
         description: "Method used for scaling.  This allows you to match the scaling when two different generations are in the same gang box",
         range: ["0":"Gen3 method (VZM-style)","1":"Gen2 method (LZW-style)"],
@@ -3117,7 +3058,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter120 : [
-        number: 120,
         name: "Single Tap Behavior",
         description: "Behavior of single tapping the on or off button. Old behavior turns the switch on or off. Single Tap cycles through the levels set by P131-133 (Firmware 1.05+). Tap Down Always Off will cycle through the speeds when pressing up, but will always turn off when tapping down. (Firmware 1.06+)",
         range: ["0":"Old Behavior (default)","1":"Single Tap Cycle","2":"Tap Down Always Off"],
@@ -3126,7 +3066,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter121 : [
-        number: 121,
         name: "Advanced Timer Mode",
         description: "Tap Up 1x = Fan turns on<br>Tap Up 2x = 5 min.<br>Tap Up 3x = 10 min.<br>Tap Up 4x = 15 min.<br>Tap Up 5x = 30 min.<br>(Firmware 1.05+)",
         range: ["0":"Disabled (default)","1":"Enabled"],
@@ -3135,7 +3074,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter123 : [
-        number: 123,
         name: "Aux Switch Unique Scenes",
         description: "Have unique scene numbers for scenes activated with the aux switch",
         range: ["0":"Disabled (default)","1":"Enabled"],
@@ -3144,7 +3082,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter125 : [
-        number: 125,
         name: "Binding Off-to-On Sync Level",
         description: "Send Move_To_Level using Default Level with Off/On to bound devices",
         range: ["0":"Disabled (default)","1":"Enabled"],
@@ -3153,16 +3090,16 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter129 : [
-        number: 129,
         name: "Breeze and Wind Down Mode",
-        description: "4-byte encoded Breeze and Wind Down Mode. For now use the calculator to determine value: https://inovelli-my.sharepoint.com/:x:/p/ericm/ETQi0QfqAD5BotKTW0QyDqEB-XozdRJTkghBEkB_l9YT8Q (Firmware 1.05+)",
+        description: "4-byte encoded Breeze and Wind Down Mode. For now use the "+
+					'''<a href="https://inovelli-my.sharepoint.com/:x:/p/ericm/ETQi0QfqAD5BotKTW0QyDqEB-XozdRJTkghBEkB_l9YT8Q" target="_blank">'''+
+					"Breeze Mode Calculator</a> to determine value",
         range: "0..4294967295",
         default: 0,
         size: 32,
         type: "number"
         ],
     parameter130 : [
-        number: 130,
         name: "Fan Control Mode",
         description: "Which mode to use when binding EP3 to a fan module (Firmware 1.05+)",
         range: ["0":"Disabled (default)","1":"Multi Tap", "2":"Cycle"],
@@ -3171,7 +3108,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter131 : [
-        number: 131,
         name: "Low Level For Fan Control Mode",
         description: "Level to send to device bound to EP3 when set to low (Firmware 1.05+)",
         range: "1..100",
@@ -3180,7 +3116,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter132 : [
-        number: 132,
         name: "Medium Level For Fan Control Mode",
         description: "Level to send to device bound to EP3 when set to medium (Firmware 1.05+)",
         range: "1..100",
@@ -3189,7 +3124,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter133 : [
-        number: 133,
         name: "High Level For Fan Control Mode",
         description: "Level to send to device bound to EP3 when set to high (Firmware 1.05+)",
         range: "1..100",
@@ -3198,7 +3132,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter134 : [
-        number: 134,
         name: "LED Color For Fan Control Mode",
         description: "LED color used to display fan control mode (Firmware 1.05+)",
         range: "0..255",
@@ -3207,7 +3140,6 @@ def readOnlyParams() {
         type: "number"
         ],
     parameter256 : [
-        number: 256,
         name: "Local Protection",
         description: "Ability to control switch from the wall.",
         range: ["0":"Local control enabled (default)", "1":"Local control disabled"],
@@ -3216,7 +3148,6 @@ def readOnlyParams() {
         type: "enum"
         ] ,
     parameter257 : [
-        number: 257,
         name: "Remote Protection (read only) <i>use Remote Control command to change.</i>",
         description: "Ability to control switch from the hub.",
         range: ["0":"Remote control enabled (default)", "1":"Remote control disabled"],
@@ -3225,7 +3156,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter258 : [
-        number: 258,
         name: "Switch Mode",
         description: "Ceiling Fan (Multi-Speed) or Exhaust Fan (On/Off). Ceiling Fan mode with neutral wire will have 3-Speeds. If there is no neutral wire there will only be 2-Speeds",
         range: ["0":"Ceiling Fan (Multi-Speed)", "1":"Exhaust Fan (On/Off) (default)"],
@@ -3234,7 +3164,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter259 : [
-        number: 259,
         name: "LED Bar in On/Off Switch Mode",
         description: "When the device is in On/Off mode, use full LED bar or just one LED",
         range: ["0":"Full bar (default)", "1":"One LED"],
@@ -3243,7 +3172,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter260 : [
-        number: 260,
         name: "Firmware Update-In-Progess Bar",
         description: "Display firmware update progress on LED Bar",
         range: ["1":"Enabled (default)", "0":"Disabled"],
@@ -3251,8 +3179,7 @@ def readOnlyParams() {
         size: 1,
         type: "enum"
         ],
-    parameter261 : [	//not valid for fan switch
-        number: 261,
+    parameter261 : [
         name: "Relay Click",
         description: "Audible Click in On/Off mode",
         range: ["0":"Enabled (default)", "1":"Disabled"],
@@ -3261,7 +3188,6 @@ def readOnlyParams() {
         type: "enum"
         ],
     parameter262 : [
-        number: 262,
         name: "Double-Tap config to clear notification",
         description: "Double-Tap the Config button to clear notifications",
         range: ["0":"Enabled (default)", "1":"Disabled"],
@@ -3269,8 +3195,7 @@ def readOnlyParams() {
         size: 1,
         type: "enum"
         ],
-    parameter263 : [	//not valid for dimmer
-        number: 263,
+    parameter263 : [
         name: "LED bar display levels",
         description: "Levels of the LED bar in Smart Fan Mode<br>0=full range",
         range: "0..9",
@@ -3329,8 +3254,8 @@ String underline(s) { return "<u>$s</u>" }
 String hue(Integer h, String s) {
     h = Math.min(Math.max((h!=null?h:170),1),255)    //170 is Inovelli factory default blue
 	def result =  '<font '
-	if (h==255)     result += 'style="background-color:DarkGray" '
 	if (h>30&&h<70) result += 'style="background-color:DarkGray" '
+	if (h==255)     result += 'style="background-color:LightGray" '
     if (h==255)     result += 'color="White"'
 	else            result += 'color="' + hubitat.helper.ColorUtils.rgbToHEX(hubitat.helper.ColorUtils.hsvToRGB([(h/255*100), 100, 100])) + '"' 
 	result += ">$s</font>"
