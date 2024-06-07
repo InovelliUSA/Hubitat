@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-05-28" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-05-30" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM35-SN Blue Series Zigbee Fan Switch
@@ -24,6 +24,7 @@ def getDriverDate() { return "2024-05-28" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2024-05-30(MA) log raw values with percentages
 * 2024-05-28(MA) misc. code cleanup
 * 2024-04-26(MA) add option to automatically bind group when created with the Groups and Scenes App
 * 2024-04-25(MA) move parsePrivateCluster() into its own method to reduce 'parse method too large' compiler errors
@@ -384,8 +385,8 @@ def bind(cmds=[]) {
 }
 
 def bindGroup(action="", group=0) {
-    if (infoEnable) log.info "${device.displayName} bindGroup($action, $group))"
-    state.lastCommandSent =                        "bindGroup($action, $group))"
+    if (infoEnable) log.info "${device.displayName} bindGroup($action, $group)"
+    state.lastCommandSent =                        "bindGroup($action, $group)"
     state.lastCommandTime = nowFormatted()
     if (group.toString().split('\\.').length > 1) {
         endpoint = group.toString().split('\\.')[0]
@@ -706,7 +707,7 @@ def ledEffectAll(effect=255, color=0, level=100, duration=60) {
     if (debugEnable) log.debug "${device.displayName} ledEffectAll $cmds"
     return cmds
 }
-                                        
+
 def ledEffectOne(lednum, effect=255, color=0, level=100, duration=60) {
 	lednum   = lednum.toString().split(/ /)[0].replace(",","")
 	effect   = effect.toString().split(/=/)[0]
@@ -1247,7 +1248,7 @@ def parse(String description) {
                     case 0x011D:
 						valueInt = Integer.parseInt(descMap['value'],16)
 						if (infoEnable) log.info "${device.displayName} RSSI=${convertByteToPercent(valueInt)}%"
-						sendEvent(name:"RSSI", value: "${convertByteToPercent(valueInt)}%", unit: "%")																															  
+						sendEvent(name:"RSSI", value: "${convertByteToPercent(valueInt)-100}%", unit: "%")																															  
 						break
                     default:
 						log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Attribute:$attrInt ") //+ descMap
@@ -1299,6 +1300,9 @@ def parsePrivateCluster(description) {
             } else if (descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
                 valueInt = Integer.parseInt(descMap['value'],16)
 				def valueHex = intTo32bitUnsignedHex(valueInt)
+				def infoDev = "${device.displayName} "
+				def infoTxt = "P${attrInt}=${valueInt}"
+				def infoMsg = infoDev + infoTxt
                 if ((attrInt==9)
 				|| (attrInt==10)
 				|| (attrInt==13)
@@ -1312,9 +1316,6 @@ def parsePrivateCluster(description) {
 				|| (attrInt==133)) {
 					valueInt = convertByteToPercent(valueInt) //these attributes are stored as bytes but displayed as percentages
 				}
-				def infoDev = "${device.displayName} "
-				def infoTxt = "P${attrInt}=${valueInt}"
-				def infoMsg = infoDev + infoTxt
                 switch (attrInt){
                     case 0:
 						infoMsg += " (temporarily stored level during transitions)"
@@ -1394,7 +1395,7 @@ def parsePrivateCluster(description) {
                                 break
                             default:
                                 infoMsg = infoDev + indianRed(infoTxt + " unknown model ${state.model}")
-                                state.auxType =                          "unknown model ${state.model}"
+                                state.auxType =							 "unknown model ${state.model}"
                                 break
                         }
                         break
@@ -2587,7 +2588,7 @@ def readOnlyParams() {
         ],
     parameter022 : [
         name: "Switch Type",
-        description: "Set the switch type. If you are selecting the \"Multi-way Aux Switch\" and do not have a neutral wire you may have to program your switch accordingly. Instructions can be found here: https://inov.li/vzm35snauxnn",
+        description: "Set the switch type. If you are selecting the \"Multi-way with Aux Switch\" and do not have a neutral wire you may have to program your switch accordingly. Instructions can be found here: https://inov.li/vzm35snauxnn",
         range: ["0":"Single-pole (default)", "1":"Multi-way with Aux Switch"],
         default: 0,
         size: 8,
