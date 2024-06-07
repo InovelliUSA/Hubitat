@@ -1,5 +1,5 @@
-def getDriverDate() { return "2024-05-28" }	// **** DATE OF THE DEVICE DRIVER
-//  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
+def getDriverDate() { return "2024-05-30" }	// **** DATE OF THE DEVICE DRIVER
+//  !!!!!!!!!!!!!!!!!  UPDATE ^^^THIS^^^ DATE IF YOU MAKE ANY CHANGES  !!!!!!!!!!!!!!!!!
 /*
 * Inovelli VZM31-SN Blue Series Zigbee 2-in-1 Dimmer
 *
@@ -24,6 +24,7 @@ def getDriverDate() { return "2024-05-28" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2024-05-30(MA) log raw values with percentages
 * 2024-05-28(MA) misc. code cleanup
 * 2024-04-26(MA) add option to automatically bind group when created with the Groups and Scenes App
 * 2024-04-25(MA) move parsePrivateCluster() into its own method to reduce 'parse method too large' compiler errors
@@ -215,6 +216,8 @@ metadata {
 		attribute "powerSource", "String"		//Neutral/non-Neutral				(read-only P21)
 		attribute "remoteProtection", "String"	//Enabled or Disabled				(read-only P257)
         attribute "smartBulb", "String"			//Smart Bulb mode enabled or disabled
+        //attribute "smartFan", "String"		//Smart Fan mode enabled or disabled
+		//attribute "speed", "String"				//Fan speed
         attribute "switchMode", "String"		//Dimmer or On/Off only
 		attribute "LQI", "String"				//Link Quality Indicator
 		attribute "RSSI", "String"				//Received Signal Strength Indicator
@@ -278,7 +281,7 @@ metadata {
         
         command "refresh",             [[name:"Option",    type:"ENUM",   description:"blank=current states and user-changed settings, All=refresh all settings", constraints: [" ","All"]]]
 		
-		command "remoteControl",	   [[name:"Option*",   type:"ENUM",   description:"ability to control the switch remotely", constraints: [" ","Enabled","Disabled"]]]
+		command "remoteControl",	   [[name:"Option*",   type:"ENUM",   description:"ability to control the switch remotely", constraints: [" ","Enabled (default)","Disabled"]]]
 
         command "resetEnergyMeter"		//Fan does not support power/energy reporting but Dimmer does
 
@@ -426,8 +429,8 @@ def bind(cmds=[]) {
 }
 
 def bindGroup(action="", group=0) {
-    if (infoEnable) log.info "${device.displayName} bindGroup($action, $group))"
-    state.lastCommandSent =                        "bindGroup($action, $group))"
+    if (infoEnable) log.info "${device.displayName} bindGroup($action, $group)"
+    state.lastCommandSent =                        "bindGroup($action, $group)"
     state.lastCommandTime = nowFormatted()
     if (group.toString().split('\\.').length > 1) {
         endpoint = group.toString().split('\\.')[0]
@@ -748,7 +751,7 @@ def ledEffectAll(effect=255, color=0, level=100, duration=60) {
     if (debugEnable) log.debug "${device.displayName} ledEffectAll $cmds"
     return cmds
 }
-                                        
+
 def ledEffectOne(lednum, effect=255, color=0, level=100, duration=60) {
 	lednum   = lednum.toString().split(/ /)[0].replace(",","")
 	effect   = effect.toString().split(/=/)[0]
@@ -1289,7 +1292,7 @@ def parse(String description) {
                     case 0x011D:
 						valueInt = Integer.parseInt(descMap['value'],16)
 						if (infoEnable) log.info "${device.displayName} RSSI=${convertByteToPercent(valueInt)}%"
-						sendEvent(name:"RSSI", value: "${convertByteToPercent(valueInt)}%", unit: "%")																															  
+						sendEvent(name:"RSSI", value: "${convertByteToPercent(valueInt)-100}%", unit: "%")																															  
 						break
                     default:
 						log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Attribute:$attrInt ") //+ descMap
@@ -1341,6 +1344,9 @@ def parsePrivateCluster(description) {
             } else if (descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
                 valueInt = Integer.parseInt(descMap['value'],16)
 				def valueHex = intTo32bitUnsignedHex(valueInt)
+				def infoDev = "${device.displayName} "
+				def infoTxt = "P${attrInt}=${valueInt}"
+				def infoMsg = infoDev + infoTxt
                 if ((attrInt==9)
 				|| (attrInt==10)
 				|| (attrInt==13)
@@ -1354,9 +1360,6 @@ def parsePrivateCluster(description) {
 				|| (attrInt==133)) {
 					valueInt = convertByteToPercent(valueInt) //these attributes are stored as bytes but displayed as percentages
 				}
-				def infoDev = "${device.displayName} "
-				def infoTxt = "P${attrInt}=${valueInt}"
-				def infoMsg = infoDev + infoTxt
                 switch (attrInt){
                     case 0:
 						infoMsg += " (temporarily stored level during transitions)"
@@ -1436,7 +1439,7 @@ def parsePrivateCluster(description) {
                                 break
                             default:
                                 infoMsg = infoDev + indianRed(infoTxt + " unknown model ${state.model}")
-                                state.auxType =                          "unknown model ${state.model}"
+                                state.auxType =							 "unknown model ${state.model}"
                                 break
                         }
                         break
@@ -2456,7 +2459,7 @@ def holdConfig()     {buttonEvent(13, "held", "digital")}
 def releaseConfig()  {buttonEvent(14, "released", "digital")}
 
 def userSettableParams() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
-    if (parameter258 == "1") return [258,22,52,                  10,11,12,      15,17,18,19,20,23,24,25,50,            95,96,97,98,100,    123,125,130,131,132,133,134,256,259,260,261,262]  //on/off mode
+    if (parameter258 == "1") return [258,22,52,    3,      7,    10,11,12,      15,17,18,19,20,23,24,25,50,            95,96,97,98,100,    123,125,130,131,132,133,134,256,259,260,261,262]  //on/off mode
     else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,23,24,25,50,53,54,55,56,95,96,97,98,100,120,123,125,130,131,132,133,134,256,    260,    262]  //dimmer mode
 }
 
@@ -2629,7 +2632,7 @@ def readOnlyParams() {
         ],
     parameter022 : [
         name: "Switch Type",
-        description: "Set the Aux switch type (Smart Bulb Mode does not work in Dumb 3-Way Switch mode)",
+        description: "Set the switch type (Smart Bulb Mode does not work in Multi-way with Dumb Switch mode)",
         range: ["0":"Single-pole (default)", "1":"Multi-way with Dumb Switch", "2":"Mulit-way with Aux Switch", "3":"Single-pole Full Wave (On/Off only)"],
         default: 0,
         size: 8,
@@ -2699,6 +2702,22 @@ def readOnlyParams() {
         size: 1,
         type: "number"
         ],
+//    parameter034 : [
+//        name: "Quick Start Light Time",
+//        description: "Duration (in 1/60s) of higher power output when the light goes from OFF to ON (0=disabled)",
+//        range: "0..60",
+//        default: 0,
+//        size: 8,
+//        type: "number"
+//        ],
+//    parameter035 : [
+//        name: "Quick Start Light Level",
+//        description: "When Quick Start is enabled, the value is the output level during the Quick Start Light Time",
+//        range: "0..100",
+//        default: 0,
+//        size: 8,
+//        type: "number"
+//        ],
     parameter050 : [
         name: "Button Press Delay",
         description: "Adjust the button delay used in scene control. 0=no delay (disables multi-tap scenes), Default=500ms",
