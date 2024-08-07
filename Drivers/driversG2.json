@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "VZM36: removing incorrect fingerprint",
+   "releaseNotes": "VZW31-SN: fix issues preventing preferences from being sent in updated and configure methods",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -119,7 +119,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-vzw31-sn.src/inovelli-dimmer-red-series-vzw31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "24.2.13",
+                "version": "24.8.7",
 		"releaseNotes": "" 
    	},
 	{
