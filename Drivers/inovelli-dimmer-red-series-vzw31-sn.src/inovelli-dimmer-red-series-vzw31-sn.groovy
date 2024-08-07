@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-05-28" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-08-07" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW31-SN Red Series Z-Wave 2-in-1 Dimmer
@@ -7,7 +7,7 @@ def getDriverDate() { return "2024-05-28" /** + orangeRed(" (beta)") **/ }	// **
 * Contributor: Mark Amber (marka75160)
 * Platform: Hubitat
 *
-* Copyright 2023 Eric Maycock / Inovelli
+* Copyright 2024 Eric Maycock / Inovelli
 *
 * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 * in compliance with the License. You may obtain a copy of the License at:
@@ -18,6 +18,7 @@ def getDriverDate() { return "2024-05-28" /** + orangeRed(" (beta)") **/ }	// **
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2024-08-07(EM) fix issues preventing preferences from being sent in "updated" and "configure" methods
 * 2024-05-28(MA) add support for unique scenes on Aux switch (P123)
 * 2024-05-25(MA) move configParams map to bottom to maintain similarity with other VZxxx drivers
 * 2024-05-20(MA) fix issue where Dimmer parameters were still displayed after switching mode from Dimmer to On/Off
@@ -425,7 +426,8 @@ def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS A
     sendEvent(name: "numberOfButtons", value: 14)
     def cmds = []
     cmds += processAssociations()
-    cmds += zwave.versionV1.versionGet()
+    cmds += secureCmd(zwave.versionV1.versionGet())
+    cmds += "delay ${shortDelay}"
     if (option=="") {		//IF   we didn't pick an option 
 		cmds += refresh()	//THEN refresh read-only and key parameters
     } else { 				//ELSE read device attributes and pass on to update settings.
@@ -434,7 +436,8 @@ def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS A
 		cmds += updated(option)
 	}
     if (debugEnable) log.debug "${device.displayName} configure $cmds"
-    return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
+    //return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
+    return cmds
 }
 
 def convertByteToPercent(int value=0) {                  //convert a 0-254 range where 254=100%.  255 is reserved for special meaning.
@@ -1205,11 +1208,11 @@ def refresh(option) {
 				if (([22,52,158,258].contains(i))		//refresh primary settings
 				|| (readOnlyParams().contains(i))		//refresh read-only params
 				|| (settings."parameter${i}"!=null)) {	//refresh user settings
-					getParameter(i)
+					cmds += getParameter(i)
 				}
 				break
 			case "All":
-				getParameter(i) //if option is All then refresh all params
+				cmds += getParameter(i) //if option is All then refresh all params
 				break
 			default: 
 				if (traceEnable||debugEnable) log.error "${device.displayName} Unknonwn option 'refresh($option)'"
@@ -1292,10 +1295,9 @@ def setParameter(paramNum=0, value=null, size=null, delay=shortDelay) {
 	state.lastCommandTime = nowFormatted()
 	def cmds = []
     if (value!=null) cmds += zwave.configurationV4.configurationSet(parameterNumber: paramNum, scaledConfigurationValue: size==1?(value<0x80?value:value-0x100):size==4?(value<0x80000000?value:value-0x100000000):value, size: size)
-	if (paramNum==52 || paramNum==158 || paramNum==258) cmds += "delay $longDelay"	//allow extra time when changing modes
 	cmds += zwave.configurationV4.configurationGet(parameterNumber: paramNum)
     if (debugEnable) log.debug value!=null?"${device.displayName} setParameter $cmds":"${device.displayName} getParameter $cmds"
-    return delayBetween(cmds.collect{ secureCmd(it) }, delay)
+    return cmds.collect{ secureCmd(it) }
 }
 
 def getParameter(paramNum=0, delay=shortDelay) {
@@ -1422,7 +1424,7 @@ def updated(option) { // called when "Save Preferences" is requested
 				if ((userSettableParams().contains(i))		//IF   this is a valid parameter for this device mode
 				&& (settings."parameter$i"!=null)			//AND  this is a non-default setting
 				&& (!readOnlyParams().contains(i))) {		//AND  this is not a read-only parameter
-					setParameter(i, newValue)				//THEN set the new value
+					cmds += setParameter(i, newValue)				//THEN set the new value
 					nothingChanged = false
 				}
 				break
@@ -1431,10 +1433,10 @@ def updated(option) { // called when "Save Preferences" is requested
 				if (option=="Default") newValue = defaultValue	//if user selected "Default" then set the new value to the default value
 				if (((i!=158)&&(i!=258))					//IF   we are not changing Switch Mode
 				&& (!readOnlyParams().contains(i))) {		//AND  this is not a read-only parameter
-					setParameter(i, newValue)				//THEN Set the new value
+					cmds += setParameter(i, newValue)				//THEN Set the new value
 					nothingChanged = false
 				} else {									//ELSE this is a read-only parameter or Switch Mode parameter
-					getParameter(i)							//so Get current value from device
+					cmds += getParameter(i)							//so Get current value from device
 				}
 				break
 			default: 
@@ -1456,15 +1458,22 @@ def updated(option) { // called when "Save Preferences" is requested
     if (infoEnable && disableInfoLogging) {
 		log.info "${device.displayName} Info Logging will be disabled in $disableInfoLogging minutes"
 		runIn(disableInfoLogging*60,infoLogsOff)
-	}
+    } else {
+        unschedule(infoLogsOff)
+    }
     if (traceEnable && disableTraceLogging) {
 		log.trace "${device.displayName} Trace Logging will be disabled in $disableTraceLogging minutes"
 		runIn(disableTraceLogging*60,traceLogsOff)
-	}
+	} else {
+        unschedule(traceLogsOff)
+    }
     if (debugEnable && disableDebugLogging) {
 		log.debug "${device.displayName} Debug Logging will be disabled in $disableDebugLogging minutes"
 		runIn(disableDebugLogging*60,debugLogsOff) 
-	}
+	} else {
+        unschedule(debugLogsOff)
+    }
+
     if (cmds) return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 	else return
 }
@@ -1654,7 +1663,7 @@ def processAssociations(){
    }
    if (cmds) cmds -= null	//remove nulls from list
    if (cmds)
-       return delayBetween(cmds.collect{ secureCmd(it) }, defaultDelay)
+       return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
    else 
        return []
 }
