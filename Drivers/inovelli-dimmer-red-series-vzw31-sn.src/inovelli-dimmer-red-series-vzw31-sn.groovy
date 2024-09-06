@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-08-07" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-09-06" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW31-SN Red Series Z-Wave 2-in-1 Dimmer
@@ -18,6 +18,7 @@ def getDriverDate() { return "2024-08-07" /** + orangeRed(" (beta)") **/ }	// **
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2024-09-06(EM) adding parameters 156 and 157 to enable/disable local and remote control
 * 2024-08-07(EM) fix issues preventing preferences from being sent in "updated" and "configure" methods
 * 2024-05-28(MA) add support for unique scenes on Aux switch (P123)
 * 2024-05-25(MA) move configParams map to bottom to maintain similarity with other VZxxx drivers
@@ -314,12 +315,12 @@ metadata {
 }
 
 def validConfigParams() {	//all valid parameters for this specific device (configParams Map contains definitions for all parameters for all devices)
-	return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,22,25,50,52,53,54,55,56,58,59,64,69,74,79,84,89,94,95,96,97,98,99,100,123,158,159,160,161,162]
+	return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,22,25,50,52,53,54,55,56,58,59,64,69,74,79,84,89,94,95,96,97,98,99,100,123,156,157,158,159,160,161,162]
 }
 
 def userSettableParams() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
-    if (state.parameter158value == 1) return [158,22,52,                  10,11,12,      15,17,18,19,20,25,50,            58,59,95,96,97,98,100,123,159,160,161,162]  //on/off mode
-    else                              return [158,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,25,50,53,54,55,56,58,59,95,96,97,98,100,123,    160,    162]  //dimmer mode
+    if (state.parameter158value == 1) return [158,22,52,                  10,11,12,      15,17,18,19,20,25,50,            58,59,95,96,97,98,100,123,156,157,159,160,161,162]  //on/off mode
+    else                              return [158,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,25,50,53,54,55,56,58,59,95,96,97,98,100,123,156,157,    160,    162]  //dimmer mode
 }
 
 def readOnlyParams() {
@@ -1294,8 +1295,17 @@ def setParameter(paramNum=0, value=null, size=null, delay=shortDelay) {
 	state.lastCommandSent =    value!=null?                      "setParameter($paramNum, $value, $size)":                      "getParameter($paramNum)"
 	state.lastCommandTime = nowFormatted()
 	def cmds = []
-    if (value!=null) cmds += zwave.configurationV4.configurationSet(parameterNumber: paramNum, scaledConfigurationValue: size==1?(value<0x80?value:value-0x100):size==4?(value<0x80000000?value:value-0x100000000):value, size: size)
-	cmds += zwave.configurationV4.configurationGet(parameterNumber: paramNum)
+    if (paramNum == 156 && value!=null) {
+        cmds += zwave.protectionV2.protectionSet(localProtectionState : value > 0 ? 1 : 0, rfProtectionState: state.rfProtectionState? state.rfProtectionState:0)
+        cmds += zwave.protectionV2.protectionGet()
+    } else if (paramNum == 157 && value!=null) {
+        cmds += zwave.protectionV2.protectionSet(rfProtectionState: value > 0 ? 1 : 0, localProtectionState: state.localProtectionState? state.localProtectionState:0)
+        cmds += zwave.protectionV2.protectionGet()
+    } else if (value!=null) {
+        cmds += zwave.configurationV4.configurationSet(parameterNumber: paramNum, scaledConfigurationValue: size==1?(value<0x80?value:value-0x100):size==4?(value<0x80000000?value:value-0x100000000):value, size: size)
+        cmds += zwave.configurationV4.configurationGet(parameterNumber: paramNum)
+    }
+    
     if (debugEnable) log.debug value!=null?"${device.displayName} setParameter $cmds":"${device.displayName} getParameter $cmds"
     return cmds.collect{ secureCmd(it) }
 }
