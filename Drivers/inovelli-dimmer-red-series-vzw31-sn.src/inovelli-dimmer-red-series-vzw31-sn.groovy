@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-10-08" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-10-09" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW31-SN Red Series Z-Wave 2-in-1 Dimmer
@@ -18,6 +18,7 @@ def getDriverDate() { return "2024-10-08" /** + orangeRed(" (beta)") **/ }	// **
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2024-10-09(EM) fix bug that was preventing the ability to change remote control from the device page
 * 2024-10-08(EM) make it so parameter 156 and 157 update when using setParameter or when changed locally
 * 2024-09-06(EM) adding parameters 156 and 157 to enable/disable local and remote control
 * 2024-08-07(EM) fix issues preventing preferences from being sent in "updated" and "configure" methods
@@ -325,7 +326,7 @@ def userSettableParams() {   //controls which options are available depending on
 }
 
 def readOnlyParams() {
-	return [21,32,33,51,157,257]
+	return [21,32,33,51,257]
 }
 
 private getCommandClassVersions() {
