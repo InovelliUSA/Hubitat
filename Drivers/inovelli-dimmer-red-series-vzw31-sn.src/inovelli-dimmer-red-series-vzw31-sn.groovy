@@ -1298,9 +1298,11 @@ def setParameter(paramNum=0, value=null, size=null, delay=shortDelay) {
 	state.lastCommandTime = nowFormatted()
 	def cmds = []
     if (paramNum == 156 && value!=null) {
+        state.localProtectionState = (value > 0 ? 1 : 0)
         cmds += zwave.protectionV2.protectionSet(localProtectionState : value > 0 ? 1 : 0, rfProtectionState: state.rfProtectionState? state.rfProtectionState:0)
         cmds += zwave.protectionV2.protectionGet()
     } else if (paramNum == 157 && value!=null) {
+        state.rfProtectionState = (value > 0 ? 1 : 0)
         cmds += zwave.protectionV2.protectionSet(rfProtectionState: value > 0 ? 1 : 0, localProtectionState: state.localProtectionState? state.localProtectionState:0)
         cmds += zwave.protectionV2.protectionGet()
     } else if (value!=null) {
