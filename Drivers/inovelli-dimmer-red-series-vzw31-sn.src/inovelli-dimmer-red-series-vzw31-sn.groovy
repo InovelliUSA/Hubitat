@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-10-09" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-10-22" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW31-SN Red Series Z-Wave 2-in-1 Dimmer
@@ -18,6 +18,7 @@ def getDriverDate() { return "2024-10-09" /** + orangeRed(" (beta)") **/ }	// **
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2024-10-22(EM) fix leading and trailing edge state variable update
 * 2024-10-09(EM) fix bug that was preventing the ability to change remote control from the device page
 * 2024-10-08(EM) make it so parameter 156 and 157 update when using setParameter or when changed locally
 * 2024-09-06(EM) adding parameters 156 and 157 to enable/disable local and remote control
@@ -865,6 +866,9 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
                     case 25:    //Higher Output in non-Neutral
                         infoMsg += " (non-Neutral High Output " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
                         break
+                    case 26:    //Leading or Trailing edge
+                        infoMsg += " (Dimming Method " + (valueInt==0?red("Leading Edge"):limeGreen("Trailing Edge")) + ")"
+                        break
 					case 30:	//non-Neutral AUX med gear learn value
 						infoMsg += " (non-Neutral AUX medium gear)"
 						break
@@ -1051,7 +1055,7 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
                     device.updateSetting("parameter${attrInt}custom",[value:"${Math.round(valueInt/255*360)}",type:configParams["parameter${attrInt.toString().padLeft(3,"0")}"].type?.toString()])
                     state."parameter${attrInt}custom" = Math.round(valueInt/255*360)
                 }
-				if (state.model?.substring(0,5)!="VZM35" && (attrInt==21 || attrInt==22 || attrInt==158 || attrInt==258)) {  //fan does not support leading/trailing edge dimming
+				if (state.model?.substring(0,5)!="VZM35" && (attrInt==21 || attrInt==22 || attrInt==158 || attrInt==258 || attrInt==26)) {  //fan does not support leading/trailing edge dimming
 					state.dimmingMethod = "Leading Edge"							//default to Leading Edge
 					if (parameter21=="1") {											//if neutral wiring then select based on remote switch type
 						if (parameter22=="0") state.dimmingMethod = "Trailing Edge"	//no aux
@@ -1067,6 +1071,7 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 							}
 						}
 					}
+                    if (attrInt==26) state.dimmingMethod = (valueInt == 1? "Trailing Edge" : "Leading Edge")
 					if (infoEnable||traceEnable||debugEnable) log.info "${device.displayName} Dimming Method = ${state.dimmingMethod}"
 				}
 				//Update UI setting with value received from device
@@ -1307,6 +1312,8 @@ def setParameter(paramNum=0, value=null, size=null, delay=shortDelay) {
         cmds += zwave.protectionV2.protectionGet()
     } else if (value!=null) {
         cmds += zwave.configurationV4.configurationSet(parameterNumber: paramNum, scaledConfigurationValue: size==1?(value<0x80?value:value-0x100):size==4?(value<0x80000000?value:value-0x100000000):value, size: size)
+        cmds += zwave.configurationV4.configurationGet(parameterNumber: paramNum)
+    } else {
         cmds += zwave.configurationV4.configurationGet(parameterNumber: paramNum)
     }
     
