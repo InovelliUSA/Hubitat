@@ -129,7 +129,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-canopy-module-blue-series-vzm36.src/VZM36_Zigbee_Canopy_Main.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "24.11.7",
+                "version": "24.3.26",
 		"releaseNotes": "" 
    	},
 	{
@@ -149,7 +149,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-canopy-module-blue-series-vzm36.src/VZM36_Zigbee_Canopy_Fan.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "24.3.26",
+                "version": "24.11.7",
 		"releaseNotes": "" 
    	}
    ]
