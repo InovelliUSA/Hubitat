@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-03-26" + orangeRed(" (beta)") }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-11-07" + orangeRed(" (beta)") }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM36 Zigbee Canopy Fan
@@ -22,6 +22,7 @@ def getDriverDate() { return "2024-03-26" + orangeRed(" (beta)") }	// **** DATE 
 *           CHANGE LOG          
 * ------------------------------
 *
+* 2024-11-07(EM) Adding supportedFanSpeeds for new Google Home Requirement
 * 2024-03-26(EM) removing incorrect fingerprint
 * 2024-03-20(EM) model number, cycleSpeed and setSpeed fixes
 * 2024-03-14(EM) changing parameter 258 description and default
