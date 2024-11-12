@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-11-07" + orangeRed(" (beta)") }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-11-12" + orangeRed(" (beta)") }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM36 Zigbee Canopy Fan
@@ -22,6 +22,8 @@ def getDriverDate() { return "2024-11-07" + orangeRed(" (beta)") }	// **** DATE 
 *           CHANGE LOG          
 * ------------------------------
 *
+* 2024-11-12(EM) Removing speed attribute because it was making Google Home reject the device. Sending events when setspeed command is sent 
+*                as Google Home is not properly changing the state of the device.
 * 2024-11-07(EM) Adding supportedFanSpeeds for new Google Home Requirement
 * 2024-03-26(EM) removing incorrect fingerprint
 * 2024-03-20(EM) model number, cycleSpeed and setSpeed fixes
@@ -71,7 +73,7 @@ metadata {
 		attribute "remoteProtection", "String"	//Enabled or Disabled				(read-only P257)
         //attribute "smartBulb", "String"		//Smart Bulb mode enabled or disabled
         attribute "smartFan", "String"			//Smart Fan mode enabled or disabled
-		attribute "speed", "String"				//Fan speed
+		//attribute "speed", "String"				//Fan speed //Removing as it is breaking Google Home Integration
         attribute "switchMode", "String"		//Dimmer or On/Off only
 
         // Uncomment these lines if you would like to test your scenes with digital button presses.
@@ -1835,30 +1837,37 @@ def setSpeed(value) {  // FOR FAN ONLY
         case "off":
             //cmds += zigbee.off(shortDelay) 
             cmds += "he cmd 0x${parent.deviceNetworkId} 0x${device.deviceNetworkId?.substring(device.deviceNetworkId.length()-2)?:"00"} 6 0 {}"
+            sendEvent(name:"speed", value: "off") // 2024-11-12(EM) Google Home not properly reporting state change without these.
             break
         case "low": 
             //cmds += zigbee.setLevel(smartMode?20:33)
 	        cmds += "he cmd 0x${parent.deviceNetworkId} 0x${device.deviceNetworkId?.substring(device.deviceNetworkId.length()-2)?:"00"} 0x0008 0x04 {${zigbee.convertToHexString(convertPercentToByte(smartMode?20:33),2)} 0xFFFF}"
+            sendEvent(name:"speed", value: "low")   // 2024-11-12(EM) Google Home not properly reporting state change without these.
             break
         case "medium-low":             //placeholder since Hubitat natively supports 5-speed fans
             //cmds += zigbee.setLevel(40) 
 	        cmds += "he cmd 0x${parent.deviceNetworkId} 0x${device.deviceNetworkId?.substring(device.deviceNetworkId.length()-2)?:"00"} 0x0008 0x04 {${zigbee.convertToHexString(convertPercentToByte(smartMode?40:33),2)} 0xFFFF}"
+            sendEvent(name:"speed", value: "medium-low") // 2024-11-12(EM) Google Home not properly reporting state change without these.
             break
         case "medium": 
             //cmds += zigbee.setLevel(smartMode?60:66) 
 	        cmds += "he cmd 0x${parent.deviceNetworkId} 0x${device.deviceNetworkId?.substring(device.deviceNetworkId.length()-2)?:"00"} 0x0008 0x04 {${zigbee.convertToHexString(convertPercentToByte(smartMode?60:66),2)} 0xFFFF}"
+            sendEvent(name:"speed", value: "medium") // 2024-11-12(EM) Google Home not properly reporting state change without these.
             break
         case "medium-high":            //placeholder since Hubitat natively supports 5-speed fans
             //cmds += zigbee.setLevel(80)
 	        cmds += "he cmd 0x${parent.deviceNetworkId} 0x${device.deviceNetworkId?.substring(device.deviceNetworkId.length()-2)?:"00"} 0x0008 0x04 {${zigbee.convertToHexString(convertPercentToByte(smartMode?80:66),2)} 0xFFFF}"
+            sendEvent(name:"speed", value: "medium-high") // 2024-11-12(EM) Google Home not properly reporting state change without these.
             break
         case "high": 
             //cmds += zigbee.setLevel(100) 
 	        cmds += "he cmd 0x${parent.deviceNetworkId} 0x${device.deviceNetworkId?.substring(device.deviceNetworkId.length()-2)?:"00"} 0x0008 0x04 {${zigbee.convertToHexString(convertPercentToByte(100),2)} 0xFFFF}"
+            sendEvent(name:"speed", value: "high") // 2024-11-12(EM) Google Home not properly reporting state change without these.
             break
         case "on":
             //cmds += zigbee.on(shortDelay)
             cmds += "he cmd 0x${parent.deviceNetworkId} 0x${device.deviceNetworkId?.substring(device.deviceNetworkId.length()-2)?:"00"} 6 1 {}"
+            sendEvent(name:"speed", value: "on") // 2024-11-12(EM) Google Home not properly reporting state change without these.
             break
 		case "up":
 			if      (currentLevel<=0 )  {newLevel=20}
