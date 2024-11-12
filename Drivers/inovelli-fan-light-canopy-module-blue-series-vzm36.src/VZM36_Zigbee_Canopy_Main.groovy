@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-05-30" + orangeRed(" (beta)") }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-11-12" + orangeRed(" (beta)") }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM36 Zigbee Canopy
@@ -7,7 +7,7 @@ def getDriverDate() { return "2024-05-30" + orangeRed(" (beta)") }	// **** DATE 
 * Contributor: Mark Amber (marka75160)
 * Platform: Hubitat
 *
-* Copyright 2023 Eric Maycock / Inovelli
+* Copyright 2024 Eric Maycock / Inovelli
 *
 * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 * in compliance with the License. You may obtain a copy of the License at:
@@ -22,6 +22,7 @@ def getDriverDate() { return "2024-05-30" + orangeRed(" (beta)") }	// **** DATE 
 *           CHANGE LOG          
 * ------------------------------
 *
+* 2024-11-12(EM) Google Home fixes and properly read endpoint attributes after joining
 * 2024-05-30(MA) misc. code cleanup
 * 2024-03-26(EM) removing incorrect fingerprint
 * 2024-03-20(EM) fix endpoint binding and child device creation upon device pairing
@@ -293,6 +294,10 @@ def debugLogsOff() {
     //device.updateSetting("disableDebugLogging",[value:"",type:"number"])
 }
 
+private endpointNumber(String dni) {
+    dni.split("-")[-1] as Integer
+}
+
 private String byteReverseParameters(String oneString) { byteReverseParameters([] << oneString) }
 private String byteReverseParameters(List<String> parameters) {
 	StringBuilder rStr = new StringBuilder(128)
@@ -479,7 +484,7 @@ def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS A
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0008 {${device.zigbeeId}} {}"] //Level Control Cluster
     cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0x0008 {${device.zigbeeId}} {}"] //Level Control Cluster ep2
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0019 {${device.zigbeeId}} {}"] //OTA Upgrade Cluster
-	if (state.model?.substring(0,5)!="VZM35") {  //Fan does not support power/energy reports
+	if (state.model?.substring(0,5)!="VZM35" && state.model?.substring(0,5)!="VZM36") {  //Fan does not support power/energy reports
 		cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0702 {${device.zigbeeId}} {}"] //Simple Metering - to get energy reports
 		cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0B04 {${device.zigbeeId}} {}"] //Electrical Measurement - to get power reports
 	}
@@ -1659,16 +1664,17 @@ def presetLevel(value,childDevice) {
 //    }
 //}
 
-def readDeviceAttributes(childDevice) {
+def readDeviceAttributes(childDevice = "ep-01") {
 	if (traceEnable||debugEnable) log.trace "${device.displayName} readDeviceAttributes()"
+    def endpointId = endpointNumber(childDevice)
 	def cmds = []
 //	cmds += zigbee.readAttribute(0x0000, 0x0000, [:])    //BASIC ZCL Version
 //	cmds += zigbee.readAttribute(0x0000, 0x0001, [:])    //BASIC Application Version
 //	cmds += zigbee.readAttribute(0x0000, 0x0002, [:])    //BASIC Stack Version
 //	cmds += zigbee.readAttribute(0x0000, 0x0003, [:])    //BASIC HW Version
 //	cmds += zigbee.readAttribute(0x0000, 0x0004, [:])    //BASIC Manufacturer Name
-	cmds += zigbee.readAttribute(0x0000, 0x0005, [:])    //BASIC Model
-	cmds += zigbee.readAttribute(0x0000, 0x0006, [:])    //BASIC SW Date Code
+	cmds += zigbee.readAttribute(0x0000, 0x0005, [destEndpoint: endpointId])    //BASIC Model
+	cmds += zigbee.readAttribute(0x0000, 0x0006, [destEndpoint: endpointId])    //BASIC SW Date Code
 //	cmds += zigbee.readAttribute(0x0000, 0x0007, [:])    //BASIC Power Source
 //	cmds += zigbee.readAttribute(0x0000, 0x0008, [:])    //BASIC GenericDevice-Class
 //	cmds += zigbee.readAttribute(0x0000, 0x0009, [:])    //BASIC GenericDevice-Type
@@ -1682,7 +1688,7 @@ def readDeviceAttributes(childDevice) {
 //	cmds += zigbee.readAttribute(0x0000, 0x0012, [:])    //BASIC DeviceEnabled
 //	cmds += zigbee.readAttribute(0x0000, 0x0013, [:])    //BASIC AlarmMask
 //	cmds += zigbee.readAttribute(0x0000, 0x0014, [:])    //BASIC DisableLocalConfig
-	cmds += zigbee.readAttribute(0x0000, 0x4000, [:])    //BASIC SWBuildID
+	cmds += zigbee.readAttribute(0x0000, 0x4000, [destEndpoint: endpointId])    //BASIC SWBuildID
 //	cmds += zigbee.readAttribute(0x0003, 0x0000, [:])    //IDENTIFY Identify Time
 //	cmds += zigbee.readAttribute(0x0004, 0x0000, [:])    //GROUP Name Support
 //	cmds += zigbee.readAttribute(0x0005, 0x0000, [:])    //SCENES Scene Count
@@ -1691,12 +1697,12 @@ def readDeviceAttributes(childDevice) {
 //	cmds += zigbee.readAttribute(0x0005, 0x0003, [:])    //SCENES Scene Valid
 //	cmds += zigbee.readAttribute(0x0005, 0x0004, [:])    //SCENES Name Support
 //	cmds += zigbee.readAttribute(0x0005, 0x0005, [:])    //SCENES LastConfiguredBy
-	cmds += zigbee.readAttribute(0x0006, 0x0000, [:])    //ON_OFF Current OnOff state
+	cmds += zigbee.readAttribute(0x0006, 0x0000, [destEndpoint: endpointId])    //ON_OFF Current OnOff state
 //	cmds += zigbee.readAttribute(0x0006, 0x4000, [:])    //ON_OFF GlobalSceneControl
 //	cmds += zigbee.readAttribute(0x0006, 0x4001, [:])    //ON_OFF OnTime
 //	cmds += zigbee.readAttribute(0x0006, 0x4002, [:])    //ON_OFF OffWaitTime
-	cmds += zigbee.readAttribute(0x0006, 0x4003, [:])    //ON_OFF Startup OnOff state
-	cmds += zigbee.readAttribute(0x0008, 0x0000, [:])    //LEVEL_CONTROL CurrentLevel
+	cmds += zigbee.readAttribute(0x0006, 0x4003, [destEndpoint: endpointId])    //ON_OFF Startup OnOff state
+	cmds += zigbee.readAttribute(0x0008, 0x0000, [destEndpoint: endpointId])    //LEVEL_CONTROL CurrentLevel
 //	cmds += zigbee.readAttribute(0x0008, 0x0001, [:])    //LEVEL_CONTROL RemainingTime
 //	cmds += zigbee.readAttribute(0x0008, 0x0002, [:])    //LEVEL_CONTROL MinLevel
 //	cmds += zigbee.readAttribute(0x0008, 0x0003, [:])    //LEVEL_CONTROL MaxLevel
@@ -1723,8 +1729,8 @@ def readDeviceAttributes(childDevice) {
 //  cmds += zigbee.readAttribute(0x0019, 0x000A, [:])    //OTA Image Stamp
 //  cmds += zigbee.readAttribute(0x0019, 0x000B, [:])    //OTA UpgradeActivationPolicy
 //  cmds += zigbee.readAttribute(0x0019, 0x000C, [:])    //OTA UpgradeTimeoutPolicy 
-    if (state.model?.substring(0,5)!="VZM35")	//Fan does not support power/energy reports
-      cmds += zigbee.readAttribute(0x0702, 0x0000, [:])  //SIMPLE_METERING Energy Report
+    if (state.model?.substring(0,5)!="VZM35" && state.model?.substring(0,5)!="VZM36")	//Fan does not support power/energy reports
+      cmds += zigbee.readAttribute(0x0702, 0x0000, [destEndpoint: endpointId])  //SIMPLE_METERING Energy Report
 //  cmds += zigbee.readAttribute(0x0702, 0x0200, [:])    //SIMPLE_METERING Status
 //  cmds += zigbee.readAttribute(0x0702, 0x0300, [:])    //SIMPLE_METERING Units
 //  cmds += zigbee.readAttribute(0x0702, 0x0301, [:])    //SIMPLE_METERING AC Multiplier
@@ -1740,8 +1746,8 @@ def readDeviceAttributes(childDevice) {
 //  cmds += zigbee.readAttribute(0x0B04, 0x0508, [:])    //ELECTRICAL_MEASUREMENT RMS Current
 //  cmds += zigbee.readAttribute(0x0B04, 0x0509, [:])    //ELECTRICAL_MEASUREMENT RMS Current min
 //  cmds += zigbee.readAttribute(0x0B04, 0x050A, [:])    //ELECTRICAL_MEASUREMENT RMS Current max
-    if (state.model?.substring(0,5)!="VZM35")  //Fan does not support power/energy reports
-      cmds += zigbee.readAttribute(0x0B04, 0x050B, [:])    //ELECTRICAL_MEASUREMENT Active Power
+    if (state.model?.substring(0,5)!="VZM35" && state.model?.substring(0,5)!="VZM36")  //Fan does not support power/energy reports
+      cmds += zigbee.readAttribute(0x0B04, 0x050B, [destEndpoint: endpointId])    //ELECTRICAL_MEASUREMENT Active Power
 //  cmds += zigbee.readAttribute(0x0B04, 0x050C, [:])    //ELECTRICAL_MEASUREMENT Active Power min
 //  cmds += zigbee.readAttribute(0x0B04, 0x050D, [:])    //ELECTRICAL_MEASUREMENT Active Power max
 //  cmds += zigbee.readAttribute(0x0B04, 0x050E, [:])    //ELECTRICAL_MEASUREMENT Reactive Power
@@ -1751,7 +1757,8 @@ def readDeviceAttributes(childDevice) {
 //  cmds += zigbee.readAttribute(0x0B04, 0x0605, [:])    //ELECTRICAL_MEASUREMENT Power Divisor
 //  cmds += zigbee.readAttribute(0x8021, 0x0000, [:])    //Binding
 //  cmds += zigbee.readAttribute(0x8022, 0x0000, [:])    //UnBinding
-	return delayBetween(cmds, shortDelay)
+	//return delayBetween(cmds, shortDelay)
+    sendHubCommand(new HubMultiAction(delayBetween(cmds, shortDelay), Protocol.ZIGBEE))
 }
 
 def refresh(option=null,childDevice=null) {
@@ -1763,7 +1770,7 @@ def refresh(option=null,childDevice=null) {
 	state.model = device.getDataValue('model')
     if (infoEnable||traceEnable||debugEnable) log.info "${device.displayName} Driver Date $state.driverDate"
     if (infoEnable||traceEnable||debugEnable) log.info "${device.displayName} Device Model $state.model"
-    //def cmds = []
+    def cmds = []
 	readDeviceAttributes()
 	configParams.each {	//loop through all parameters
 		int i = it.value.number.toInteger()
@@ -1774,18 +1781,18 @@ def refresh(option=null,childDevice=null) {
 				if (([22,52,158,258].contains(i))		//refresh primary settings
 				|| (readOnlyParams().contains(i))		//refresh read-only params
 				|| (settings."parameter${i}"!=null)) {	//refresh user settings
-					getParameter(i)
+					cmds = getParameter(i)
 				}
 				break
 			case "All":
-				getParameter(i) //if option is All then refresh all params
+				cmds = getParameter(i) //if option is All then refresh all params
 				break
 			default: 
 				if (traceEnable||debugEnable) log.error "${device.displayName} Unknonwn option 'refresh($option)'"
 				break
 		}
     }
-	//return cmds
+	return cmds
 }
 
 def remoteControl(option) {
