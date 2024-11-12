@@ -23,7 +23,7 @@ def getDriverDate() { return "2024-11-12" + orangeRed(" (beta)") }	// **** DATE 
 * ------------------------------
 *
 * 2024-11-12(EM) Removing speed attribute because it was making Google Home reject the device. Sending events when setspeed command is sent 
-*                as Google Home is not properly changing the state of the device.
+*                as Google Home is not properly changing the state of the device. Other Google Home fixes
 * 2024-11-07(EM) Adding supportedFanSpeeds for new Google Home Requirement
 * 2024-03-26(EM) removing incorrect fingerprint
 * 2024-03-20(EM) model number, cycleSpeed and setSpeed fixes
@@ -146,7 +146,7 @@ metadata {
         //                                [name:"DEPRECIATED",              description:"This command is depreciated.  Use setParameter instead"]]
 
         //Dimmer does not support setSpeed commands but Fan does
-        command "setSpeed",            [[name:"FanSpeed*", type:"ENUM",   constraints:["off","low","medium-low","medium","medium-high","high","up","down"]]]
+        command "setSpeed",            [[name:"FanSpeed*", type:"ENUM",   constraints:["low","medium","high","on","off","up","down"]]]
 		
         command "setZigbeeAttribute",  [[name:"Cluster*",  type:"NUMBER", description:"Cluster (in decimal) ex. Inovelli Private Cluster=0xFC31 input 64561"], 
                                         [name:"Attribute*",type:"NUMBER", description:"Attribute (in decimal) ex. 0x0100 input 256"], 
@@ -565,6 +565,8 @@ def installed() {    //THIS IS CALLED WHEN A DEVICE IS INSTALLED
     log.info "${device.displayName} Driver Date $state.driverDate"
     log.info "${device.displayName} Model=$state.model"
     //configure()     //I confirmed configure() gets called at Install time so this isn't needed here
+    refresh()
+    sendEvent(name: "supportedFanSpeeds", value: new groovy.json.JsonBuilder(["low","medium","high","on","off"]))
     return
 }
 
@@ -1544,100 +1546,7 @@ def quickStartVariables() {
 
 def readDeviceAttributes() {
 	if (traceEnable||debugEnable) log.trace "${device.displayName} readDeviceAttributes()"
-	parent.readDeviceAttributes(this.device)
-
-	def cmds = []
-//	cmds += zigbee.readAttribute(0x0000, 0x0000, [:])    //BASIC ZCL Version
-//	cmds += zigbee.readAttribute(0x0000, 0x0001, [:])    //BASIC Application Version
-//	cmds += zigbee.readAttribute(0x0000, 0x0002, [:])    //BASIC Stack Version
-//	cmds += zigbee.readAttribute(0x0000, 0x0003, [:])    //BASIC HW Version
-//	cmds += zigbee.readAttribute(0x0000, 0x0004, [:])    //BASIC Manufacturer Name
-	cmds += zigbee.readAttribute(0x0000, 0x0005, [:])    //BASIC Model
-	cmds += zigbee.readAttribute(0x0000, 0x0006, [:])    //BASIC SW Date Code
-//	cmds += zigbee.readAttribute(0x0000, 0x0007, [:])    //BASIC Power Source
-//	cmds += zigbee.readAttribute(0x0000, 0x0008, [:])    //BASIC GenericDevice-Class
-//	cmds += zigbee.readAttribute(0x0000, 0x0009, [:])    //BASIC GenericDevice-Type
-//	cmds += zigbee.readAttribute(0x0000, 0x000A, [:])    //BASIC ProductCode
-//	cmds += zigbee.readAttribute(0x0000, 0x000B, [:])    //BASIC ProductURL
-//	cmds += zigbee.readAttribute(0x0000, 0x000C, [:])    //BASIC ManufacturerVersionDetails
-//	cmds += zigbee.readAttribute(0x0000, 0x000D, [:])    //BASIC SerialNumber
-//	cmds += zigbee.readAttribute(0x0000, 0x000E, [:])    //BASIC ProductLabel
-//	cmds += zigbee.readAttribute(0x0000, 0x0010, [:])    //BASIC LocationDescription
-//	cmds += zigbee.readAttribute(0x0000, 0x0011, [:])    //BASIC PhysicalEnvironment
-//	cmds += zigbee.readAttribute(0x0000, 0x0012, [:])    //BASIC DeviceEnabled
-//	cmds += zigbee.readAttribute(0x0000, 0x0013, [:])    //BASIC AlarmMask
-//	cmds += zigbee.readAttribute(0x0000, 0x0014, [:])    //BASIC DisableLocalConfig
-	cmds += zigbee.readAttribute(0x0000, 0x4000, [:])    //BASIC SWBuildID
-//	cmds += zigbee.readAttribute(0x0003, 0x0000, [:])    //IDENTIFY Identify Time
-//	cmds += zigbee.readAttribute(0x0004, 0x0000, [:])    //GROUP Name Support
-//	cmds += zigbee.readAttribute(0x0005, 0x0000, [:])    //SCENES Scene Count
-//	cmds += zigbee.readAttribute(0x0005, 0x0001, [:])    //SCENES Current Scene
-//	cmds += zigbee.readAttribute(0x0005, 0x0002, [:])    //SCENES Current Group
-//	cmds += zigbee.readAttribute(0x0005, 0x0003, [:])    //SCENES Scene Valid
-//	cmds += zigbee.readAttribute(0x0005, 0x0004, [:])    //SCENES Name Support
-//	cmds += zigbee.readAttribute(0x0005, 0x0005, [:])    //SCENES LastConfiguredBy
-	cmds += zigbee.readAttribute(0x0006, 0x0000, [:])    //ON_OFF Current OnOff state
-//	cmds += zigbee.readAttribute(0x0006, 0x4000, [:])    //ON_OFF GlobalSceneControl
-//	cmds += zigbee.readAttribute(0x0006, 0x4001, [:])    //ON_OFF OnTime
-//	cmds += zigbee.readAttribute(0x0006, 0x4002, [:])    //ON_OFF OffWaitTime
-	cmds += zigbee.readAttribute(0x0006, 0x4003, [:])    //ON_OFF Startup OnOff state
-	cmds += zigbee.readAttribute(0x0008, 0x0000, [:])    //LEVEL_CONTROL CurrentLevel
-//	cmds += zigbee.readAttribute(0x0008, 0x0001, [:])    //LEVEL_CONTROL RemainingTime
-//	cmds += zigbee.readAttribute(0x0008, 0x0002, [:])    //LEVEL_CONTROL MinLevel
-//	cmds += zigbee.readAttribute(0x0008, 0x0003, [:])    //LEVEL_CONTROL MaxLevel
-//	cmds += zigbee.readAttribute(0x0008, 0x0004, [:])    //LEVEL_CONTROL CurrentFrequency
-//	cmds += zigbee.readAttribute(0x0008, 0x0005, [:])    //LEVEL_CONTROL MinFrequency
-//	cmds += zigbee.readAttribute(0x0008, 0x0006, [:])    //LEVEL_CONTROL MaxFrequency
-//	cmds += zigbee.readAttribute(0x0008, 0x000F, [:])    //LEVEL_CONTROL Options
-//	cmds += zigbee.readAttribute(0x0008, 0x0010, [:])    //LEVEL_CONTROL OnOff Transition Time
-//	cmds += zigbee.readAttribute(0x0008, 0x0011, [:])    //LEVEL_CONTROL OnLevel
-//  cmds += zigbee.readAttribute(0x0008, 0x0012, [:])    //LEVEL_CONTROL OnTransitionTime
-//  cmds += zigbee.readAttribute(0x0008, 0x0013, [:])    //LEVEL_CONTROL OffTransitionTime
-//  cmds += zigbee.readAttribute(0x0008, 0x0014, [:])    //LEVEL_CONTROL DefaultMoveRate
-//  cmds += zigbee.readAttribute(0x0008, 0x4000, [:])    //LEVEL_CONTROL StartUpCurrentLevel
-//  cmds += zigbee.readAttribute(0x0019, 0x0000, [:])    //OTA Upgrade Server ID
-//  cmds += zigbee.readAttribute(0x0019, 0x0001, [:])    //OTA File Offset
-//  cmds += zigbee.readAttribute(0x0019, 0x0002, [:])    //OTA CurrentFileVersion
-//  cmds += zigbee.readAttribute(0x0019, 0x0003, [:])    //OTA CurrentZigBeeStackVersion
-//  cmds += zigbee.readAttribute(0x0019, 0x0004, [:])    //OTA DownloadedFileVersion
-//  cmds += zigbee.readAttribute(0x0019, 0x0005, [:])    //OTA DownloadedZigBeeStackVersion
-//  cmds += zigbee.readAttribute(0x0019, 0x0006, [:])    //OTA Image Upgrade Status
-//  cmds += zigbee.readAttribute(0x0019, 0x0007, [:])    //OTA ManufacturerID 
-//  cmds += zigbee.readAttribute(0x0019, 0x0008, [:])    //OTA Image TypeID 
-//  cmds += zigbee.readAttribute(0x0019, 0x0009, [:])    //OTA MinimumBlockPeriod
-//  cmds += zigbee.readAttribute(0x0019, 0x000A, [:])    //OTA Image Stamp
-//  cmds += zigbee.readAttribute(0x0019, 0x000B, [:])    //OTA UpgradeActivationPolicy
-//  cmds += zigbee.readAttribute(0x0019, 0x000C, [:])    //OTA UpgradeTimeoutPolicy 
-    if (state.model?.substring(0,5)!="VZM35")	//Fan does not support power/energy reports
-      cmds += zigbee.readAttribute(0x0702, 0x0000, [:])  //SIMPLE_METERING Energy Report
-//  cmds += zigbee.readAttribute(0x0702, 0x0200, [:])    //SIMPLE_METERING Status
-//  cmds += zigbee.readAttribute(0x0702, 0x0300, [:])    //SIMPLE_METERING Units
-//  cmds += zigbee.readAttribute(0x0702, 0x0301, [:])    //SIMPLE_METERING AC Multiplier
-//  cmds += zigbee.readAttribute(0x0702, 0x0302, [:])    //SIMPLE_METERING AC Divisor
-//  cmds += zigbee.readAttribute(0x0702, 0x0303, [:])    //SIMPLE_METERING Formatting
-//  cmds += zigbee.readAttribute(0x0702, 0x0306, [:])    //SIMPLE_METERING Metering Device Type
-//  cmds += zigbee.readAttribute(0x0B04, 0x0501, [:])    //ELECTRICAL_MEASUREMENT Line Current
-//  cmds += zigbee.readAttribute(0x0B04, 0x0502, [:])    //ELECTRICAL_MEASUREMENT Active Current
-//  cmds += zigbee.readAttribute(0x0B04, 0x0503, [:])    //ELECTRICAL_MEASUREMENT Reactive Current
-//  cmds += zigbee.readAttribute(0x0B04, 0x0505, [:])    //ELECTRICAL_MEASUREMENT RMS Voltage
-//  cmds += zigbee.readAttribute(0x0B04, 0x0506, [:])    //ELECTRICAL_MEASUREMENT RMS Voltage min
-//  cmds += zigbee.readAttribute(0x0B04, 0x0507, [:])    //ELECTRICAL_MEASUREMENT RMS Voltage max
-//  cmds += zigbee.readAttribute(0x0B04, 0x0508, [:])    //ELECTRICAL_MEASUREMENT RMS Current
-//  cmds += zigbee.readAttribute(0x0B04, 0x0509, [:])    //ELECTRICAL_MEASUREMENT RMS Current min
-//  cmds += zigbee.readAttribute(0x0B04, 0x050A, [:])    //ELECTRICAL_MEASUREMENT RMS Current max
-    if (state.model?.substring(0,5)!="VZM35")  //Fan does not support power/energy reports
-      cmds += zigbee.readAttribute(0x0B04, 0x050B, [:])    //ELECTRICAL_MEASUREMENT Active Power
-//  cmds += zigbee.readAttribute(0x0B04, 0x050C, [:])    //ELECTRICAL_MEASUREMENT Active Power min
-//  cmds += zigbee.readAttribute(0x0B04, 0x050D, [:])    //ELECTRICAL_MEASUREMENT Active Power max
-//  cmds += zigbee.readAttribute(0x0B04, 0x050E, [:])    //ELECTRICAL_MEASUREMENT Reactive Power
-//  cmds += zigbee.readAttribute(0x0B04, 0x050F, [:])    //ELECTRICAL_MEASUREMENT Apparent Power
-//  cmds += zigbee.readAttribute(0x0B04, 0x0510, [:])    //ELECTRICAL_MEASUREMENT Power Factor
-//  cmds += zigbee.readAttribute(0x0B04, 0x0604, [:])    //ELECTRICAL_MEASUREMENT Power Multiplier
-//  cmds += zigbee.readAttribute(0x0B04, 0x0605, [:])    //ELECTRICAL_MEASUREMENT Power Divisor
-//  cmds += zigbee.readAttribute(0x8021, 0x0000, [:])    //Binding
-//  cmds += zigbee.readAttribute(0x8022, 0x0000, [:])    //UnBinding
-
-	return delayBetween(cmds, shortDelay)
+	parent.readDeviceAttributes(device.deviceNetworkId)
 }
 
 def refresh(option) {
