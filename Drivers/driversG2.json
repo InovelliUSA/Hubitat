@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "VZW36: Google Home fixes and properly read endpoint attributes after joining",
+   "releaseNotes": "LZW36/VZM35-SN: add supportedFanSpeeds to configure method for Google Home support fix. Press configure button after updating the driver",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -81,7 +81,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-lzw36.src/inovelli-fan-light-lzw36.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "21.11.30"
+                "version": "24.11.19"
    	},
 	   {
    		"id" : "66a064ca-b968-11ba-b3de-0242ac270024",
@@ -109,7 +109,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-blue-series-vzm35-sn.src/inovelli-fan-blue-series-vzm35-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "24.2.16",
+                "version": "24.11.19",
 		"releaseNotes": "" 
    	},
 	{
