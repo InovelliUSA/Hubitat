@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-05-30" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2024-11-19" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM35-SN Blue Series Zigbee Fan Switch
@@ -24,6 +24,7 @@ def getDriverDate() { return "2024-05-30" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2024-11-19(EM) add supportedFanSpeeds to configure method for Google Home support fix. Press configure button after updating the driver
 * 2024-05-30(MA) log raw values with percentages
 * 2024-05-28(MA) misc. code cleanup
 * 2024-04-26(MA) add option to automatically bind group when created with the Groups and Scenes App
@@ -506,6 +507,7 @@ def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS A
     state.lastCommandSent =                        "configure($option)"
     state.lastCommandTime = nowFormatted()
     sendEvent(name: "numberOfButtons", value: settings.parmeter23?28:14)
+    sendEvent(name: "supportedFanSpeeds", value: new groovy.json.JsonBuilder(["low","medium","high","on","off"]))
     def cmds = []
 	if (infoEnable) log.info "${device.displayName} re-establish lifeline bindings to hub"
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0000 {${device.zigbeeId}} {}"] //Basic Cluster
