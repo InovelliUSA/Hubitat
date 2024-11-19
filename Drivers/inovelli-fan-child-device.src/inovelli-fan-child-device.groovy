@@ -21,6 +21,7 @@ metadata {
 	capability "Switch"
 	capability "Refresh"
         capability "FanControl"
+        capability "Configuration"
 
         command "low"
         command "medium"
@@ -86,4 +87,8 @@ def setSpeed(fanspeed) {
     else if (fanspeed == off) {
         off()
     }
+}
+
+def configure() {
+    sendEvent(name: "supportedFanSpeeds", value: new groovy.json.JsonBuilder(["low","medium","high","on","off"]))
 }
