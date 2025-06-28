@@ -42,7 +42,7 @@ import hubitat.helper.HexUtils
 import java.security.MessageDigest
 
 metadata {
-    definition (name: "Inovelli Switch Blue Series VZM30-SN", namespace: "InovelliUSA", author: "E.Maycock/M.Amber", filename: "Inovelli-zigbee-switch", importUrl:"https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-blue-series-vzm30-sn.src/inovelli-dimmer-blue-series-vzm30-sn.groovy" ) 
+    definition (name: "Inovelli Switch Blue Series VZM30-SN", namespace: "InovelliUSA", author: "E.Maycock/M.Amber", filename: "Inovelli-zigbee-switch", importUrl:"https://raw.githubusercontent.com/InovelliUSA/Hubitat/refs/heads/master/Drivers/inovelli-switch-blue-series-vzm30-sn.src/inovelli-switch-blue-series-vzm30-sn.groovy" ) 
 	{
 		capability "Actuator"	//device can "do" something (has commands)
         capability "Sensor"		//device can "report" something (has attributes)
