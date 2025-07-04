@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "LZW36/VZM35-SN: add supportedFanSpeeds to configure method for Google Home support fix. Press configure button after updating the driver",
+   "releaseNotes": "VZM30-SN: Add support for this device.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -91,6 +91,16 @@
    		"required": false,
    		"oauth": false,
                 "version": "22.12.29"
+   	},
+	   {
+   		"id" : "ddd82d36-1545-49b6-913e-3735cccce7da",
+   		"name": "Inovelli Switch Blue Series VZM30-SN",
+                "namespace": "InovelliUSA",
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/refs/heads/master/Drivers/inovelli-switch-blue-series-vzm30-sn.src/inovelli-switch-blue-series-vzm30-sn.groovy",
+   		"required": false,
+   		"oauth": false,
+                "version": "25.7.4",
+		"releaseNotes": "" 
    	},
 	{
    		"id" : "c0d82d86-1545-49b6-943e-3435cccce7d6",
