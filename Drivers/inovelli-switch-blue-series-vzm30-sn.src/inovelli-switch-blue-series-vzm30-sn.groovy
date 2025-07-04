@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-12-17" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-07-04" }	// **** DATE OF THE DEVICE DRIVER
 //  !!!!!!!!!!!!!!!!!  UPDATE ^^^THIS^^^ DATE IF YOU MAKE ANY CHANGES  !!!!!!!!!!!!!!!!!
 /*
 * Inovelli VZM30-SN Blue Series Zigbee Switch
@@ -24,6 +24,7 @@ def getDriverDate() { return "2024-12-17" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2025-07-04(EM) Removing relay click parameter. It does not apply to this device.
 * 2024-12-17(EM) Adding some parameters back for use with binding. Removing full sine mode and P25 (Non-Neutral enhancements).
 * 2024-11-27(EM) Adding temperature/humidity measurement.
 * 2024-11-26(EM) Adding additional fingerprint for EP1.
@@ -2350,9 +2351,9 @@ def holdConfig()     {buttonEvent(13, "held", "digital")}
 def releaseConfig()  {buttonEvent(14, "released", "digital")}
 
 def userSettableParams() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
-    //if (parameter258 == "1") return [258,22,52,    3,      7,    10,11,12,      15,17,18,19,20,23,24,25,50,            95,96,97,98,100,    123,125,130,131,132,133,134,256,259,260,261,262]  //on/off mode
+    //if (parameter258 == "1") return [258,22,52,    3,      7,    10,11,12,      15,17,18,19,20,23,24,25,50,            95,96,97,98,100,    123,125,130,131,132,133,134,256,259,260,262]  //on/off mode
     //else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,23,24,25,50,53,54,55,56,95,96,97,98,100,120,123,125,130,131,132,133,134,256,    260,    262]  //dimmer mode
-    return [22,52,1,2,3,4,5,6,7,8,9,10,11,12,      15,17,18,19,20,        ,50,            95,96,97,98,100,    121,123,125,130,131,132,133,134,256,259,260,261,262]  //on/off mode
+    return [22,52,1,2,3,4,5,6,7,8,9,10,11,12,      15,17,18,19,20,        ,50,            95,96,97,98,100,    121,123,125,130,131,132,133,134,256,259,260,262]  //on/off mode
 }
 
 def readOnlyParams() {
