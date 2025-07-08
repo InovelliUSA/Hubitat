@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-07-04" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-07-08" }	// **** DATE OF THE DEVICE DRIVER
 //  !!!!!!!!!!!!!!!!!  UPDATE ^^^THIS^^^ DATE IF YOU MAKE ANY CHANGES  !!!!!!!!!!!!!!!!!
 /*
 * Inovelli VZM30-SN Blue Series Zigbee Switch
@@ -24,6 +24,7 @@ def getDriverDate() { return "2025-07-04" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2025-07-08(EM) Adding temperature and humidity reporting configuration parameters.
 * 2025-07-04(EM) Removing relay click parameter. It does not apply to this device.
 * 2024-12-17(EM) Adding some parameters back for use with binding. Removing full sine mode and P25 (Non-Neutral enhancements).
 * 2024-11-27(EM) Adding temperature/humidity measurement.
@@ -165,7 +166,7 @@ metadata {
     }
 
     preferences {
-        userSettableParams().each{ i ->
+        (userSettableParams() + [301, 302, 303, 304, 305, 306]).each{ i ->
             switch(configParams["parameter${i.toString().padLeft(3,"0")}"].type){
                 case "number":
                     switch(i){
@@ -427,6 +428,7 @@ def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS A
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0xFC31 {${device.zigbeeId}} {}"] //Private Cluster ep2
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0xFC57 {${device.zigbeeId}} {}"] //???? ???? (listed in fingerprint)
 
+   
     if (debugEnable) log.debug "${device.displayName} configure $cmds"
 	sendHubCommand(new HubMultiAction(delayBetween(cmds, shortDelay), Protocol.ZIGBEE))
     if (option=="") {		//IF   we didn't pick an option 
@@ -1988,6 +1990,26 @@ def updated(option) { // called when "Save Preferences" is requested
     if (infoEnable) log.info "${device.displayName} updated(${option})"
     state.lastCommandSent =                        "updated(${option})"
     state.lastCommandTime = nowFormatted()
+    
+    def cmds = []
+    // Configure temperature and humidity reporting
+    def tempMinInterval = settings.parameter301 ?: 30
+    def tempMaxInterval = settings.parameter302 ?: 3600
+    def tempMinChange = settings.parameter303 ?: 10
+    def humidMinInterval = settings.parameter304 ?: 30
+    def humidMaxInterval = settings.parameter305 ?: 3600
+    def humidMinChange = settings.parameter306 ?: 10
+
+    
+    // Temperature reporting configuration (cluster 0x0402, attribute 0x0000)
+    cmds += zigbee.configureReporting(0x0402, 0x0000, DataType.INT16, tempMinInterval.toInteger(), tempMaxInterval.toInteger(), tempMinChange.toInteger(), [destEndpoint: 0x04])
+    
+    // Humidity reporting configuration (cluster 0x0405, attribute 0x0000)
+    cmds += zigbee.configureReporting(0x0405, 0x0000, DataType.UINT16, humidMinInterval.toInteger(), humidMaxInterval.toInteger(), humidMinChange.toInteger(), [destEndpoint: 0x04])
+
+    sendHubCommand(new HubMultiAction(delayBetween(cmds, shortDelay), Protocol.ZIGBEE))
+
+
     def nothingChanged = true
     int defaultValue
     int newValue
@@ -3147,6 +3169,54 @@ def readOnlyParams() {
         range: "0..9",
         default: 3,
         size: 8,
+        type: "number"
+        ],
+    parameter301 : [
+        name: "Temperature Reporting - Min Report Interval",
+        description: "Minimum time interval between temperature reports (in seconds).<br>0 = Disabled<br>1-65535 = 1 second to 65535 seconds",
+        range: "0..65535",
+        default: 30,
+        size: 16,
+        type: "number"
+        ],
+    parameter302 : [
+        name: "Temperature Reporting - Max Report Interval",
+        description: "Maximum time interval between temperature reports (in seconds).<br>0 = Disabled<br>1-65535 = 1 second to 65535 seconds",
+        range: "0..65535",
+        default: 3600,
+        size: 16,
+        type: "number"
+        ],
+    parameter303 : [
+        name: "Temperature Reporting - Min Report Change",
+        description: "Minimum change in temperature that will trigger a report (in 0.1°C units).<br>0 = Disabled<br>1-65535 = 0.1°C to 6553.5°C",
+        range: "0..65535",
+        default: 10,
+        size: 16,
+        type: "number"
+        ],
+    parameter304 : [
+        name: "Humidity Reporting - Min Report Interval",
+        description: "Minimum time interval between humidity reports (in seconds).<br>0 = Disabled<br>1-65535 = 1 second to 65535 seconds",
+        range: "0..65535",
+        default: 30,
+        size: 16,
+        type: "number"
+        ],
+    parameter305 : [
+        name: "Humidity Reporting - Max Report Interval",
+        description: "Maximum time interval between humidity reports (in seconds).<br>0 = Disabled<br>1-65535 = 1 second to 65535 seconds",
+        range: "0..65535",
+        default: 3600,
+        size: 16,
+        type: "number"
+        ],
+    parameter306 : [
+        name: "Humidity Reporting - Min Report Change",
+        description: "Minimum change in humidity that will trigger a report (in 0.1% units).<br>0 = Disabled<br>1-65535 = 0.1% to 6553.5%",
+        range: "0..65535",
+        default: 10,
+        size: 16,
         type: "number"
         ]
 ]

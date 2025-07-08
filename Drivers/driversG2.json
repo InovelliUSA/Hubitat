@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "VZM30-SN: Add support for this device.",
+   "releaseNotes": "VZM30-SN: Add configureable temperature and humidity reporting parameters.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -99,7 +99,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/refs/heads/master/Drivers/inovelli-switch-blue-series-vzm30-sn.src/inovelli-switch-blue-series-vzm30-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "25.7.4",
+                "version": "25.7.8",
 		"releaseNotes": "" 
    	},
 	{
