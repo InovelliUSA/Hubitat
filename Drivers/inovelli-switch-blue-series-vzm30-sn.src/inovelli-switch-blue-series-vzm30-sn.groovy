@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-07-08" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-07-15" }	// **** DATE OF THE DEVICE DRIVER
 //  !!!!!!!!!!!!!!!!!  UPDATE ^^^THIS^^^ DATE IF YOU MAKE ANY CHANGES  !!!!!!!!!!!!!!!!!
 /*
 * Inovelli VZM30-SN Blue Series Zigbee Switch
@@ -24,6 +24,7 @@ def getDriverDate() { return "2025-07-08" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2025-07-15(EM) Fixed VZM30-SN model handling for Aux Type (P22) and Switch Mode (P258) parameters to prevent "unknown model" display.
 * 2025-07-08(EM) Adding temperature and humidity reporting configuration parameters.
 * 2025-07-04(EM) Removing relay click parameter. It does not apply to this device.
 * 2024-12-17(EM) Adding some parameters back for use with binding. Removing full sine mode and P25 (Non-Neutral enhancements).
@@ -1327,6 +1328,10 @@ def parsePrivateCluster(description) {
                                 infoMsg += " " + (valueInt==0?"(No Aux)":(valueInt==1?"(Dumb 3-way)":(valueInt==2?"(Smart Aux)":(valueInt==3?"(No Aux Full Wave)":"(unknown type)"))))
 								state.auxType =  (valueInt==0? "No Aux": (valueInt==1? "Dumb 3-way": (valueInt==2? "Smart Aux": (valueInt==3? "No Aux Full Wave":  "unknown type $valueInt"))))
                                 break
+                            case "VZM30":    //Blue Series Switch
+                                infoMsg += " " + (valueInt==0?"(No Aux)":(valueInt==1?"(Smart Aux)":"(unknown type)"))
+								state.auxType =  (valueInt==0? "No Aux": (valueInt==1? "Smart Aux": "unknown type $valueInt"))
+                                break
                             case "VZM35":    //Fan Switch
                                 infoMsg += " " + (valueInt==0?"(No Aux)":"(Smart Aux)")
                                 state.auxType =   valueInt==0? "No Aux":  "Smart Aux"
@@ -1507,6 +1512,10 @@ def parsePrivateCluster(description) {
                         switch (state.model?.substring(0,5)){
                             case "VZM31":    //Blue 2-in-1 Dimmer
                             case "VZW31":    //Red  2-in-1 Dimmer
+                                infoMsg += " " + (valueInt==0?"(Dimmer mode)":"(On/Off mode)")
+                                sendEvent(name:"switchMode", value:valueInt==0?"Dimmer":"On/Off")
+                                break
+                            case "VZM30":    //Blue Series Switch
                                 infoMsg += " " + (valueInt==0?"(Dimmer mode)":"(On/Off mode)")
                                 sendEvent(name:"switchMode", value:valueInt==0?"Dimmer":"On/Off")
                                 break
@@ -2548,7 +2557,7 @@ def readOnlyParams() {
     parameter022 : [
         name: "Switch Type",
         description: "Set the switch type (Smart Bulb Mode does not work in Multi-way with Dumb Switch mode)",
-        range: ["0":"Single-pole (default)", "1":"Multi-way with Dumb Switch", "2":"Mulit-way with Aux Switch"],
+        range: ["0":"Single-pole (default)", "1":"Mulit-way with Aux Switch"],
         default: 2,
         size: 8,
         type: "enum"

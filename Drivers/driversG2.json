@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "VZM30-SN: Add configureable temperature and humidity reporting parameters.",
+   "releaseNotes": "VZM30-SN: Fixed VZM30-SN model handling for Aux Type (P22) and Switch Mode (P258) parameters to prevent (unknown model) display",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
