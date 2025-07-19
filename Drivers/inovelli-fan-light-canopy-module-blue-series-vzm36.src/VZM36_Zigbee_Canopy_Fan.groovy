@@ -22,6 +22,7 @@ def getDriverDate() { return "2024-11-12" + orangeRed(" (beta)") }	// **** DATE 
 *           CHANGE LOG          
 * ------------------------------
 *
+* 2025-07-17(EM) Note: supportedFanSpeeds event is now sent by the main VZM36 driver to this child device
 * 2024-11-12(EM) Removing speed attribute because it was making Google Home reject the device. Sending events when setspeed command is sent 
 *                as Google Home is not properly changing the state of the device. Other Google Home fixes
 * 2024-11-07(EM) Adding supportedFanSpeeds for new Google Home Requirement
@@ -566,7 +567,6 @@ def installed() {    //THIS IS CALLED WHEN A DEVICE IS INSTALLED
     log.info "${device.displayName} Model=$state.model"
     //configure()     //I confirmed configure() gets called at Install time so this isn't needed here
     refresh()
-    sendEvent(name: "supportedFanSpeeds", value: new groovy.json.JsonBuilder(["low","medium","high","on","off"]))
     return
 }
 

@@ -1,9 +1,9 @@
 /**
  *  Inovelli Fan + Light LZW36
  *  Author: Eric Maycock (erocm123)
- *  Date: 2024-11-19
+ *  Date: 2025-07-17
  *
- *  Copyright 2024 Inovelli / Eric Maycock
+ *  Copyright 2025 Inovelli / Eric Maycock
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -14,7 +14,9 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *  
- *  2024-11-19: add supportedFanSpeeds to configure method for Google Home support fix. Press configure button after updating the driver.
+ *  2025-07-17: Added supportedFanSpeeds event to fan child devices for Google Home integration. 
+*              The event is sent both when creating new fan child devices and to existing ones when configure() is called.
+*              Press configure button after updating the driver to update existing devices.
  *  
  *  2021-11-30: Adding push & hold methods for Hubitat capability updates.
  *  
@@ -778,6 +780,14 @@ private zwaveValueToHuePercent(value){
 def configure() {
     if (infoEnable) log.info "${device.label?device.label:device.name}: configure()"
     sendEvent(name: "supportedFanSpeeds", value: new groovy.json.JsonBuilder(["low","medium","high","on","off"]))
+    
+    // Send supportedFanSpeeds event to existing fan child devices
+    getChildDevices().each { child ->
+        if (child.deviceNetworkId.endsWith("-ep002") && child.getDriverName()?.contains("Hampton Bay Fan Component")) {
+            child.sendEvent(name: "supportedFanSpeeds", value: new groovy.json.JsonBuilder(["low","medium","high","on","off"]))
+        }
+    }
+    
     def cmds = initialize()
     commands(cmds)
 }
@@ -896,6 +906,7 @@ def initialize() {
             isComponent: false, componentName: "ep002", componentLabel: "Fan"
         ])
         newChild.sendEvent(name:"switch", value:"off")
+        newChild.sendEvent(name: "supportedFanSpeeds", value: new groovy.json.JsonBuilder(["low","medium","high","on","off"]))
     }
     if (enableDefaultLocalChild && !childExists("ep112")) {
     try {

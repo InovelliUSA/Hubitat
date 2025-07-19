@@ -22,6 +22,7 @@ def getDriverDate() { return "2024-11-12" + orangeRed(" (beta)") }	// **** DATE 
 *           CHANGE LOG          
 * ------------------------------
 *
+* 2025-07-17(EM) Added supportedFanSpeeds event to fan child devices for Google Home integration
 * 2024-11-12(EM) Google Home fixes and properly read endpoint attributes after joining
 * 2024-05-30(MA) misc. code cleanup
 * 2024-03-26(EM) removing incorrect fingerprint
@@ -511,9 +512,17 @@ def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS A
             if(i == 1) {
 				addChildDevice("InovelliUSA","Inovelli VZM36 Zigbee Canopy Light",childId,[isComponent:true,name:"Canopy Light EP0${i}",label: "${device.displayName} Light"])
             } else { if(i == 2) {
-				addChildDevice("InovelliUSA","Inovelli VZM36 Zigbee Canopy Fan",  childId,[isComponent:true,name:"Canopy Fan EP0${i}",  label: "${device.displayName} Fan"])
+				def fanChild = addChildDevice("InovelliUSA","Inovelli VZM36 Zigbee Canopy Fan",  childId,[isComponent:true,name:"Canopy Fan EP0${i}",  label: "${device.displayName} Fan"])
+				fanChild.sendEvent(name: "supportedFanSpeeds", value: new groovy.json.JsonBuilder(["low","medium","high","on","off"]))
 				}
             }
+        }
+    }
+    
+    // Send supportedFanSpeeds event to existing fan child devices
+    getChildDevices().each { child ->
+        if (child.deviceNetworkId.endsWith("-02")) {
+            child.sendEvent(name: "supportedFanSpeeds", value: new groovy.json.JsonBuilder(["low","medium","high","on","off"]))
         }
     }
 
@@ -648,7 +657,8 @@ def initialize() {    //CALLED DURING HUB BOOTUP IF "INITIALIZE" CAPABILITY IS D
             if(i == 1) {
 				addChildDevice("InovelliUSA","Inovelli VZM36 Zigbee Canopy Light",childId,[isComponent:true,name:"Canopy Light EP0${i}",label: "${device.displayName} Light"])
             } else { if(i == 2) {
-				addChildDevice("InovelliUSA","Inovelli VZM36 Zigbee Canopy Fan",  childId,[isComponent:true,name:"Canopy Fan EP0${i}",  label: "${device.displayName} Fan"])
+				def fanChild = addChildDevice("InovelliUSA","Inovelli VZM36 Zigbee Canopy Fan",  childId,[isComponent:true,name:"Canopy Fan EP0${i}",  label: "${device.displayName} Fan"])
+				fanChild.sendEvent(name: "supportedFanSpeeds", value: new groovy.json.JsonBuilder(["low","medium","high","on","off"]))
 				}
             }
         }
