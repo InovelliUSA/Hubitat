@@ -783,7 +783,7 @@ def configure() {
     
     // Send supportedFanSpeeds event to existing fan child devices
     getChildDevices().each { child ->
-        if (child.deviceNetworkId.endsWith("-ep002") && child.getDriverName()?.contains("Hampton Bay Fan Component")) {
+        if (child.deviceNetworkId.endsWith("-ep002")) {
             child.sendEvent(name: "supportedFanSpeeds", value: new groovy.json.JsonBuilder(["low","medium","high","on","off"]))
         }
     }
