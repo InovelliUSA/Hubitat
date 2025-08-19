@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-05-30" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-08-19" }	// **** DATE OF THE DEVICE DRIVER
 //  !!!!!!!!!!!!!!!!!  UPDATE ^^^THIS^^^ DATE IF YOU MAKE ANY CHANGES  !!!!!!!!!!!!!!!!!
 /*
 * Inovelli VZM31-SN Blue Series Zigbee 2-in-1 Dimmer
@@ -24,6 +24,7 @@ def getDriverDate() { return "2024-05-30" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2025-08-19(EM) Update internalTemp to report as a number so it can be used with numerical comparisons in rules.
 * 2024-05-30(MA) log raw values with percentages
 * 2024-05-28(MA) misc. code cleanup
 * 2024-04-26(MA) add option to automatically bind group when created with the Groups and Scenes App
@@ -210,7 +211,7 @@ metadata {
 
         attribute "lastButton", "String"		//last button event
         attribute "ledEffect", "String"			//last LED effect requested (may have timed-out and not necessarily displaying currently)
-		attribute "internalTemp", "String"		//Internal Temperature in Celsius	(read-only P32)
+		attribute "internalTemp", "Number"		//Internal Temperature in Celsius	(read-only P32)
         //attribute "numberOfBindings", "String"	//Group bindings count as 2		(commented out since this number is unreliable)
 		attribute "overHeat", "String"			//Overheat Indicator				(read-only P33)
 		attribute "powerSource", "String"		//Neutral/non-Neutral				(read-only P21)
@@ -1459,10 +1460,10 @@ def parsePrivateCluster(description) {
 						infoMsg += " (non-Neutral AUX low gear)"
 						break
                     case 32:    //Internal Temperature (read only)
-						valueInt = Math.round(valueInt*9/5+32).toInteger()	//convert Celsius to Fahrenheit
-						valueStr = "${valueInt}°F"
+                        valueFloat = (location.temperatureScale == "F") ? ((valueInt * 1.8) + 32) : valueInt
+                        valueStr = (location.temperatureScale == "F") ? "${valueFloat}°F" : "${valueFloat}°C"
                         infoMsg += " (Internal Temp: " + hue(valueInt,"${valueStr}") + ")"
-                        sendEvent(name:"internalTemp", value:valueStr)
+                        sendEvent(name:"internalTemp", value:valueFloat, unit: location.temperatureScale)
                         break
                     case 33:    //Overheat (read only)
                         infoMsg += " (Overheat: " + (valueInt==0?limeGreen("False"):valueInt==1?red("TRUE"):"undefined") + ")"

@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-10-22" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-08-19" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW31-SN Red Series Z-Wave 2-in-1 Dimmer
@@ -18,6 +18,7 @@ def getDriverDate() { return "2024-10-22" /** + orangeRed(" (beta)") **/ }	// **
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2025-08-19(EM) Update internalTemp to report as a number so it can be used with numerical comparisons in rules.
 * 2024-10-22(EM) fix leading and trailing edge state variable update
 * 2024-10-09(EM) fix bug that was preventing the ability to change remote control from the device page
 * 2024-10-08(EM) make it so parameter 156 and 157 update when using setParameter or when changed locally
@@ -98,7 +99,7 @@ metadata {
 
         attribute "lastButton", "String"		//last button event
         attribute "ledEffect", "String"			//last LED effect requested (may have timed-out and not necessarily displaying currently)
-		attribute "internalTemp", "String"		//Internal Temperature in Celsius	(read-only P32)
+		attribute "internalTemp", "Number"		//Internal Temperature in Celsius	(read-only P32)
         //attribute "numberOfBindings", "String" //Group bindings count as 2		(read only P51)
 		attribute "overHeat", "String"			//Overheat Indicator				(read-only P33)
 		attribute "powerSource", "String"		//Neutral/non-Neutral				(read-only P21)
@@ -876,9 +877,10 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 						infoMsg += " (non-Neutral AUX low gear)"
 						break
                     case 32:    //Internal Temperature (read only)
-						valueStr = "${Math.round(valueInt*9/5+32)}°F"
-                        infoMsg += " (Internal Temp: " + hue(100-valueInt.toInteger(),"${valueStr}") + ")"
-                        sendEvent(name:"internalTemp", value:valueStr)
+						valueFloat = (location.temperatureScale == "F") ? ((valueInt * 1.8) + 32) : valueInt
+                        valueStr = (location.temperatureScale == "F") ? "${valueFloat}°F" : "${valueFloat}°C"
+                        infoMsg += " (Internal Temp: " + hue(valueInt,"${valueStr}") + ")"
+                        sendEvent(name:"internalTemp", value:valueFloat, unit: location.temperatureScale)
                         break
                     case 33:    //Overheat (read only)
                         infoMsg += " (Overheat: " + (valueInt==0?limeGreen("False"):valueInt==1?red("TRUE"):"undefined") + ")"

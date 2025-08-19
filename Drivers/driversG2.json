@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "VZM36 & LZW36: Fix for Google Home integration",
+   "releaseNotes": "VZW31, VZM31, VZM30, VZM35: Update internalTemp to report as a number so it can be used with numerical comparisons in rules. VZM36 & LZW36: Fix for Google Home integration",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -99,7 +99,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/refs/heads/master/Drivers/inovelli-switch-blue-series-vzm30-sn.src/inovelli-switch-blue-series-vzm30-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "25.7.18",
+                "version": "25.8.19",
 		"releaseNotes": "" 
    	},
 	{
@@ -109,7 +109,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-blue-series-vzm31-sn.src/inovelli-dimmer-blue-series-vzm31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "24.3.21",
+                "version": "25.8.19",
 		"releaseNotes": "" 
    	},
 	   {
@@ -119,7 +119,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-blue-series-vzm35-sn.src/inovelli-fan-blue-series-vzm35-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "24.11.19",
+                "version": "25.8.19",
 		"releaseNotes": "" 
    	},
 	{
@@ -129,7 +129,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-vzw31-sn.src/inovelli-dimmer-red-series-vzw31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "24.10.8",
+                "version": "25.8.19",
 		"releaseNotes": "" 
    	},
 	{
