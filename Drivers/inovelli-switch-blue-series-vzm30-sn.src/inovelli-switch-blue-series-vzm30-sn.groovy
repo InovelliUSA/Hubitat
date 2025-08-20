@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-08-19" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-08-20" }	// **** DATE OF THE DEVICE DRIVER
 //  !!!!!!!!!!!!!!!!!  UPDATE ^^^THIS^^^ DATE IF YOU MAKE ANY CHANGES  !!!!!!!!!!!!!!!!!
 /*
 * Inovelli VZM30-SN Blue Series Zigbee Switch
@@ -7,7 +7,7 @@ def getDriverDate() { return "2025-08-19" }	// **** DATE OF THE DEVICE DRIVER
 * Contributor: Mark Amber (marka75160)
 * Platform: Hubitat
 *
-* Copyright 2024 Eric Maycock / Inovelli
+* Copyright 2025 Eric Maycock / Inovelli
 *
 * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 * in compliance with the License. You may obtain a copy of the License at:
@@ -24,6 +24,7 @@ def getDriverDate() { return "2025-08-19" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2025-08-20(EM) Adding overheat indicator and internal temperature reporting configuration parameters.
 * 2025-08-19(EM) Update internalTemp to report as a number so it can be used with numerical comparisons in rules.
 * 2025-07-18(EM) Adding dimmer mode parameters to userSettableParams() function for use with binding.
 * 2025-07-15(EM) Fixed VZM30-SN model handling for Aux Type (P22) and Switch Mode (P258) parameters to prevent "unknown model" display.
@@ -169,7 +170,7 @@ metadata {
     }
 
     preferences {
-        (userSettableParams() + [301, 302, 303, 304, 305, 306]).each{ i ->
+        (userSettableParams() + [301, 302, 303, 304, 305, 306, 307, 308, 309]).each{ i ->
             switch(configParams["parameter${i.toString().padLeft(3,"0")}"].type){
                 case "number":
                     switch(i){
@@ -2011,12 +2012,26 @@ def updated(option) { // called when "Save Preferences" is requested
     def humidMaxInterval = settings.parameter305 ?: 3600
     def humidMinChange = settings.parameter306 ?: 10
 
-    
+    // Configure FC31 internal temperature reporting
+    def internalTempMinInterval = settings.parameter307 ?: 60
+    def internalTempMaxInterval = settings.parameter308 ?: 600
+    def internalTempMinChange = settings.parameter309 ?: 1
+
+    // Configure FC31 overheat indicator reporting
+    def overheatMinInterval = 5
+    def overheatMaxInterval = 600
+
     // Temperature reporting configuration (cluster 0x0402, attribute 0x0000)
     cmds += zigbee.configureReporting(0x0402, 0x0000, DataType.INT16, tempMinInterval.toInteger(), tempMaxInterval.toInteger(), tempMinChange.toInteger(), [destEndpoint: 0x04])
     
     // Humidity reporting configuration (cluster 0x0405, attribute 0x0000)
     cmds += zigbee.configureReporting(0x0405, 0x0000, DataType.UINT16, humidMinInterval.toInteger(), humidMaxInterval.toInteger(), humidMinChange.toInteger(), [destEndpoint: 0x04])
+
+    // FC31 cluster internal temperature reporting configuration (attribute 0x0020)
+    cmds += zigbee.configureReporting(0xFC31, 0x0020, DataType.INT8, internalTempMinInterval.toInteger(), internalTempMaxInterval.toInteger(), internalTempMinChange.toInteger(), ["mfgCode": "0x122F"])
+
+    // FC31 cluster overheat indicator reporting configuration (attribute 0x0021)
+    cmds += zigbee.configureReporting(0xFC31, 0x0021, DataType.BOOLEAN, overheatMinInterval.toInteger(), overheatMaxInterval.toInteger(), 1, ["mfgCode": "0x122F"])
 
     sendHubCommand(new HubMultiAction(delayBetween(cmds, shortDelay), Protocol.ZIGBEE))
 
@@ -3226,6 +3241,30 @@ def readOnlyParams() {
         description: "Minimum change in humidity that will trigger a report (in 0.1% units).<br>0 = Disabled<br>1-65535 = 0.1% to 6553.5%",
         range: "0..65535",
         default: 10,
+        size: 16,
+        type: "number"
+        ],
+    parameter307 : [
+        name: "Internal Temperature - Min Report Interval",
+        description: "Minimum time interval between internal temperature reports (in seconds).<br>0 = Disabled<br>1-65535 = 1 second to 65535 seconds",
+        range: "0..65535",
+        default: 60,
+        size: 16,
+        type: "number"
+        ],
+    parameter308 : [
+        name: "Internal Temperature - Max Report Interval",
+        description: "Maximum time interval between internal temperature reports (in seconds).<br>0 = Disabled<br>1-65535 = 1 second to 65535 seconds",
+        range: "0..65535",
+        default: 600,
+        size: 16,
+        type: "number"
+        ],
+    parameter309 : [
+        name: "Internal Temperature - Min Report Change",
+        description: "Minimum change in internal temperature that will trigger a report (in 0.1°C units).<br>0 = Disabled<br>1-65535 = 0.1°C to 6553.5°C",
+        range: "0..65535",
+        default: 1,
         size: 16,
         type: "number"
         ]
