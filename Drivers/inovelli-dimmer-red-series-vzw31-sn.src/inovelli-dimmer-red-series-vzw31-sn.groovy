@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-08-19" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-08-20" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW31-SN Red Series Z-Wave 2-in-1 Dimmer
@@ -18,6 +18,7 @@ def getDriverDate() { return "2025-08-19" /** + orangeRed(" (beta)") **/ }	// **
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2025-08-20(EM) Add getTemperature command to retrieve the internal temperature of the switch.
 * 2025-08-19(EM) Update internalTemp to report as a number so it can be used with numerical comparisons in rules.
 * 2024-10-22(EM) fix leading and trailing edge state variable update
 * 2024-10-09(EM) fix bug that was preventing the ability to change remote control from the device page
@@ -151,6 +152,8 @@ metadata {
 //										[name:"number of seconds to blink the LED bar so it can be identified (leave blank to see remaining seconds in the logs)"]]
 		
         command "initialize",		   [[name:"clear state variables, clear LED notifications, refresh current states"]]
+
+        command "getTemperature",	   [[name:"Get the switch internal operating temperature"]]
         
         command "ledEffectAll",        [[name:"Effect*",   type:"ENUM",
 											description:  "255=Stop,  1=Solid,  2=Fast Blink,  3=Slow Blink,  4=Pulse,  5=Chase,  6=Open/Close,  7=Small-to-Big,  8=Aurora,  9=Slow Falling,  10=Medium Falling,  11=Fast Falling,  12=Slow Rising,  13=Medium Rising,  14=Fast Rising,  15=Medium Blink,  16=Slow Chase,  17=Fast Chase,  18=Fast Siren,  19=Slow Siren,  0=LEDs off",
@@ -650,6 +653,7 @@ def on() {
     if (debugEnable) log.debug "${device.displayName} on $cmds"
     return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 }
+
 
 def parse(String description) {
     if (traceEnable) log.trace "${device.displayName} parse($description)"
@@ -1338,6 +1342,16 @@ def getParameter(paramNum=0, delay=shortDelay) {
 	}
     if (debugEnable) log.debug "${device.displayName} getParameter $cmds"
     return delayBetween(cmds.collect{ secureCmd(it) }, delay)
+}
+
+def getTemperature() {
+    if (infoEnable) log.info "${device.displayName} getTemperature()"
+    state.lastCommandSent =                        "getTemperature()"
+    state.lastCommandTime = nowFormatted()
+    def cmds = []
+    cmds += getParameter(32)
+    cmds += getParameter(33)
+    return cmds
 }
 
 def startLevelChange(direction, duration=null) {
