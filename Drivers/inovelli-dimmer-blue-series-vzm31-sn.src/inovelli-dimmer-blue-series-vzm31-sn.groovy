@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-08-20" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-08-21" }	// **** DATE OF THE DEVICE DRIVER
 //  !!!!!!!!!!!!!!!!!  UPDATE ^^^THIS^^^ DATE IF YOU MAKE ANY CHANGES  !!!!!!!!!!!!!!!!!
 /*
 * Inovelli VZM31-SN Blue Series Zigbee 2-in-1 Dimmer
@@ -24,6 +24,8 @@ def getDriverDate() { return "2025-08-20" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2025-08-21(EM) Adding power and energy monitoring reporting configuration parameters for Zigbee Reporting.
+*                Removed legacy reporting parameters (18, 19, 20).
 * 2025-08-20(EM) Adding overheat indicator and internal temperature reporting configuration parameters.
 * 2025-08-19(EM) Update internalTemp to report as a number so it can be used with numerical comparisons in rules.
 * 2024-05-30(MA) log raw values with percentages
@@ -311,7 +313,7 @@ metadata {
     }
 
     preferences {
-        (userSettableParams() + [307, 308, 309]).each{ i ->
+        (userSettableParams() + [297, 298, 299, 307, 308, 309, 310, 311, 312]).each{ i ->
             switch(configParams["parameter${i.toString().padLeft(3,"0")}"].type){
                 case "number":
                     switch(i){
@@ -2101,19 +2103,38 @@ def updated(option) { // called when "Save Preferences" is requested
     
     def cmds = []
     // Configure FC31 internal temperature reporting
-    def internalTempMinInterval = settings.parameter307 ?: 60
-    def internalTempMaxInterval = settings.parameter308 ?: 600
-    def internalTempMinChange = settings.parameter309 ?: 1
+    def internalTempMinInterval = settings.parameter297 ?: 60
+    def internalTempMaxInterval = settings.parameter298 ?: 600
+    def internalTempMinChange = settings.parameter299 ?: 1
 
     // Configure FC31 overheat indicator reporting
     def overheatMinInterval = 5
     def overheatMaxInterval = 600
+
+    // Configure power and energy monitoring reporting
+    def powerMinInterval = settings.parameter307 ?: 5
+    def powerMaxInterval = settings.parameter308 ?: 3600
+    def powerMinChange = settings.parameter309 ?: 25
+    def energyMinInterval = settings.parameter310 ?: 60
+    def energyMaxInterval = settings.parameter311 ?: 3600
+    def energyMinChange = settings.parameter312 ?: 1
 
     // FC31 cluster internal temperature reporting configuration (attribute 0x0020)
     cmds += zigbee.configureReporting(0xFC31, 0x0020, DataType.INT8, internalTempMinInterval.toInteger(), internalTempMaxInterval.toInteger(), internalTempMinChange.toInteger(), ["mfgCode": "0x122F"])
 
     // FC31 cluster overheat indicator reporting configuration (attribute 0x0021)
     cmds += zigbee.configureReporting(0xFC31, 0x0021, DataType.BOOLEAN, overheatMinInterval.toInteger(), overheatMaxInterval.toInteger(), 1, ["mfgCode": "0x122F"])
+
+    // Power monitoring reporting configuration (cluster 0x0B04, attribute 0x050B)
+    cmds += zigbee.configureReporting(0x0B04, 0x050B, DataType.INT16, powerMinInterval.toInteger(), powerMaxInterval.toInteger(), powerMinChange.toInteger())
+
+    // Energy monitoring reporting configuration (cluster 0x0702, attribute 0x0000)
+    cmds += zigbee.configureReporting(0x0702, 0x0000, DataType.UINT48, energyMinInterval.toInteger(), energyMaxInterval.toInteger(), energyMinChange.toInteger())
+
+    // Set legacy reporting parameters to 0 to use Zigbee reporting exclusively
+    setParameter(18, 0)   // Active Power Reports - disabled
+    setParameter(19, 0)   // Periodic Power & Energy Reports - disabled
+    setParameter(20, 0)   // Active Energy Reports - disabled
 
     sendHubCommand(new HubMultiAction(delayBetween(cmds, shortDelay), Protocol.ZIGBEE))
 
@@ -2480,8 +2501,8 @@ def holdConfig()     {buttonEvent(13, "held", "digital")}
 def releaseConfig()  {buttonEvent(14, "released", "digital")}
 
 def userSettableParams() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
-    if (parameter258 == "1") return [258,22,52,    3,      7,    10,11,12,      15,17,18,19,20,23,24,25,50,            95,96,97,98,100,    123,125,130,131,132,133,134,256,259,260,261,262]  //on/off mode
-    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,23,24,25,50,53,54,55,56,95,96,97,98,100,120,123,125,130,131,132,133,134,256,    260,    262]  //dimmer mode
+    if (parameter258 == "1") return [258,22,52,    3,      7,    10,11,12,      15,17,      23,24,25,50,            95,96,97,98,100,    123,125,130,131,132,133,134,256,259,260,261,262]  //on/off mode
+    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,      23,24,25,50,53,54,55,56,95,96,97,98,100,120,123,125,130,131,132,133,134,256,    260,    262]  //dimmer mode
 }
 
 def readOnlyParams() {
@@ -2619,30 +2640,30 @@ def readOnlyParams() {
         size: 8,
         type: "enum"
         ],
-    parameter018 : [
-        name: "Active Power Reports",
-        description: "Percent power level change that will result in a new power report being sent.<br>0 = Disabled",
-        range: "0..100",
-        default: 10,
-        size: 8,
-        type: "number"
-        ],
-    parameter019 : [
-        name: "Periodic Power & Energy Reports",
-        description: "Time period between consecutive power & energy reports being sent (in seconds). The timer is reset after each report is sent.",
-        range: "0..32767",
-        default: 3600,
-        size: 16,
-        type: "number"
-        ],
-    parameter020 : [
-        name: "Active Energy Reports",
-        description: "Energy level change that will result in a new energy report being sent.<br>0 = Disabled<br>1-32767 = 0.01kWh-327.67kWh.",
-        range: "0..32767",
-        default: 10,
-        size: 16,
-        type: "number"
-        ],
+    // parameter018 : [
+    //     name: "Active Power Reports",
+    //     description: "Percent power level change that will result in a new power report being sent.<br>0 = Disabled",
+    //     range: "0..100",
+    //     default: 10,
+    //     size: 8,
+    //     type: "number"
+    //     ],
+    // parameter019 : [
+    //     name: "Periodic Power & Energy Reports",
+    //     description: "Time period between consecutive power & energy reports being sent (in seconds). The timer is reset after each report is sent.",
+    //     range: "0..32767",
+    //     default: 3600,
+    //     size: 16,
+    //     type: "number"
+    //     ],
+    // parameter020 : [
+    //     name: "Active Energy Reports",
+    //     description: "Energy level change that will result in a new energy report being sent.<br>0 = Disabled<br>1-32767 = 0.01kWh-327.67kWh.",
+    //     range: "0..32767",
+    //     default: 10,
+    //     size: 16,
+    //     type: "number"
+    //     ],
     parameter021 : [
         name: "Power Source (read only)",
         description: "Neutral or Non-Neutral wiring is automatically sensed.",
@@ -3285,7 +3306,7 @@ def readOnlyParams() {
         size: 8,
         type: "number"
         ],
-    parameter307 : [
+    parameter297 : [
         name: "Internal Temperature - Min Report Interval",
         description: "Minimum time interval between internal temperature reports (in seconds).<br>0 = Disabled<br>1-65535 = 1 second to 65535 seconds",
         range: "0..65535",
@@ -3293,7 +3314,7 @@ def readOnlyParams() {
         size: 16,
         type: "number"
         ],
-    parameter308 : [
+    parameter298 : [
         name: "Internal Temperature - Max Report Interval",
         description: "Maximum time interval between internal temperature reports (in seconds).<br>0 = Disabled<br>1-65535 = 1 second to 65535 seconds",
         range: "0..65535",
@@ -3301,9 +3322,57 @@ def readOnlyParams() {
         size: 16,
         type: "number"
         ],
-    parameter309 : [
+    parameter299 : [
         name: "Internal Temperature - Min Report Change",
         description: "Minimum change in internal temperature that will trigger a report (in 0.1°C units).<br>0 = Disabled<br>1-65535 = 0.1°C to 6553.5°C",
+        range: "0..65535",
+        default: 1,
+        size: 16,
+        type: "number"
+        ],
+    parameter307 : [
+        name: "Power Monitoring - Min Report Interval",
+        description: "Minimum time interval between power reports (in seconds).<br>0 = Disabled<br>1-65535 = 1 second to 65535 seconds",
+        range: "0..65535",
+        default: 5,
+        size: 16,
+        type: "number"
+        ],
+    parameter308 : [
+        name: "Power Monitoring - Max Report Interval",
+        description: "Maximum time interval between power reports (in seconds).<br>0 = Disabled<br>1-65535 = 1 second to 65535 seconds",
+        range: "0..65535",
+        default: 3600,
+        size: 16,
+        type: "number"
+        ],
+    parameter309 : [
+        name: "Power Monitoring - Min Report Change",
+        description: "Minimum change in power that will trigger a report (in watts).<br>0 = Disabled<br>1-65535 = 1 watt to 65535 watts",
+        range: "0..65535",
+        default: 25,
+        size: 16,
+        type: "number"
+        ],
+    parameter310 : [
+        name: "Energy Monitoring - Min Report Interval",
+        description: "Minimum time interval between energy reports (in seconds).<br>0 = Disabled<br>1-65535 = 1 second to 65535 seconds",
+        range: "0..65535",
+        default: 60,
+        size: 16,
+        type: "number"
+        ],
+    parameter311 : [
+        name: "Energy Monitoring - Max Report Interval",
+        description: "Maximum time interval between energy reports (in seconds).<br>0 = Disabled<br>1-65535 = 1 second to 65535 seconds",
+        range: "0..65535",
+        default: 3600,
+        size: 16,
+        type: "number"
+        ],
+    parameter312 : [
+        name: "Energy Monitoring - Min Report Change",
+        description: "Minimum change in energy that will trigger a report (in watt-hours).<br>0 = Disabled<br>1-65535 = 1 watt-hour to 65535 watt-hours",
         range: "0..65535",
         default: 1,
         size: 16,

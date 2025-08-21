@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-08-20" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-08-21" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM35-SN Blue Series Zigbee Fan Switch
@@ -24,6 +24,7 @@ def getDriverDate() { return "2025-08-20" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2025-08-21(EM) Changing overheat indicator and internal temperature reporting configuration parameters numbers.
 * 2025-08-20(EM) Adding overheat indicator and internal temperature reporting configuration parameters.
 * 2025-08-19(EM) Update internalTemp to report as a number so it can be used with numerical comparisons in rules.
 * 2024-11-19(EM) add supportedFanSpeeds to configure method for Google Home support fix. Press configure button after updating the driver
@@ -268,7 +269,7 @@ metadata {
     }
 
     preferences {
-        (userSettableParams() + [307, 308, 309]).each{ i ->
+        (userSettableParams() + [297, 298, 299]).each{ i ->
             switch(configParams["parameter${i.toString().padLeft(3,"0")}"].type){
                 case "number":
                     switch(i){
@@ -2059,9 +2060,9 @@ def updated(option) { // called when "Save Preferences" is requested
     
     def cmds = []
     // Configure FC31 internal temperature reporting
-    def internalTempMinInterval = settings.parameter307 ?: 60
-    def internalTempMaxInterval = settings.parameter308 ?: 600
-    def internalTempMinChange = settings.parameter309 ?: 1
+    def internalTempMinInterval = settings.parameter297 ?: 60
+    def internalTempMaxInterval = settings.parameter298 ?: 600
+    def internalTempMinChange = settings.parameter299 ?: 1
 
     // Configure FC31 overheat indicator reporting
     def overheatMinInterval = 5
@@ -3227,7 +3228,7 @@ def readOnlyParams() {
         size: 8,
         type: "number"
         ],
-    parameter307 : [
+    parameter297 : [
         name: "Internal Temperature - Min Report Interval",
         description: "Minimum time interval between internal temperature reports (in seconds).<br>0 = Disabled<br>1-65535 = 1 second to 65535 seconds",
         range: "0..65535",
@@ -3235,7 +3236,7 @@ def readOnlyParams() {
         size: 16,
         type: "number"
         ],
-    parameter308 : [
+    parameter298 : [
         name: "Internal Temperature - Max Report Interval",
         description: "Maximum time interval between internal temperature reports (in seconds).<br>0 = Disabled<br>1-65535 = 1 second to 65535 seconds",
         range: "0..65535",
@@ -3243,7 +3244,7 @@ def readOnlyParams() {
         size: 16,
         type: "number"
         ],
-    parameter309 : [
+    parameter299 : [
         name: "Internal Temperature - Min Report Change",
         description: "Minimum change in internal temperature that will trigger a report (in 0.1°C units).<br>0 = Disabled<br>1-65535 = 0.1°C to 6553.5°C",
         range: "0..65535",

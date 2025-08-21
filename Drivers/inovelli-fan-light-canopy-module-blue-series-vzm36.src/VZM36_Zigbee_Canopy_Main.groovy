@@ -22,6 +22,7 @@ def getDriverDate() { return "2025-08-20" }	// **** DATE OF THE DEVICE DRIVER
 *           CHANGE LOG          
 * ------------------------------
 *
+* 2025-08-21(EM) Changing overheat indicator and internal temperature reporting configuration parameters numbers.
 * 2025-08-20(EM) Adding overheat indicator and internal temperature reporting configuration parameters.
 * 2025-07-17(EM) Added supportedFanSpeeds event to fan child devices for Google Home integration
 * 2024-11-12(EM) Google Home fixes and properly read endpoint attributes after joining
@@ -175,7 +176,7 @@ metadata {
     }
 
     preferences {
-        (userSettableParams() + [307, 308, 309]).each{ i ->
+        (userSettableParams() + [297, 298, 299]).each{ i ->
             switch(configParams["parameter${i.toString().padLeft(3,"0")}"].type){
                 case "number":
                     switch(i){
@@ -2064,9 +2065,9 @@ def updated(option) { // called when "Save Preferences" is requested
     def cmds = []
     
     // Configure FC31 internal temperature reporting
-    def internalTempMinInterval = settings.parameter307 ?: 60
-    def internalTempMaxInterval = settings.parameter308 ?: 600
-    def internalTempMinChange = settings.parameter309 ?: 1
+    def internalTempMinInterval = settings.parameter297 ?: 60
+    def internalTempMaxInterval = settings.parameter298 ?: 600
+    def internalTempMinChange = settings.parameter299 ?: 1
 
     // Configure FC31 overheat indicator reporting
     def overheatMinInterval = 5
@@ -3237,8 +3238,8 @@ def releaseConfig()  {buttonEvent(14, "released", "digital")}
         type: "number",
         value: null
         ],
-    parameter307 : [
-        number: 307,
+    parameter297 : [
+        number: 297,
         name: "Internal Temperature - Min Report Interval",
         description: "Minimum time interval between internal temperature reports (in seconds).<br>0 = Disabled<br>1-65535 = 1 second to 65535 seconds",
         range: "0..65535",
@@ -3247,8 +3248,8 @@ def releaseConfig()  {buttonEvent(14, "released", "digital")}
         type: "number",
         value: null
         ],
-    parameter308 : [
-        number: 308,
+    parameter298 : [
+        number: 298,
         name: "Internal Temperature - Max Report Interval",
         description: "Maximum time interval between internal temperature reports (in seconds).<br>0 = Disabled<br>1-65535 = 1 second to 65535 seconds",
         range: "0..65535",
@@ -3257,8 +3258,8 @@ def releaseConfig()  {buttonEvent(14, "released", "digital")}
         type: "number",
         value: null
         ],
-    parameter309 : [
-        number: 309,
+    parameter299 : [
+        number: 299,
         name: "Internal Temperature - Min Report Change",
         description: "Minimum change in internal temperature that will trigger a report (in 0.1°C units).<br>0 = Disabled<br>1-65535 = 0.1°C to 6553.5°C",
         range: "0..65535",
