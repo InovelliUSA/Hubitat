@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-08-21" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-08-22" }	// **** DATE OF THE DEVICE DRIVER
 //  !!!!!!!!!!!!!!!!!  UPDATE ^^^THIS^^^ DATE IF YOU MAKE ANY CHANGES  !!!!!!!!!!!!!!!!!
 /*
 * Inovelli VZM30-SN Blue Series Zigbee Switch
@@ -24,6 +24,7 @@ def getDriverDate() { return "2025-08-21" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2025-08-22(EM) Fixing power and energy monitoring reporting configuration to disable reporting if any parameter is 0.
 * 2025-08-21(EM) Adding power and energy monitoring reporting configuration parameters for Zigbee Reporting.
 *                Removed legacy reporting parameters (18, 19, 20).
 * 2025-08-20(EM) Adding overheat indicator and internal temperature reporting configuration parameters.
@@ -2010,14 +2011,30 @@ def updated(option) { // called when "Save Preferences" is requested
     def tempMinInterval = settings.parameter301 ?: 30
     def tempMaxInterval = settings.parameter302 ?: 3600
     def tempMinChange = settings.parameter303 ?: 10
+    
+    // If any temperature parameter is 0, disable temperature reporting by setting max interval to 65535
+    if (tempMinInterval == 0 || tempMaxInterval == 0 || tempMinChange == 0) {
+        tempMaxInterval = 65535
+    }
+    
     def humidMinInterval = settings.parameter304 ?: 30
     def humidMaxInterval = settings.parameter305 ?: 3600
     def humidMinChange = settings.parameter306 ?: 10
+    
+    // If any humidity parameter is 0, disable humidity reporting by setting max interval to 65535
+    if (humidMinInterval == 0 || humidMaxInterval == 0 || humidMinChange == 0) {
+        humidMaxInterval = 65535
+    }
 
     // Configure FC31 internal temperature reporting
     def internalTempMinInterval = settings.parameter297 ?: 60
     def internalTempMaxInterval = settings.parameter298 ?: 600
     def internalTempMinChange = settings.parameter299 ?: 1
+    
+    // If any internal temperature parameter is 0, disable internal temperature reporting by setting max interval to 65535
+    if (internalTempMinInterval == 0 || internalTempMaxInterval == 0 || internalTempMinChange == 0) {
+        internalTempMaxInterval = 65535
+    }
 
     // Configure FC31 overheat indicator reporting
     def overheatMinInterval = 5
@@ -2027,9 +2044,20 @@ def updated(option) { // called when "Save Preferences" is requested
     def powerMinInterval = settings.parameter307 ?: 5
     def powerMaxInterval = settings.parameter308 ?: 3600
     def powerMinChange = settings.parameter309 ?: 25
+    
+    // If any power parameter is 0, disable power reporting by setting max interval to 65535
+    if (powerMinInterval == 0 || powerMaxInterval == 0 || powerMinChange == 0) {
+        powerMaxInterval = 65535
+    }
+    
     def energyMinInterval = settings.parameter310 ?: 60
     def energyMaxInterval = settings.parameter311 ?: 3600
     def energyMinChange = settings.parameter312 ?: 1
+    
+    // If any energy parameter is 0, disable energy reporting by setting max interval to 65535
+    if (energyMinInterval == 0 || energyMaxInterval == 0 || energyMinChange == 0) {
+        energyMaxInterval = 65535
+    }
 
     // Temperature reporting configuration (cluster 0x0402, attribute 0x0000)
     cmds += zigbee.configureReporting(0x0402, 0x0000, DataType.INT16, tempMinInterval.toInteger(), tempMaxInterval.toInteger(), tempMinChange.toInteger(), [destEndpoint: 0x04])
@@ -3281,14 +3309,14 @@ def readOnlyParams() {
         size: 16,
         type: "number"
         ],
-    parameter299 : [
-        name: "Internal Temperature - Min Report Change",
-        description: "Minimum change in internal temperature that will trigger a report (in 0.1°C units).<br>0 = Disabled<br>1-65535 = 0.1°C to 6553.5°C",
-        range: "0..65535",
-        default: 1,
-        size: 16,
-        type: "number"
-        ],
+         parameter299 : [
+         name: "Internal Temperature - Min Report Change",
+         description: "Minimum change in internal temperature that will trigger a report (in 1°C units).<br>0 = Disabled<br>1-65535 = 1°C to 65535°C",
+         range: "0..65535",
+         default: 1,
+         size: 16,
+         type: "number"
+         ],
     parameter307 : [
         name: "Power Monitoring - Min Report Interval",
         description: "Minimum time interval between power reports (in seconds).<br>0 = Disabled<br>1-65535 = 1 second to 65535 seconds",
@@ -3307,7 +3335,7 @@ def readOnlyParams() {
         ],
     parameter309 : [
         name: "Power Monitoring - Min Report Change",
-        description: "Minimum change in power that will trigger a report (in watts).<br>0 = Disabled<br>1-65535 = 1 watt to 65535 watts",
+        description: "Minimum change in power that will trigger a report (in 0.1 watts).<br>0 = Disabled<br>1-65535 = 0.1 watt to 6553.5 watts",
         range: "0..65535",
         default: 25,
         size: 16,

@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-08-21" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-08-22" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM35-SN Blue Series Zigbee Fan Switch
@@ -24,6 +24,7 @@ def getDriverDate() { return "2025-08-21" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2025-08-22(EM) Fixing power and energy monitoring reporting configuration to disable reporting if any parameter is 0.
 * 2025-08-21(EM) Changing overheat indicator and internal temperature reporting configuration parameters numbers.
 * 2025-08-20(EM) Adding overheat indicator and internal temperature reporting configuration parameters.
 * 2025-08-19(EM) Update internalTemp to report as a number so it can be used with numerical comparisons in rules.
@@ -2063,6 +2064,11 @@ def updated(option) { // called when "Save Preferences" is requested
     def internalTempMinInterval = settings.parameter297 ?: 60
     def internalTempMaxInterval = settings.parameter298 ?: 600
     def internalTempMinChange = settings.parameter299 ?: 1
+    
+    // If any internal temperature parameter is 0, disable internal temperature reporting by setting max interval to 65535
+    if (internalTempMinInterval == 0 || internalTempMaxInterval == 0 || internalTempMinChange == 0) {
+        internalTempMaxInterval = 65535
+    }
 
     // Configure FC31 overheat indicator reporting
     def overheatMinInterval = 5
@@ -3246,7 +3252,7 @@ def readOnlyParams() {
         ],
     parameter299 : [
         name: "Internal Temperature - Min Report Change",
-        description: "Minimum change in internal temperature that will trigger a report (in 0.1°C units).<br>0 = Disabled<br>1-65535 = 0.1°C to 6553.5°C",
+        description: "Minimum change in internal temperature that will trigger a report (in 1°C units).<br>0 = Disabled<br>1-65535 = 1°C to 65535°C",
         range: "0..65535",
         default: 1,
         size: 16,
