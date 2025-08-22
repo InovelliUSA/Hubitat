@@ -2008,18 +2008,18 @@ def updated(option) { // called when "Save Preferences" is requested
     
     def cmds = []
     // Configure temperature and humidity reporting
-    def tempMinInterval = settings.parameter301 ?: 30
-    def tempMaxInterval = settings.parameter302 ?: 3600
-    def tempMinChange = settings.parameter303 ?: 10
+    def tempMinInterval = settings.parameter301 != null ? settings.parameter301 : 30
+    def tempMaxInterval = settings.parameter302 != null ? settings.parameter302 : 3600
+    def tempMinChange = settings.parameter303 != null ? settings.parameter303 : 10
     
     // If any temperature parameter is 0, disable temperature reporting by setting max interval to 65535
     if (tempMinInterval == 0 || tempMaxInterval == 0 || tempMinChange == 0) {
         tempMaxInterval = 65535
     }
     
-    def humidMinInterval = settings.parameter304 ?: 30
-    def humidMaxInterval = settings.parameter305 ?: 3600
-    def humidMinChange = settings.parameter306 ?: 10
+    def humidMinInterval = settings.parameter304 != null ? settings.parameter304 : 30
+    def humidMaxInterval = settings.parameter305 != null ? settings.parameter305 : 3600
+    def humidMinChange = settings.parameter306 != null ? settings.parameter306 : 10
     
     // If any humidity parameter is 0, disable humidity reporting by setting max interval to 65535
     if (humidMinInterval == 0 || humidMaxInterval == 0 || humidMinChange == 0) {
@@ -2027,9 +2027,9 @@ def updated(option) { // called when "Save Preferences" is requested
     }
 
     // Configure FC31 internal temperature reporting
-    def internalTempMinInterval = settings.parameter297 ?: 60
-    def internalTempMaxInterval = settings.parameter298 ?: 600
-    def internalTempMinChange = settings.parameter299 ?: 1
+    def internalTempMinInterval = settings.parameter297 != null ? settings.parameter297 : 60
+    def internalTempMaxInterval = settings.parameter298 != null ? settings.parameter298 : 600
+    def internalTempMinChange = settings.parameter299 != null ? settings.parameter299 : 1
     
     // If any internal temperature parameter is 0, disable internal temperature reporting by setting max interval to 65535
     if (internalTempMinInterval == 0 || internalTempMaxInterval == 0 || internalTempMinChange == 0) {
@@ -2041,18 +2041,18 @@ def updated(option) { // called when "Save Preferences" is requested
     def overheatMaxInterval = 600
 
     // Configure power and energy monitoring reporting
-    def powerMinInterval = settings.parameter307 ?: 5
-    def powerMaxInterval = settings.parameter308 ?: 3600
-    def powerMinChange = settings.parameter309 ?: 25
+    def powerMinInterval = settings.parameter307 != null ? settings.parameter307 : 5
+    def powerMaxInterval = settings.parameter308 != null ? settings.parameter308 : 3600
+    def powerMinChange = settings.parameter309 != null ? settings.parameter309 : 25
     
     // If any power parameter is 0, disable power reporting by setting max interval to 65535
     if (powerMinInterval == 0 || powerMaxInterval == 0 || powerMinChange == 0) {
         powerMaxInterval = 65535
     }
     
-    def energyMinInterval = settings.parameter310 ?: 60
-    def energyMaxInterval = settings.parameter311 ?: 3600
-    def energyMinChange = settings.parameter312 ?: 1
+    def energyMinInterval = settings.parameter310 != null ? settings.parameter310 : 60
+    def energyMaxInterval = settings.parameter311 != null ? settings.parameter311 : 3600
+    def energyMinChange = settings.parameter312 != null ? settings.parameter312 : 1
     
     // If any energy parameter is 0, disable energy reporting by setting max interval to 65535
     if (energyMinInterval == 0 || energyMaxInterval == 0 || energyMinChange == 0) {
@@ -3309,7 +3309,7 @@ def readOnlyParams() {
         size: 16,
         type: "number"
         ],
-         parameter299 : [
+    parameter299 : [
          name: "Internal Temperature - Min Report Change",
          description: "Minimum change in internal temperature that will trigger a report (in 1°C units).<br>0 = Disabled<br>1-65535 = 1°C to 65535°C",
          range: "0..65535",

@@ -2061,9 +2061,9 @@ def updated(option) { // called when "Save Preferences" is requested
     
     def cmds = []
     // Configure FC31 internal temperature reporting
-    def internalTempMinInterval = settings.parameter297 ?: 60
-    def internalTempMaxInterval = settings.parameter298 ?: 600
-    def internalTempMinChange = settings.parameter299 ?: 1
+    def internalTempMinInterval = settings.parameter297 != null ? settings.parameter297 : 60
+    def internalTempMaxInterval = settings.parameter298 != null ? settings.parameter298 : 600
+    def internalTempMinChange = settings.parameter299 != null ? settings.parameter299 : 1
     
     // If any internal temperature parameter is 0, disable internal temperature reporting by setting max interval to 65535
     if (internalTempMinInterval == 0 || internalTempMaxInterval == 0 || internalTempMinChange == 0) {
