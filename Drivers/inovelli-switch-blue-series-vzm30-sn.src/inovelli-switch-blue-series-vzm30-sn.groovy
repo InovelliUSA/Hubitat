@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-08-22" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-08-26" }	// **** DATE OF THE DEVICE DRIVER
 //  !!!!!!!!!!!!!!!!!  UPDATE ^^^THIS^^^ DATE IF YOU MAKE ANY CHANGES  !!!!!!!!!!!!!!!!!
 /*
 * Inovelli VZM30-SN Blue Series Zigbee Switch
@@ -24,6 +24,8 @@ def getDriverDate() { return "2025-08-22" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2025-08-26(EM) Updating temperature and humidity reporting configuration parameters description to 0.01°C and 0.01% units.
+*                Updating default values to 50 (0.5°C and 0.5%) for temperature and humidity reporting configuration parameters.
 * 2025-08-22(EM) Fixing power and energy monitoring reporting configuration to disable reporting if any parameter is 0.
 * 2025-08-21(EM) Adding power and energy monitoring reporting configuration parameters for Zigbee Reporting.
 *                Removed legacy reporting parameters (18, 19, 20).
@@ -2010,7 +2012,7 @@ def updated(option) { // called when "Save Preferences" is requested
     // Configure temperature and humidity reporting
     def tempMinInterval = settings.parameter301 != null ? settings.parameter301 : 30
     def tempMaxInterval = settings.parameter302 != null ? settings.parameter302 : 3600
-    def tempMinChange = settings.parameter303 != null ? settings.parameter303 : 10
+    def tempMinChange = settings.parameter303 != null ? settings.parameter303 : 50
     
     // If any temperature parameter is 0, disable temperature reporting by setting max interval to 65535
     if (tempMinInterval == 0 || tempMaxInterval == 0 || tempMinChange == 0) {
@@ -2019,7 +2021,7 @@ def updated(option) { // called when "Save Preferences" is requested
     
     def humidMinInterval = settings.parameter304 != null ? settings.parameter304 : 30
     def humidMaxInterval = settings.parameter305 != null ? settings.parameter305 : 3600
-    def humidMinChange = settings.parameter306 != null ? settings.parameter306 : 10
+    def humidMinChange = settings.parameter306 != null ? settings.parameter306 : 50
     
     // If any humidity parameter is 0, disable humidity reporting by setting max interval to 65535
     if (humidMinInterval == 0 || humidMaxInterval == 0 || humidMinChange == 0) {
@@ -3263,9 +3265,9 @@ def readOnlyParams() {
         ],
     parameter303 : [
         name: "Temperature Reporting - Min Report Change",
-        description: "Minimum change in temperature that will trigger a report (in 0.1°C units).<br>0 = Disabled<br>1-65535 = 0.1°C to 6553.5°C",
+        description: "Minimum change in temperature that will trigger a report (in 0.01°C units).<br>0 = Disabled<br>1-65535 = 0.01°C to 6553.5°C",
         range: "0..65535",
-        default: 10,
+        default: 50,
         size: 16,
         type: "number"
         ],
@@ -3287,9 +3289,9 @@ def readOnlyParams() {
         ],
     parameter306 : [
         name: "Humidity Reporting - Min Report Change",
-        description: "Minimum change in humidity that will trigger a report (in 0.1% units).<br>0 = Disabled<br>1-65535 = 0.1% to 6553.5%",
+        description: "Minimum change in humidity that will trigger a report (in 0.01% units).<br>0 = Disabled<br>1-65535 = 0.01% to 6553.5%",
         range: "0..65535",
-        default: 10,
+        default: 50,
         size: 16,
         type: "number"
         ],
