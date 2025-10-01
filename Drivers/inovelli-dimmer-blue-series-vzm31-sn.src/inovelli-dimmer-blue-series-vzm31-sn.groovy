@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-08-22" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-10-01" }	// **** DATE OF THE DEVICE DRIVER
 //  !!!!!!!!!!!!!!!!!  UPDATE ^^^THIS^^^ DATE IF YOU MAKE ANY CHANGES  !!!!!!!!!!!!!!!!!
 /*
 * Inovelli VZM31-SN Blue Series Zigbee 2-in-1 Dimmer
@@ -24,6 +24,8 @@ def getDriverDate() { return "2025-08-22" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2025-10-01(EM) Adding "toggle" option to Fan Control Mode (P130) parameters (fw 3.0+). Adding fw 3.0+ fingerprint.
+*                Update default values for Switch Type (P22) and Switch Mode (P258) parameters (fw 3.0+).
 * 2025-08-22(EM) Fixing power and energy monitoring reporting configuration to disable reporting if any parameter is 0.
 * 2025-08-21(EM) Adding power and energy monitoring reporting configuration parameters for Zigbee Reporting.
 *                Removed legacy reporting parameters (18, 19, 20).
@@ -310,6 +312,7 @@ metadata {
 
 		fingerprint profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,0702,0B04,0B05,FC57,FC31", outClusters:"0003,0019",           model:"VZM31-SN", manufacturer:"Inovelli"
 		fingerprint profileId:"0104", endpointId:"02", inClusters:"0000,0003",                                              outClusters:"0003,0019,0006,0008", model:"VZM31-SN", manufacturer:"Inovelli"
+        fingerprint profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,0702,0B04,0B05,FC31,FC57", outClusters:"0019",                model:"VZM31-SN", manufacturer:"Inovelli"
 //      fingerprint profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,0702,0B04,FC31",           outClusters:"0003,0019",           model:"VZM31-SN", manufacturer:"Inovelli"
     }
 
@@ -2691,9 +2694,9 @@ def readOnlyParams() {
         ],
     parameter022 : [
         name: "Switch Type",
-        description: "Set the switch type (Smart Bulb Mode does not work in Multi-way with Dumb Switch mode)",
-        range: ["0":"Single-pole (default)", "1":"Multi-way with Dumb Switch", "2":"Mulit-way with Aux Switch", "3":"Single-pole Full Wave (On/Off only)"],
-        default: 0,
+        description: "Set the switch type (Smart Bulb Mode does not work in Multi-way with Dumb Switch mode), In Fw 3.0+ Full Wave is automatically applied in On/Off and Smart Bulb mode (Neutral Only).",
+        range: ["0":"Single-pole", "1":"Multi-way with Dumb Switch", "2":"Mulit-way with Aux Switch (default)", "3":"Single-pole Full Wave (On/Off only) (Not available in Fw 3.0+)"],
+        default: 2,
         size: 8,
         type: "enum"
         ],
@@ -3222,7 +3225,7 @@ def readOnlyParams() {
     parameter130 : [
         name: "Fan Control Mode",
         description: "Which mode to use when binding EP3 to a fan module (Firmware 2.17+)",
-        range: ["0":"Disabled (default)","1":"Multi Tap", "2":"Cycle"],
+        range: ["0":"Disabled (default)","1":"Multi Tap", "2":"Cycle", "3":"Toggle"],
         default: 0,
         size: 8,
         type: "enum"
@@ -3278,8 +3281,8 @@ def readOnlyParams() {
     parameter258 : [
         name: "Switch Mode",
         description: "Dimmer or On/Off only",
-        range: ["0":"Dimmer", "1":"On/Off (default)"],
-        default: 1,
+        range: ["0":"Dimmer (default)", "1":"On/Off"],
+        default: 0,
         size: 1,
         type: "enum"
         ],
