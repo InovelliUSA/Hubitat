@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-08-20" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-10-03" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW31-SN Red Series Z-Wave 2-in-1 Dimmer
@@ -18,6 +18,7 @@ def getDriverDate() { return "2025-08-20" /** + orangeRed(" (beta)") **/ }	// **
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2025-10-03(EM) Update setParameter to fix bug when secure inclusion is used. Only update parameters if they have actually changed.
 * 2025-08-20(EM) Add getTemperature command to retrieve the internal temperature of the switch.
 * 2025-08-19(EM) Update internalTemp to report as a number so it can be used with numerical comparisons in rules.
 * 2024-10-22(EM) fix leading and trailing edge state variable update
@@ -1171,7 +1172,7 @@ def presetLevel(value) {
     state.lastCommandTime = nowFormatted()
     def cmds = []
     Integer scaledValue = value==null?null:Math.min(Math.max(value.toInteger(),0),99)  //Zwave levels range from 1-99 with 0 = 'use previous'
-    cmds += setParameter(13, scaledValue)
+    cmds += setParameter(13, scaledValue, null)
     if (debugEnable) log.debug  "${device.displayName} preset $cmds"
     return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 }
@@ -1296,10 +1297,15 @@ def setLevel(value, duration) {
 }
 
 def setConfigParameter(number, value, size) {	//for backward compatibility
-    return setParameter(number, value, size.toInteger())
+    return delayBetween(setParameter(paramNum, value, size.toInteger()).collect{ secureCmd(it) }, shortDelay)
 }
 
-def setParameter(paramNum=0, value=null, size=null, delay=shortDelay) {
+def setParameter(paramNum, value) {
+    // User interface version - wraps result in delayBetween
+    return delayBetween(setParameter(paramNum, value, null).collect{ secureCmd(it) }, shortDelay)
+}
+
+def setParameter(paramNum, value, size) {
 	paramNum = paramNum?.toInteger()
 	value    = value?.toInteger()
 	size     = size?.toInteger()
@@ -1324,7 +1330,7 @@ def setParameter(paramNum=0, value=null, size=null, delay=shortDelay) {
     }
     
     if (debugEnable) log.debug value!=null?"${device.displayName} setParameter $cmds":"${device.displayName} getParameter $cmds"
-    return cmds.collect{ secureCmd(it) }
+    return cmds
 }
 
 def getParameter(paramNum=0, delay=shortDelay) {
@@ -1341,7 +1347,7 @@ def getParameter(paramNum=0, delay=shortDelay) {
 		cmds += zwave.configurationV4.configurationGet(parameterNumber: paramNum)
 	}
     if (debugEnable) log.debug "${device.displayName} getParameter $cmds"
-    return delayBetween(cmds.collect{ secureCmd(it) }, delay)
+    return cmds
 }
 
 def getTemperature() {
@@ -1461,8 +1467,12 @@ def updated(option) { // called when "Save Preferences" is requested
 				if ((userSettableParams().contains(i))		//IF   this is a valid parameter for this device mode
 				&& (settings."parameter$i"!=null)			//AND  this is a non-default setting
 				&& (!readOnlyParams().contains(i))) {		//AND  this is not a read-only parameter
-					cmds += setParameter(i, newValue)				//THEN set the new value
-					nothingChanged = false
+					// Check if parameter value has actually changed from what's stored on the device
+					def currentValue = state."parameter${i}value"?.toInteger()
+					if (currentValue == null || newValue != currentValue) {
+						cmds += setParameter(i, newValue, null)				//THEN set the new value
+						nothingChanged = false
+					}
 				}
 				break
 			case "All":
@@ -1470,7 +1480,7 @@ def updated(option) { // called when "Save Preferences" is requested
 				if (option=="Default") newValue = defaultValue	//if user selected "Default" then set the new value to the default value
 				if (((i!=158)&&(i!=258))					//IF   we are not changing Switch Mode
 				&& (!readOnlyParams().contains(i))) {		//AND  this is not a read-only parameter
-					cmds += setParameter(i, newValue)				//THEN Set the new value
+					cmds += setParameter(i, newValue, null)				//THEN Set the new value
 					nothingChanged = false
 				} else {									//ELSE this is a read-only parameter or Switch Mode parameter
 					cmds += getParameter(i)							//so Get current value from device
