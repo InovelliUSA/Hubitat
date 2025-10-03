@@ -37,7 +37,7 @@ import hubitat.helper.ColorUtils
 import java.security.MessageDigest
 
 metadata {
-    definition (name: "Inovelli mmWave Dimmer Red Series VZW32-SN", namespace: "InovelliUSA", author: "E.Maycock/M.Amber", importUrl:  "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-mmwave-dimmer-red-series-vzw31-sn.src/inovelli-mmwave-dimmer-red-series-vzw31-sn.groovy")
+    definition (name: "Inovelli mmWave Dimmer Red Series VZW32-SN", namespace: "InovelliUSA", author: "E.Maycock/M.Amber", importUrl:  "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-mmwave-dimmer-red-series-vzw32-sn.src/inovelli-mmwave-dimmer-red-series-vzw32-sn.groovy")
 	{
 		capability "Actuator"	//device can "do" something (has commands)
         capability "Sensor"		//device can "report" something (has attributes)
