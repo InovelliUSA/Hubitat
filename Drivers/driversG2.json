@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "VZM31, VZM30: Changing energy and reporting configuration method.VZM30, VZM31, VZM35, VZM36: Add overheat indicator and internal temperature reporting configuration parameters. VZM30: Add overheat indicator and internal temperature reporting configuration parameters. VZW31: Add getTemperature command to retrieve the internal temperature of the switch. VZW31, VZM31, VZM30, VZM35: Update internalTemp to report as a number so it can be used with numerical comparisons in rules. VZM36 & LZW36: Fix for Google Home integration. VZM31, VZM30, VZM35, VZM36: Fixing power and energy monitoring reporting configuration to disable reporting if any parameter is 0. VZM30: Updating temperature and humidity reporting configuration parameters description to 0.01°C and 0.01% units. Updating default values to 50 (0.5°C and 0.5%) for temperature and humidity reporting configuration parameters.",
+   "releaseNotes": "VZM32 & VZW32: Adding mmWave Dimmer drivers.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -109,7 +109,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-blue-series-vzm31-sn.src/inovelli-dimmer-blue-series-vzm31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "25.8.22",
+                "version": "25.10.1",
 		"releaseNotes": "" 
    	},
 	   {
@@ -161,6 +161,26 @@
    		"oauth": false,
                 "version": "25.7.18",
 		"releaseNotes": "" 
-   	}
+   	},
+	{
+   		"id" : "dfc1bf2f-b008-4ac1-8b75-c0d5f161c356",
+   		"name": "Inovelli mmWave Dimmer Red Series VZW32-SN",
+        "namespace": "InovelliUSA",
+   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/refs/heads/master/Drivers/inovelli-mmwave-dimmer-red-series-vzw32-sn.src/inovelli-mmwave-dimmer-red-series-vzw32-sn.groovy",
+   		"required": false,
+   		"oauth": false,
+        "version": "25.10.3",
+		"releaseNotes": "" 
+   	},
+	{
+		"id" : "ef21198b-1b1a-48b7-99cf-b3c91406de00",
+		"name": "Inovelli mmWave Dimmer Blue Series VZM32-SN",
+		"namespace": "InovelliUSA",
+		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/refs/heads/master/Drivers/inovelli-mmwave-dimmer-blue-series-vzm32-sn.src/inovelli-mmwave-dimmer-blue-series-vzm32-sn.groovy",
+		"required": false,
+		"oauth": false,
+		"version": "25.10.3",
+	    "releaseNotes": "" 
+	}
    ]
 }
