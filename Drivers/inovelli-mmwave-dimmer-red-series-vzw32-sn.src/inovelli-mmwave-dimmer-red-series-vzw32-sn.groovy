@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-10-03" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-10-16" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW32-SN Red Series Z-Wave 2-in-1 mmWave
@@ -18,6 +18,7 @@ def getDriverDate() { return "2025-10-03" /** + orangeRed(" (beta)") **/ }	// **
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2025-10-16(EM) Update SwitchMultilevelReport and BasicReport to set targetValue to value so it can override the value parsed from the command.
 * 2025-10-03(EM) Added feature to prevent updates to unchanged parameters.
 * 2025-07-30(EM) Added parameter parsing cases for mmWave parameters 101-120 and parameter 115 state variable for mmWave firmware version.
 * 2025-07-29(EM) Fixed model detection for VZW32-SN and updated aux types to only support 2 types (0=Single Pole, 1=Aux Switch).
@@ -1829,6 +1830,7 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 			break
 		case "BasicReport":
 			if (infoEnable) log.info "${device.displayName} Basic Report: value ${cmd.value ? "on" : "off"} ($cmd.value)"
+            cmd.targetValue = cmd.value
 			dimmerEvents(cmd, (!state.lastRan || now() <= state.lastRan + 2000)?"digital":"physical")
 			break
 		case "CentralSceneNotification":
@@ -2353,6 +2355,7 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 			break
 		case "SwitchMultilevelReport":
 			if (infoEnable) log.info "${device.displayName} Switch Multilevel Report: value ${cmd.targetValue ? "on" : "off"} ($cmd.targetValue)"
+            cmd.targetValue = cmd.value
 			dimmerEvents(cmd, (!state.lastRan || now() <= state.lastRan + 2000)?"digital":"physical")
 			break
 		case "VersionCommandClassReport":
