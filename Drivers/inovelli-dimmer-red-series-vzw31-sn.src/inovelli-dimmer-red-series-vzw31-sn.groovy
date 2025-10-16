@@ -18,6 +18,7 @@ def getDriverDate() { return "2025-10-03" /** + orangeRed(" (beta)") **/ }	// **
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2025-10-16(EM) Update SwitchMultilevelReport and BasicReport to set targetValue to value so it can override the value parsed from the command.
 * 2025-10-03(EM) Update setParameter to fix bug when secure inclusion is used. Only update parameters if they have actually changed.
 * 2025-08-20(EM) Add getTemperature command to retrieve the internal temperature of the switch.
 * 2025-08-19(EM) Update internalTemp to report as a number so it can be used with numerical comparisons in rules.
@@ -691,6 +692,7 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 			break
 		case "BasicReport":
 			if (infoEnable) log.info "${device.displayName} Basic Report: value ${cmd.value ? "on" : "off"} ($cmd.value)"
+            cmd.targetValue = cmd.value
 			dimmerEvents(cmd, (!state.lastRan || now() <= state.lastRan + 2000)?"digital":"physical")
 			break
 		case "CentralSceneNotification":
@@ -1149,6 +1151,7 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 			break
 		case "SwitchMultilevelReport":
 			if (infoEnable) log.info "${device.displayName} Switch Multilevel Report: value ${cmd.targetValue ? "on" : "off"} ($cmd.targetValue)"
+            cmd.targetValue = cmd.value
 			dimmerEvents(cmd, (!state.lastRan || now() <= state.lastRan + 2000)?"digital":"physical")
 			break
 		case "VersionCommandClassReport":
@@ -1527,10 +1530,10 @@ def updated(option) { // called when "Save Preferences" is requested
 def lastRanRemove() {if (state?.lastRan) state.remove("lastRan")}
 
 private dimmerEvents(hubitat.zwave.Command cmd, type="physical") {
-    def value = (cmd.targetValue ? "on" : "off")
+    def value = (cmd.value ? "on" : "off")
     def result = [sendEvent(name: "switch", value: value, type: type)]
-    if (cmd.targetValue) {
-        result += sendEvent(name: "level", value: cmd.targetValue, unit: "%", type: type)
+    if (cmd.value) {
+        result += sendEvent(name: "level", value: value, unit: "%", type: type)
     }
     return result
 }
