@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-08-22" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-10-17" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM35-SN Blue Series Zigbee Fan Switch
@@ -24,6 +24,7 @@ def getDriverDate() { return "2025-08-22" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2025-10-17(EM) Adding fingerprint for VZM35-SN with firmware 1.07.
 * 2025-08-22(EM) Fixing power and energy monitoring reporting configuration to disable reporting if any parameter is 0.
 * 2025-08-21(EM) Changing overheat indicator and internal temperature reporting configuration parameters numbers.
 * 2025-08-20(EM) Adding overheat indicator and internal temperature reporting configuration parameters.
@@ -267,6 +268,7 @@ metadata {
 
 		fingerprint profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,0B05,FC31,FC57", outClusters:"0019", model:"VZM35-SN-MG24", manufacturer:"Inovelli"
 		fingerprint profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,0B05,FC57,FC31", outClusters:"0019", model:"VZM35-SN",      manufacturer:"Inovelli"
+        fingerprint profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,0025,0202,0B05,FC31,FC57", outClusters:"0019", model:"VZM35-SN", manufacturer:"Inovelli"
     }
 
     preferences {

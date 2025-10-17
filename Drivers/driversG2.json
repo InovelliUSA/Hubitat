@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "VZW31 & VZW32: Update SwitchMultilevelReport and BasicReport to set targetValue to value so it can override the value parsed from the command.",
+   "releaseNotes": "VZW31 & VZW32: Update SwitchMultilevelReport and BasicReport to set targetValue to value so it can override the value parsed from the command. VZM35-SN: Adding fingerprint for VZM35-SN with firmware 1.07.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -119,7 +119,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-blue-series-vzm35-sn.src/inovelli-fan-blue-series-vzm35-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "25.8.22",
+                "version": "25.10.17",
 		"releaseNotes": "" 
    	},
 	{
