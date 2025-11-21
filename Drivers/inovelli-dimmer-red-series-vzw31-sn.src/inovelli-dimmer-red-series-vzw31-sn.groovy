@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-10-16" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-11-20" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW31-SN Red Series Z-Wave 2-in-1 Dimmer
@@ -18,6 +18,7 @@ def getDriverDate() { return "2025-10-16" /** + orangeRed(" (beta)") **/ }	// **
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2025-11-20(EM) Fixing bug in SwitchMultilevelReport that was causing the level to be reported as on when the switch was on.
 * 2025-10-16(EM) Update SwitchMultilevelReport and BasicReport to set targetValue to value so it can override the value parsed from the command.
 * 2025-10-03(EM) Update setParameter to fix bug when secure inclusion is used. Only update parameters if they have actually changed.
 * 2025-08-20(EM) Add getTemperature command to retrieve the internal temperature of the switch.
@@ -1530,10 +1531,10 @@ def updated(option) { // called when "Save Preferences" is requested
 def lastRanRemove() {if (state?.lastRan) state.remove("lastRan")}
 
 private dimmerEvents(hubitat.zwave.Command cmd, type="physical") {
-    def value = (cmd.value ? "on" : "off")
+    def value = (cmd.targetValue ? "on" : "off")
     def result = [sendEvent(name: "switch", value: value, type: type)]
-    if (cmd.value) {
-        result += sendEvent(name: "level", value: value, unit: "%", type: type)
+    if (cmd.targetValue) {
+        result += sendEvent(name: "level", value: cmd.targetValue, unit: "%", type: type)
     }
     return result
 }
