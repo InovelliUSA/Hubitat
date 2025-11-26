@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-10-16" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-11-25" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW32-SN Red Series Z-Wave 2-in-1 mmWave
@@ -18,6 +18,7 @@ def getDriverDate() { return "2025-10-16" /** + orangeRed(" (beta)") **/ }	// **
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2025-11-25(EM) Removing delayBetween from return values for initialize()
 * 2025-10-16(EM) Update SwitchMultilevelReport and BasicReport to set targetValue to value so it can override the value parsed from the command.
 * 2025-10-03(EM) Added feature to prevent updates to unchanged parameters.
 * 2025-07-30(EM) Added parameter parsing cases for mmWave parameters 101-120 and parameter 115 state variable for mmWave firmware version.
@@ -1652,7 +1653,7 @@ def initialize() {    //CALLED DURING HUB BOOTUP IF "INITIALIZE" CAPABILITY IS D
     cmds += processAssociations()
     cmds += refresh()
     if (debugEnable) log.debug "${device.displayName} initialize $cmds"
-    return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
+    return cmds
 }
 
 def installed() {    //THIS IS CALLED WHEN A DEVICE IS INSTALLED
