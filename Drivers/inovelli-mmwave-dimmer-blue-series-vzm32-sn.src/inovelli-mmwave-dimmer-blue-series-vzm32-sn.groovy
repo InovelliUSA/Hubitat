@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-10-03" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-12-03" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM32-SN Blue Series Zigbee 2-in-1 mmWave
@@ -24,6 +24,7 @@ def getDriverDate() { return "2025-10-03" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2025-12-03(EM) Fixing bug in dimming method reporting.
 * 2025-10-03(EM) Added feature to prevent updates to unchanged parameters.
 * 2025-09-29(EM) Scaling for lux reporting added to configure().
 * 2025-09-28(EM) Scaling the lux reporting min for the illuminance cluster 0x0400. Making reports min change correct.
@@ -1524,7 +1525,11 @@ def parse(String description) {
                     case 25:    //Higher Output in non-Neutral
                         infoMsg += " (non-Neutral High Output " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
                         break
-					case 30:	//non-Neutral AUX med gear learn value
+					case 26:    //Leading or Trailing edge
+                        infoMsg += " (Dimming Method " + (valueInt==0?red("Leading Edge"):limeGreen("Trailing Edge")) + ")"
+                        state.dimmingMethod = (valueInt==0?"Leading Edge":"Trailing Edge")
+                        break
+                    case 30:	//non-Neutral AUX med gear learn value
 						infoMsg += " (non-Neutral AUX medium gear)"
 						break
 					case 31:	//non-Neutral AUX low gear learn value
@@ -2862,7 +2867,7 @@ def readOnlyParams() {
         description: "Select Leading Edge or Trailing Edge dimming method",
         range: ["0":"Leading (default)","1":"Trailing"],
         default:0,
-        size: 1,
+        size: 8,
         type: "enum",
         value: null
         ],

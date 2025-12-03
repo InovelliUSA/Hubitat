@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-10-01" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-12-03" }	// **** DATE OF THE DEVICE DRIVER
 //  !!!!!!!!!!!!!!!!!  UPDATE ^^^THIS^^^ DATE IF YOU MAKE ANY CHANGES  !!!!!!!!!!!!!!!!!
 /*
 * Inovelli VZM31-SN Blue Series Zigbee 2-in-1 Dimmer
@@ -24,6 +24,7 @@ def getDriverDate() { return "2025-10-01" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2025-12-03(EM) Fixing bug in dimming method reporting.
 * 2025-10-01(EM) Adding "toggle" option to Fan Control Mode (P130) parameters (fw 3.0+). Adding fw 3.0+ fingerprint.
 *                Update default values for Switch Type (P22) and Switch Mode (P258) parameters (fw 3.0+).
 * 2025-08-22(EM) Fixing power and energy monitoring reporting configuration to disable reporting if any parameter is 0.
@@ -1460,6 +1461,10 @@ def parsePrivateCluster(description) {
                     case 25:    //Higher Output in non-Neutral
                         infoMsg += " (non-Neutral High Output " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
                         break
+                    case 26:    //Leading or Trailing edge
+                        infoMsg += " (Dimming Method " + (valueInt==0?red("Leading Edge"):limeGreen("Trailing Edge")) + ")"
+                        state.dimmingMethod = (valueInt==0?"Leading Edge":"Trailing Edge")
+                        break
 					case 30:	//non-Neutral AUX med gear learn value
 						infoMsg += " (non-Neutral AUX medium gear)"
 						break
@@ -2729,7 +2734,7 @@ def readOnlyParams() {
         description: "Select Leading Edge or Trailing Edge dimming method",
         range: ["0":"Leading (default)","1":"Trailing"],
         default:0,
-        size: 1,
+        size: 8,
         type: "enum"
         ],
     parameter030 : [

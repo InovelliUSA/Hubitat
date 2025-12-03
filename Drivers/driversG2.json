@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "VZW31-SN: Removing delayBetween from return values for initialize(). VZW32-SN: Removing delayBetween from return values for initialize(). VZM35-SN: Adding fingerprint for VZM35-SN with firmware 1.07.",
+   "releaseNotes": "VZM31-SN & VZM32-SN: Fixing bug in dimming method reporting.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -109,7 +109,7 @@
    		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-blue-series-vzm31-sn.src/inovelli-dimmer-blue-series-vzm31-sn.groovy",
    		"required": false,
    		"oauth": false,
-                "version": "25.10.1",
+                "version": "25.12.3",
 		"releaseNotes": "" 
    	},
 	   {
@@ -179,7 +179,7 @@
 		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/refs/heads/master/Drivers/inovelli-mmwave-dimmer-blue-series-vzm32-sn.src/inovelli-mmwave-dimmer-blue-series-vzm32-sn.groovy",
 		"required": false,
 		"oauth": false,
-		"version": "25.10.3",
+		"version": "25.12.3",
 	    "releaseNotes": "" 
 	}
    ]
