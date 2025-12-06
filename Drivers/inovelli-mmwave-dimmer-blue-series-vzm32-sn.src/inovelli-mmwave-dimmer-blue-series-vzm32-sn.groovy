@@ -194,7 +194,7 @@ metadata {
                                                       [name:"zmax", type:"NUMBER", description:"Value for the parameter (leave blank to get current value)"],
 										             [name:"Enter the internal raw value. Percentages and Color Hues are entered as 0-255. Leave blank to get current value"]]
         
-        command "mmWaveSetDetectioneArea",         [[name:"areaid*",type:"NUMBER", description:"Parameter number"],
+        command "mmWaveSetDetectionArea",         [[name:"areaid*",type:"NUMBER", description:"Parameter number"],
                                                       [name:"xmin", type:"NUMBER", description:"Value for the parameter (leave blank to get current value)"],
                                                       [name:"xmax", type:"NUMBER", description:"Value for the parameter (leave blank to get current value)"],
                                                       [name:"ymin", type:"NUMBER", description:"Value for the parameter (leave blank to get current value)"],
@@ -359,7 +359,7 @@ def mmWaveSetHoldtime(holdtime)
     return cmds
 }
 
-def mmWaveSetDetectioneArea(areaid, xmin, xmax,ymin,ymax,zmin,zmax)
+def mmWaveSetDetectionArea(areaid, xmin, xmax,ymin,ymax,zmin,zmax)
 {
      def cmds =[]
     Integer cmdareaid = areaid.toInteger()
