@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-12-03" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-12-12" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM32-SN Blue Series Zigbee 2-in-1 mmWave
@@ -24,6 +24,7 @@ def getDriverDate() { return "2025-12-03" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2025-12-12(EM) Fixing lux reporting parameters showing up twice.
 * 2025-12-03(EM) Fixing bug in dimming method reporting.
 * 2025-10-03(EM) Added feature to prevent updates to unchanged parameters.
 * 2025-09-29(EM) Scaling for lux reporting added to configure().
@@ -2609,8 +2610,8 @@ def holdConfig()     {buttonEvent(13, "held", "digital")}
 def releaseConfig()  {buttonEvent(14, "released", "digital")}
 
 def userSettableParams() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
-    if (parameter258 == "1") return [258,22,52,                  10,11,12,      15,17,18,19,20,21,25,34,50,51,            95,96,97,98,100,101,102,103,104,105,106,107,108,112,113,114,115,110,117,120,121,123,125,130,131,132,133,256,257,259,260,261,262,301,302,303]  //on/off mode
-    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,25,34,50,51,53,54,55,56,95,96,97,98,100,101,102,103,104,105,106,107,108,112,113,114,115,110,117,120,121,123,125,130,131,132,133,256,257,    260,    262,301,302,303]  //dimmer mode
+    if (parameter258 == "1") return [258,22,52,                  10,11,12,      15,17,18,19,20,21,25,34,50,51,            95,96,97,98,100,101,102,103,104,105,106,107,108,112,113,114,115,110,117,120,121,123,125,130,131,132,133,256,257,259,260,261,262]  //on/off mode
+    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,25,34,50,51,53,54,55,56,95,96,97,98,100,101,102,103,104,105,106,107,108,112,113,114,115,110,117,120,121,123,125,130,131,132,133,256,257,    260,    262]  //dimmer mode
 }
 
 def readOnlyParams() {

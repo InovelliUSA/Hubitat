@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "VZM31-SN & VZM32-SN: Fixing bug in dimming method reporting.",
+   "releaseNotes": "VZM32-SN: Fixing lux reporting parameters showing up twice.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -179,7 +179,7 @@
 		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/refs/heads/master/Drivers/inovelli-mmwave-dimmer-blue-series-vzm32-sn.src/inovelli-mmwave-dimmer-blue-series-vzm32-sn.groovy",
 		"required": false,
 		"oauth": false,
-		"version": "25.12.3",
+		"version": "25.12.12",
 	    "releaseNotes": "" 
 	}
    ]
