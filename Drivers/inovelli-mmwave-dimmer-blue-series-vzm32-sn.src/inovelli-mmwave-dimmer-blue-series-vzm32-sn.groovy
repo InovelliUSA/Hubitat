@@ -55,7 +55,7 @@ import hubitat.helper.HexUtils
 import java.security.MessageDigest
 
 metadata {
-    definition (name: "Inovelli mmWave Dimmer Blue Series VZM32-SN", namespace: "InovelliUSA", author: "E.Maycock/M.Amber", filename: "Inovelli-zigbee-2-in-1-dimmer", importUrl:"https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-blue-series-vzm31-sn.src/inovelli-dimmer-blue-series-vzm31-sn.groovy" ) 
+    definition (name: "Inovelli mmWave Dimmer Blue Series VZM32-SN", namespace: "InovelliUSA", author: "E.Maycock/M.Amber", filename: "Inovelli-zigbee-2-in-1-dimmer", importUrl:"https://raw.githubusercontent.com/InovelliUSA/Hubitat/refs/heads/master/Drivers/inovelli-mmwave-dimmer-blue-series-vzm32-sn.src/inovelli-mmwave-dimmer-blue-series-vzm32-sn.groovy" ) 
 	{
 		capability "Actuator"	//device can "do" something (has commands)
         capability "Sensor"		//device can "report" something (has attributes)
