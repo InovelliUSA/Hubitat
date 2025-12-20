@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-11-25" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-12-20" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW31-SN Red Series Z-Wave 2-in-1 Dimmer
@@ -18,6 +18,7 @@ def getDriverDate() { return "2025-11-25" /** + orangeRed(" (beta)") **/ }	// **
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2025-12-20(EM) Fixing bug in getTemperature command that was preventing the temperature from being reported.
 * 2025-11-25(EM) Removing delayBetween from return values for initialize()
 * 2025-11-20(EM) Fixing bug in SwitchMultilevelReport that was causing the level to be reported as on when the switch was on.
 * 2025-10-16(EM) Update SwitchMultilevelReport and BasicReport to set targetValue to value so it can override the value parsed from the command.
@@ -1362,7 +1363,7 @@ def getTemperature() {
     def cmds = []
     cmds += getParameter(32)
     cmds += getParameter(33)
-    return cmds
+    return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 }
 
 def startLevelChange(direction, duration=null) {
