@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-12-12" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-12-26" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM32-SN Blue Series Zigbee 2-in-1 mmWave
@@ -24,6 +24,7 @@ def getDriverDate() { return "2025-12-12" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2025-12-26(EM) Fixing group binding input type from number to string. Change so that default settings are not cleared.
 * 2025-12-12(EM) Fixing lux reporting parameters showing up twice.
 * 2025-12-03(EM) Fixing bug in dimming method reporting.
 * 2025-10-03(EM) Added feature to prevent updates to unchanged parameters.
@@ -289,9 +290,9 @@ metadata {
             }
         }
 		
-        input name: "groupBinding1", type: "number", title: bold("Group Bind #1"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind. To specify the source endpoint proceed the group with \"ep#.\". So if you want to bind ep 3 to group 9 you would input 3.9"), defaultValue: null, range: "1..65527"
-        input name: "groupBinding2", type: "number", title: bold("Group Bind #2"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind. To specify the source endpoint proceed the group with \"ep#.\". So if you want to bind ep 3 to group 9 you would input 3.9"), defaultValue: null, range: "1..65527"
-        input name: "groupBinding3", type: "number", title: bold("Group Bind #3"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind. To specify the source endpoint proceed the group with \"ep#.\". So if you want to bind ep 3 to group 9 you would input 3.9"), defaultValue: null, range: "1..65527"
+        input name: "groupBinding1", type: "string", title: bold("Group Bind #1"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind. To specify the source endpoint proceed the group with \"ep#.\". So if you want to bind ep 3 to group 9 you would input 3.9"), defaultValue: null, range: "1..65527"
+        input name: "groupBinding2", type: "string", title: bold("Group Bind #2"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind. To specify the source endpoint proceed the group with \"ep#.\". So if you want to bind ep 3 to group 9 you would input 3.9"), defaultValue: null, range: "1..65527"
+        input name: "groupBinding3", type: "string", title: bold("Group Bind #3"), description: italic("Enter the Zigbee Group ID or leave blank to UNBind. To specify the source endpoint proceed the group with \"ep#.\". So if you want to bind ep 3 to group 9 you would input 3.9"), defaultValue: null, range: "1..65527"
 
         input name: "infoEnable",          type: "bool",   title: bold("Enable Info Logging"),   defaultValue: true,  description: italic("Log general device activity<br>(optional and not required for normal operation)")
         input name: "traceEnable",         type: "bool",   title: bold("Enable Trace Logging"),  defaultValue: false, description: italic("Additional info for trouble-shooting (not needed unless having issues)")
@@ -1765,7 +1766,7 @@ def parse(String description) {
 				if ((valueInt==getDefaultValue(attrInt))	//IF   value is the default
 				&& (!readOnlyParams().contains(attrInt))	//AND  not a read-only param
 				&& (![22,52,158,258].contains(attrInt))) {	//AND  not a key parameter
-					clearSetting(attrInt)					//THEN clear the setting (so only changed settings are displayed)
+					//clearSetting(attrInt)					//THEN clear the setting (so only changed settings are displayed)
 				} else {									//ELSE update local setting
 					device.updateSetting("parameter${attrInt}",[value:"${valueInt}",type:configParams["parameter${attrInt.toString().padLeft(3,"0")}"]?.type?.toString()])
 				}
