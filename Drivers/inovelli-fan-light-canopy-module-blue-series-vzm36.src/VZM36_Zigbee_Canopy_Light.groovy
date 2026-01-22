@@ -1,4 +1,4 @@
-def getDriverDate() { return "2024-11-12" + orangeRed(" (beta)") }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2026-01-21" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM36 Zigbee Canopy Light
@@ -7,7 +7,7 @@ def getDriverDate() { return "2024-11-12" + orangeRed(" (beta)") }	// **** DATE 
 * Contributor: Mark Amber (marka75160)
 * Platform: Hubitat
 *
-* Copyright 2024 Eric Maycock / Inovelli
+* Copyright 2026 Eric Maycock / Inovelli
 *
 * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 * in compliance with the License. You may obtain a copy of the License at:
@@ -22,6 +22,7 @@ def getDriverDate() { return "2024-11-12" + orangeRed(" (beta)") }	// **** DATE 
 *           CHANGE LOG          
 * ------------------------------
 *
+* 2026-01-21(EM) Fixing bug in undefined button function logging.
 * 2024-11-12(EM) Google Home fixes and properly read endpoint attributes after joining
 * 2024-03-26(EM) removing incorrect fingerprint
 * 2024-03-14(EM) changing parameter 258 description and default
@@ -2049,7 +2050,7 @@ void ZigbeePrivateCommandEvent(data) {
             buttonEvent(14, "pushed", "physical")
             break
         default:       //undefined button function
-            log.warn "${device.displayName} " + fireBrick("Undefined button function Scene=${data[0]} Attributes=${data[1]}")
+            if (infoEnable||traceEnable||debugEnable) log.warn "${device.displayName} " + fireBrick("Undefined button function Scene=${data[0]} Attributes=${data[1]}")
             break
     }
 }

@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-12-20" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2026-01-21" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW32-SN Red Series Z-Wave 2-in-1 mmWave
@@ -7,7 +7,7 @@ def getDriverDate() { return "2025-12-20" /** + orangeRed(" (beta)") **/ }	// **
 * Contributor: Mark Amber (marka75160)
 * Platform: Hubitat
 *
-* Copyright 2025 Eric Maycock / Inovelli
+* Copyright 2026 Eric Maycock / Inovelli
 *
 * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 * in compliance with the License. You may obtain a copy of the License at:
@@ -18,6 +18,8 @@ def getDriverDate() { return "2025-12-20" /** + orangeRed(" (beta)") **/ }	// **
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2026-01-21(EM) Adding parameter 115 to readOnlyParams() for firmware version reporting.
+* 2026-01-21(EM) Fixing bug in undefined button function logging. Fixing issue with setParameter().
 * 2025-12-20(EM) Adding getTemperature command to retrieve the internal temperature of the switch.
 * 2025-11-25(EM) Removing delayBetween from return values for initialize()
 * 2025-10-16(EM) Update SwitchMultilevelReport and BasicReport to set targetValue to value so it can override the value parsed from the command.
@@ -397,7 +399,7 @@ def userSettableParams() {   //controls which options are available depending on
 }
 
 def readOnlyParams() {
-	return [21,32,33,51,157,257]
+	return [21,32,33,51,115,157,257]
 }
 
 @Field static Integer shortDelay = 500		//default delay to use for zwave commands (in milliseconds)
@@ -1915,7 +1917,7 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 					buttonEvent(14, "pushed", "physical")
 					break
 				default:       //undefined button function
-					log.warn "${device.displayName} " + fireBrick("Undefined button function Scene: ${data[0]} Attributes: ${data[1]}")
+					if (infoEnable||traceEnable||debugEnable) log.warn "${device.displayName} " + fireBrick("Undefined button function Scene: ${data[0]} Attributes: ${data[1]}")
 					break
 			}
 			break
@@ -2382,7 +2384,7 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 			state.fwVersion = firmware0Version
 			break
 		default:
-			log.warn "${device.displayName} ${fireBrick('Unhandled:')} ${cmd}"
+			if (infoEnable||traceEnable||debugEnable) log.warn "${device.displayName} ${fireBrick('Unhandled:')} ${cmd}"
 			break
 	}
 }
@@ -2523,6 +2525,11 @@ def setLevel(value, duration) {
 
 def setConfigParameter(number, value, size) {	//for backward compatibility
     return delayBetween(setParameter(paramNum, value, size.toInteger()).collect{ secureCmd(it) }, shortDelay)
+}
+
+def setParameter(paramNum) {
+    // User interface version - wraps result in delayBetween
+    return delayBetween(setParameter(paramNum, value, null).collect{ secureCmd(it) }, shortDelay)
 }
 
 def setParameter(paramNum, value) {

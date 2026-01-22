@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-10-17" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2026-01-21" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM35-SN Blue Series Zigbee Fan Switch
@@ -7,7 +7,7 @@ def getDriverDate() { return "2025-10-17" }	// **** DATE OF THE DEVICE DRIVER
 * Contributor: Mark Amber (marka75160)
 * Platform: Hubitat
 *
-* Copyright 2025 Eric Maycock / Inovelli
+* Copyright 2026 Eric Maycock / Inovelli
 *
 * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 * in compliance with the License. You may obtain a copy of the License at:
@@ -24,6 +24,7 @@ def getDriverDate() { return "2025-10-17" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2026-01-21(EM) Fixing bug in undefined button function logging.
 * 2025-10-17(EM) Adding fingerprint for VZM35-SN with firmware 1.07.
 * 2025-08-22(EM) Fixing power and energy monitoring reporting configuration to disable reporting if any parameter is 0.
 * 2025-08-21(EM) Changing overheat indicator and internal temperature reporting configuration parameters numbers.
@@ -2331,7 +2332,7 @@ void ZigbeePrivateCommandEvent(data) {
             buttonEvent(28, "pushed", "physical")
             break
         default:       //undefined scene
-            log.warn "${device.displayName} " + fireBrick("Undefined Scene=${data[0]} Attributes=${data[1]}")
+            if (infoEnable||traceEnable||debugEnable) log.warn "${device.displayName} " + fireBrick("Undefined Scene=${data[0]} Attributes=${data[1]}")
             break
     }
 }
@@ -2353,7 +2354,7 @@ void ZigbeePrivateLEDeffectStopEvent(data) {
 			sendEvent(name:"ledEffect", value: "${ledStatus}")
             break
         default:  
-			log.warn "${device.displayName} " + fireBrick("Undefined LEDeffectStopEvent=${data[0]}")
+			if (infoEnable||traceEnable||debugEnable) log.warn "${device.displayName} " + fireBrick("Undefined LEDeffectStopEvent=${data[0]}")
             break
     }
 }
@@ -2415,7 +2416,7 @@ void buttonEvent(button, action, type = "digital") {
             sendEvent(name:"lastButton", value: "Aux Release ►")
             break
         default:       //undefined button event
-            log.warn "${device.displayName} " + fireBrick("Undefined Button=$button Action=$action Type=$type")
+            if (infoEnable||traceEnable||debugEnable) log.warn "${device.displayName} " + fireBrick("Undefined Button=$button Action=$action Type=$type")
             break
     }
 }

@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "VZM32-SN: Fixing lux reporting parameters showing up twice.",
+   "releaseNotes": "VZW32-SN: Adding parameter 115 to readOnlyParams() for firmware version reporting. Fixing bug in undefined button function logging. Fixing issue with setParameter(). VZM31-SN, VZM35-SN, VZM36: Fixing bug in undefined button function logging.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -103,74 +103,74 @@
 		"releaseNotes": "" 
    	},
 	{
-   		"id" : "c0d82d86-1545-49b6-943e-3435cccce7d6",
-   		"name": "Inovelli Dimmer 2-in-1 Blue Series VZM31-SN",
+		"id" : "c0d82d86-1545-49b6-943e-3435cccce7d6",
+		"name": "Inovelli Dimmer 2-in-1 Blue Series VZM31-SN",
                 "namespace": "InovelliUSA",
-   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-blue-series-vzm31-sn.src/inovelli-dimmer-blue-series-vzm31-sn.groovy",
-   		"required": false,
-   		"oauth": false,
-                "version": "25.12.3",
-		"releaseNotes": "" 
+		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-blue-series-vzm31-sn.src/inovelli-dimmer-blue-series-vzm31-sn.groovy",
+		"required": false,
+		"oauth": false,
+                "version": "26.1.21",
+		"releaseNotes": ""
    	},
 	   {
-   		"id" : "dada3ebc-3d4f-11ee-be56-0242ac120002",
-   		"name": "Inovelli Fan Blue Series VZM35-SN",
+		"id" : "dada3ebc-3d4f-11ee-be56-0242ac120002",
+		"name": "Inovelli Fan Blue Series VZM35-SN",
                 "namespace": "InovelliUSA",
-   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-blue-series-vzm35-sn.src/inovelli-fan-blue-series-vzm35-sn.groovy",
-   		"required": false,
-   		"oauth": false,
-                "version": "25.10.17",
-		"releaseNotes": "" 
+		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-blue-series-vzm35-sn.src/inovelli-fan-blue-series-vzm35-sn.groovy",
+		"required": false,
+		"oauth": false,
+                "version": "26.1.21",
+		"releaseNotes": ""
    	},
 	{
-   		"id" : "effbd34b-1d62-4fff-889b-566d70a72531",
-   		"name": "Inovelli Dimmer 2-in-1 Red Series VZW31-SN",
+		"id" : "effbd34b-1d62-4fff-889b-566d70a72531",
+		"name": "Inovelli Dimmer 2-in-1 Red Series VZW31-SN",
                 "namespace": "InovelliUSA",
-   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-vzw31-sn.src/inovelli-dimmer-red-series-vzw31-sn.groovy",
-   		"required": false,
-   		"oauth": false,
-                "version": "25.11.25",
-		"releaseNotes": "" 
+		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-dimmer-red-series-vzw31-sn.src/inovelli-dimmer-red-series-vzw31-sn.groovy",
+		"required": false,
+		"oauth": false,
+                "version": "26.1.21",
+		"releaseNotes": ""
    	},
 	{
-   		"id" : "e4af254b-0bcf-4c2f-acdb-d0595233c78c",
-   		"name": "Inovelli Fan + Light Blue Series VZM36",
+		"id" : "e4af254b-0bcf-4c2f-acdb-d0595233c78c",
+		"name": "Inovelli Fan + Light Blue Series VZM36",
                 "namespace": "InovelliUSA",
-   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-canopy-module-blue-series-vzm36.src/VZM36_Zigbee_Canopy_Main.groovy",
-   		"required": false,
-   		"oauth": false,
-                "version": "25.8.22",
-		"releaseNotes": "" 
+		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-canopy-module-blue-series-vzm36.src/VZM36_Zigbee_Canopy_Main.groovy",
+		"required": false,
+		"oauth": false,
+                "version": "26.1.21",
+		"releaseNotes": ""
    	},
 	{
-   		"id" : "1b8f0eee-70fc-49cd-ae99-6d235c74a855",
-   		"name": "Inovelli Fan + Light Blue Series VZM36 (Light)",
+		"id" : "1b8f0eee-70fc-49cd-ae99-6d235c74a855",
+		"name": "Inovelli Fan + Light Blue Series VZM36 (Light)",
                 "namespace": "InovelliUSA",
-   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-canopy-module-blue-series-vzm36.src/VZM36_Zigbee_Canopy_Light.groovy",
-   		"required": false,
-   		"oauth": false,
-                "version": "24.11.12",
-		"releaseNotes": "" 
+		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-canopy-module-blue-series-vzm36.src/VZM36_Zigbee_Canopy_Light.groovy",
+		"required": false,
+		"oauth": false,
+                "version": "26.1.21",
+		"releaseNotes": ""
    	},
 	{
-   		"id" : "eb51ce13-970f-4369-abbd-17edb72ba40e",
-   		"name": "Inovelli Fan + Light Blue Series VZM36 (Fan)",
+		"id" : "eb51ce13-970f-4369-abbd-17edb72ba40e",
+		"name": "Inovelli Fan + Light Blue Series VZM36 (Fan)",
                 "namespace": "InovelliUSA",
-   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-canopy-module-blue-series-vzm36.src/VZM36_Zigbee_Canopy_Fan.groovy",
-   		"required": false,
-   		"oauth": false,
-                "version": "25.7.18",
-		"releaseNotes": "" 
+		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/master/Drivers/inovelli-fan-light-canopy-module-blue-series-vzm36.src/VZM36_Zigbee_Canopy_Fan.groovy",
+		"required": false,
+		"oauth": false,
+                "version": "26.1.21",
+		"releaseNotes": ""
    	},
 	{
-   		"id" : "dfc1bf2f-b008-4ac1-8b75-c0d5f161c356",
-   		"name": "Inovelli mmWave Dimmer Red Series VZW32-SN",
+		"id" : "dfc1bf2f-b008-4ac1-8b75-c0d5f161c356",
+		"name": "Inovelli mmWave Dimmer Red Series VZW32-SN",
         "namespace": "InovelliUSA",
-   		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/refs/heads/master/Drivers/inovelli-mmwave-dimmer-red-series-vzw32-sn.src/inovelli-mmwave-dimmer-red-series-vzw32-sn.groovy",
-   		"required": false,
-   		"oauth": false,
-        "version": "25.11.25",
-		"releaseNotes": "" 
+		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/refs/heads/master/Drivers/inovelli-mmwave-dimmer-red-series-vzw32-sn.src/inovelli-mmwave-dimmer-red-series-vzw32-sn.groovy",
+		"required": false,
+		"oauth": false,
+        "version": "26.1.21",
+		"releaseNotes": ""
    	},
 	{
 		"id" : "ef21198b-1b1a-48b7-99cf-b3c91406de00",

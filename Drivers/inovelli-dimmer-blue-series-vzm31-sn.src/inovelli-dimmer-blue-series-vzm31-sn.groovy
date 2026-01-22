@@ -2410,7 +2410,7 @@ void ZigbeePrivateCommandEvent(data) {
             buttonEvent(28, "pushed", "physical")
             break
         default:       //undefined scene
-            log.warn "${device.displayName} " + fireBrick("Undefined Scene=${data[0]} Attributes=${data[1]}")
+            if (infoEnable||traceEnable||debugEnable) log.warn "${device.displayName} " + fireBrick("Undefined Scene=${data[0]} Attributes=${data[1]}")
             break
     }
 }
@@ -2432,7 +2432,7 @@ void ZigbeePrivateLEDeffectStopEvent(data) {
 			sendEvent(name:"ledEffect", value: "${ledStatus}")
             break
         default:  
-			log.warn "${device.displayName} " + fireBrick("Undefined LEDeffectStopEvent=${data[0]}")
+			if (infoEnable||traceEnable||debugEnable) log.warn "${device.displayName} " + fireBrick("Undefined LEDeffectStopEvent=${data[0]}")
             break
     }
 }
@@ -2494,7 +2494,7 @@ void buttonEvent(button, action, type = "digital") {
             sendEvent(name:"lastButton", value: "Aux Release ►")
             break
         default:       //undefined button event
-            log.warn "${device.displayName} " + fireBrick("Undefined Button=$button Action=$action Type=$type")
+            if (infoEnable||traceEnable||debugEnable) log.warn "${device.displayName} " + fireBrick("Undefined Button=$button Action=$action Type=$type")
             break
     }
 }

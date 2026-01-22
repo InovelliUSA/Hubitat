@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-12-20" /** + orangeRed(" (beta)") **/ }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2026-01-21" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW31-SN Red Series Z-Wave 2-in-1 Dimmer
@@ -7,7 +7,7 @@ def getDriverDate() { return "2025-12-20" /** + orangeRed(" (beta)") **/ }	// **
 * Contributor: Mark Amber (marka75160)
 * Platform: Hubitat
 *
-* Copyright 2024 Eric Maycock / Inovelli
+* Copyright 2026 Eric Maycock / Inovelli
 *
 * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 * in compliance with the License. You may obtain a copy of the License at:
@@ -18,6 +18,7 @@ def getDriverDate() { return "2025-12-20" /** + orangeRed(" (beta)") **/ }	// **
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2026-01-21(EM) Fixing bug in undefined button function logging.
 * 2025-12-20(EM) Fixing bug in getTemperature command that was preventing the temperature from being reported.
 * 2025-11-25(EM) Removing delayBetween from return values for initialize()
 * 2025-11-20(EM) Fixing bug in SwitchMultilevelReport that was causing the level to be reported as on when the switch was on.
@@ -765,9 +766,9 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 				case "0301":    //Release Config
 					buttonEvent(14, "pushed", "physical")
 					break
-				default:       //undefined button function
-					log.warn "${device.displayName} " + fireBrick("Undefined button function Scene: ${data[0]} Attributes: ${data[1]}")
-					break
+			default:       //undefined button function
+				if (infoEnable||traceEnable||debugEnable) log.warn "${device.displayName} " + fireBrick("Undefined button function Scene: ${data[0]} Attributes: ${data[1]}")
+				break
 			}
 			break
 		case "ConfigurationReport":
@@ -1167,7 +1168,7 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 			state.fwVersion = firmware0Version
 			break
 		default:
-			log.warn "${device.displayName} ${fireBrick('Unhandled:')} ${cmd}"
+			if (infoEnable||traceEnable||debugEnable) log.warn "${device.displayName} ${fireBrick('Unhandled:')} ${cmd}"
 			break
 	}
 }
