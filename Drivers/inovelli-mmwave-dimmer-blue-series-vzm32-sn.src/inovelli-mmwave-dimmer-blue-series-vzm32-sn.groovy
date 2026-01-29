@@ -1996,7 +1996,7 @@ def setAttribute(Integer cluster, Integer attrInt, Integer dataType, Integer val
                 infoMsg += "${value} = ${convertByteToPercent(value)}% on 255 scale"
                 break
             case 23:
-                quickStartVariables()
+                //quickStartVariables()
                 infoMsg = ""
                 break
 			case 60:	//LED1 color when on
@@ -2060,6 +2060,7 @@ def key_mmwave_preferences() {[
   104,
   105,
   106,
+  107,
   111,
   112,
   113,
