@@ -24,6 +24,7 @@ def getDriverDate() { return "2025-12-26" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2025-12-26(EM) Fixing attribute 107 setting. Enable/Disable targetInfo and TargetCount Hubitat device attributes with Target Information Reporting setting.
 * 2025-12-26(EM) Fixing group binding input type from number to string. Change so that default settings are not cleared.
 * 2025-12-12(EM) Fixing lux reporting parameters showing up twice.
 * 2025-12-03(EM) Fixing bug in dimming method reporting.
@@ -92,6 +93,9 @@ metadata {
 		attribute "RSSI", "String"				//Received Signal Strength Indicator
         attribute "firmware", "String"	
         attribute "mmWaveFirmware", "String"	
+
+        attribute "targetInfo", "string"
+        attribute "targetCount", "number"
 
         // Uncomment these lines if you would like to test your scenes with digital button presses.
         /*
@@ -184,6 +188,8 @@ metadata {
         // Start and (automatically or manually) stop the MMWave Calibration
 	    command "startCalibrationZoneCreation"
     	command "stopCalibrationZoneCreation"
+
+        command "bindMmWaveCluster"
         
         command "mmWaveControlInstruction",       [[name:"id",     type:"NUMBER", description:  "0=Reset mmWave Module,  1=Generate Interference Area,  2=Obtain Interference Area,  3=Clear Interference Area,  4=Reset Detection Area,  5=Clear the Stay Area"]]
         
@@ -303,6 +309,25 @@ metadata {
     }
 }
 
+def bindMmWaveCluster() {
+    def cluster = 0xFC32
+    def endpoint = 0x01
+
+    def hubEui = location.hubs[0]?.zigbeeEui
+    if (!hubEui) {
+        log.warn "${device.displayName} Cannot get hub EUI; binding will fail"
+        return
+    }
+    log.debug "${device.displayName} Hub EUI: ${hubEui}"
+
+    // ZDO bind command as string (Hubitat expects this)
+    def cmd = "zdo bind ${device.deviceNetworkId} 0x01 0x01 0x${cluster.toString(16)} {${hubEui}} {}"
+    log.info "${device.displayName} Sending bind command: ${cmd}"
+
+    sendHubCommand(new hubitat.device.HubAction(cmd, hubitat.device.Protocol.ZIGBEE))
+}
+
+
 
 
 def intTo16bitHex(value) {
@@ -412,7 +437,10 @@ void ReportTargetInfoCommandEvent(data)
     //log.info "${device.displayName} ReportTargetInfo:${data}"
     Integer targetnum = Integer.parseInt(data[0],8)
     //log.info "${device.displayName} targetnum:${targetnum}"
-    
+    sendEvent(name: "targetCount", value: targetnum, isStateChange: true)
+
+    def targets = []
+
     if(targetnum > 0)
     {
         Integer index = 1
@@ -432,9 +460,14 @@ void ReportTargetInfoCommandEvent(data)
                 y = (short) y
                 z = (short) z
                 dop = (short) dop
-            log.info "${device.displayName} i:${i} x:$x y:$y z:$z dop:$dop id:${id}"    
+            log.info "${device.displayName} i:${i} x:$x y:$y z:$z dop:$dop id:${id}"
+            targets << [i: i, id: id, x: x, y: y, z: z, dop: dop]
         }
     }
+
+    // publish ALL targets at once as JSON
+    def payload = [ts: now(), count: targetnum, targets: targets]
+    sendEvent(name: "targetInfo", value: JsonOutput.toJson(payload), isStateChange: true)
 }
 
 void ReportInterferenceAreaCommandEvent(data)
@@ -677,6 +710,13 @@ def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS A
 //	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x8022 {${device.zigbeeId}} {}"] //UnBinding Cluster
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0xFC31 {${device.zigbeeId}} {}"] //Private Cluster
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0xFC31 {${device.zigbeeId}} {}"] //Private Cluster ep2
+    if (settings?."parameter107" == "1") {
+        cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0xFC32 {${device.zigbeeId}} {}"]
+    } else {
+        cmds += ["zdo unbind ${device.deviceNetworkId} 0x01 0x01 0xFC32 {${device.zigbeeId}} {}"]
+        device.deleteCurrentState('targetInfo')
+        device.deleteCurrentState('targetCount')
+    }
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0xFC57 {${device.zigbeeId}} {}"] //???? ???? (listed in fingerprint)
     if (debugEnable) log.debug "${device.displayName} configure $cmds"
 	sendHubCommand(new HubMultiAction(delayBetween(cmds, shortDelay), Protocol.ZIGBEE))
@@ -952,6 +992,9 @@ def parse(String description) {
 	//	def valueInt=null
 	//}
     def valueStr =   descMap['value']?:"unknown"
+
+    log.warn "FC32 DEBUG: attrInt=${attrInt} command=${descMap.command} isClusterSpecific=${descMap.isClusterSpecific} data=${descMap.data}"
+    
     switch (clusterInt){
         case 0x0000:    //BASIC CLUSTER
             if (traceEnable||debugEnable) traceCluster(description)
@@ -1996,7 +2039,7 @@ def setAttribute(Integer cluster, Integer attrInt, Integer dataType, Integer val
                 infoMsg += "${value} = ${convertByteToPercent(value)}% on 255 scale"
                 break
             case 23:
-                //quickStartVariables()
+              //  quickStartVariables()
                 infoMsg = ""
                 break
 			case 60:	//LED1 color when on
@@ -2234,10 +2277,17 @@ def updated(option) { // called when "Save Preferences" is requested
     def cmds = []
     cmds += zigbee.configureReporting(0x0400, 0x0000, DataType.UINT16, luxMinInterval.toInteger(), luxMaxInterval.toInteger(), scaledLuxMinChange.toInteger(), [destEndpoint: 0x01])
     
+    if (settings?."parameter107" == "1") {
+        cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0xFC32 {${device.zigbeeId}} {}"]
+    } else {
+        cmds += ["zdo unbind ${device.deviceNetworkId} 0x01 0x01 0xFC32 {${device.zigbeeId}} {}"]
+        device.deleteCurrentState('targetInfo')
+        device.deleteCurrentState('targetCount')
+    }
+    
     if (cmds.size() > 0) {
         sendHubCommand(new HubMultiAction(delayBetween(cmds, shortDelay), Protocol.ZIGBEE))
     }
-
 
     int defaultValue
     int newValue
@@ -2324,7 +2374,7 @@ def updated(option) { // called when "Save Preferences" is requested
 	if (settings.groupBinding3!=null && settings.groupBinding3==settings.groupBinding2) {device.removeSetting("groupBinding3"); state.groupBinding3 = null; if (infoEnable) log.info "${device.displayName} Removed duplicate Group Bind #3"}
 	if (settings.groupBinding2!=null && settings.groupBinding2==settings.groupBinding1) {device.removeSetting("groupBinding2"); state.groupBinding2 = null; if (infoEnable) log.info "${device.displayName} Removed duplicate Group Bind #2"}
 	if (settings.groupBinding1!=null && settings.groupBinding1==settings.groupBinding3) {device.removeSetting("groupBinding3"); state.groupBinding3 = null; if (infoEnable) log.info "${device.displayName} Removed duplicate Group Bind #3"}
-	
+
     if (nothingChanged && (infoEnable||traceEnable||debugEnable)) log.info "${device.displayName} No DEVICE settings were changed"
 	log.info  "${device.displayName} Info logging  " + (infoEnable?limeGreen("Enabled"):red("Disabled"))
 	log.trace "${device.displayName} Trace logging " + (traceEnable?limeGreen("Enabled"):red("Disabled"))
