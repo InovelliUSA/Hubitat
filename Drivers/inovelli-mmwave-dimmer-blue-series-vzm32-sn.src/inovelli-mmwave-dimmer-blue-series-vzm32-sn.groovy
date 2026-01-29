@@ -24,7 +24,6 @@ def getDriverDate() { return "2025-12-26" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
-* 2025-12-26(EM) Fixing attribute 107 setting. Enable/Disable targetInfo and TargetCount Hubitat device attributes with Target Information Reporting setting.
 * 2025-12-26(EM) Fixing group binding input type from number to string. Change so that default settings are not cleared.
 * 2025-12-12(EM) Fixing lux reporting parameters showing up twice.
 * 2025-12-03(EM) Fixing bug in dimming method reporting.
@@ -188,8 +187,6 @@ metadata {
         // Start and (automatically or manually) stop the MMWave Calibration
 	    command "startCalibrationZoneCreation"
     	command "stopCalibrationZoneCreation"
-
-        command "bindMmWaveCluster"
         
         command "mmWaveControlInstruction",       [[name:"id",     type:"NUMBER", description:  "0=Reset mmWave Module,  1=Generate Interference Area,  2=Obtain Interference Area,  3=Clear Interference Area,  4=Reset Detection Area,  5=Clear the Stay Area"]]
         
@@ -308,27 +305,6 @@ metadata {
         input name: "disableDebugLogging", type: "number", title: bold("Disable Debug Logging after this number of minutes"), description: italic("(0=Do not disable, default=5)"), defaultValue: 5
     }
 }
-
-def bindMmWaveCluster() {
-    def cluster = 0xFC32
-    def endpoint = 0x01
-
-    def hubEui = location.hubs[0]?.zigbeeEui
-    if (!hubEui) {
-        log.warn "${device.displayName} Cannot get hub EUI; binding will fail"
-        return
-    }
-    log.debug "${device.displayName} Hub EUI: ${hubEui}"
-
-    // ZDO bind command as string (Hubitat expects this)
-    def cmd = "zdo bind ${device.deviceNetworkId} 0x01 0x01 0x${cluster.toString(16)} {${hubEui}} {}"
-    log.info "${device.displayName} Sending bind command: ${cmd}"
-
-    sendHubCommand(new hubitat.device.HubAction(cmd, hubitat.device.Protocol.ZIGBEE))
-}
-
-
-
 
 def intTo16bitHex(value) {
     value = (short)value
@@ -993,8 +969,6 @@ def parse(String description) {
 	//}
     def valueStr =   descMap['value']?:"unknown"
 
-    log.warn "FC32 DEBUG: attrInt=${attrInt} command=${descMap.command} isClusterSpecific=${descMap.isClusterSpecific} data=${descMap.data}"
-    
     switch (clusterInt){
         case 0x0000:    //BASIC CLUSTER
             if (traceEnable||debugEnable) traceCluster(description)
