@@ -24,7 +24,7 @@ def getDriverDate() { return "2026-01-30" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
-* 2025-01-30(EM) Added targetInfo and targetCount attributes
+* 2026-01-30(EM) Added targetInfo and targetCount attributes
 * 2025-12-26(EM) Fixing group binding input type from number to string. Change so that default settings are not cleared.
 * 2025-12-12(EM) Fixing lux reporting parameters showing up twice.
 * 2025-12-03(EM) Fixing bug in dimming method reporting.
