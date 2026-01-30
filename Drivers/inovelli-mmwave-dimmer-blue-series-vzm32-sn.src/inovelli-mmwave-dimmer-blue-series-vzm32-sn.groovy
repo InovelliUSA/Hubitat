@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-01-30" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2026-01-30" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM32-SN Blue Series Zigbee 2-in-1 mmWave
