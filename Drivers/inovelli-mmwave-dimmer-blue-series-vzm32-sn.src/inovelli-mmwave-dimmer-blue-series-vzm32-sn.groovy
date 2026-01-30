@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-12-26" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2026-01-30" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM32-SN Blue Series Zigbee 2-in-1 mmWave
@@ -24,6 +24,7 @@ def getDriverDate() { return "2025-12-26" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2026-01-30(EM) Added targetInfo and targetCount attributes
 * 2025-12-26(EM) Fixing group binding input type from number to string. Change so that default settings are not cleared.
 * 2025-12-12(EM) Fixing lux reporting parameters showing up twice.
 * 2025-12-03(EM) Fixing bug in dimming method reporting.
@@ -381,6 +382,25 @@ def mmWaveSetDetectionArea(areaid, xmin, xmax,ymin,ymax,zmin,zmax)
 void AnyoneInTheReportingAreaCommandEvent(data)
 {
     log.info "${device.displayName} ReportingArea:${data}"
+
+    // data[0..3] = area1..area4
+    Integer a1 = Integer.parseInt(data[0], 16)
+    Integer a2 = Integer.parseInt(data[1], 16)
+    Integer a3 = Integer.parseInt(data[2], 16)
+    Integer a4 = Integer.parseInt(data[3], 16)
+
+    boolean anyone = (a1 == 1 || a2 == 1 || a3 == 1 || a4 == 1)
+
+    // If nobody is present, clear target info immediately
+    if (!anyone) {
+        sendEvent(name: "targetCount", value: 0, isStateChange: true)
+        def payload = [
+            ts     : now(),
+            count  : 0,
+            targets: []
+        ]
+        sendEvent(name: "targetInfo", value: JsonOutput.toJson(payload), isStateChange: true)
+    }
 }
 
 void ZigbeePrivateMMWaveAttrEvent(descMap)
