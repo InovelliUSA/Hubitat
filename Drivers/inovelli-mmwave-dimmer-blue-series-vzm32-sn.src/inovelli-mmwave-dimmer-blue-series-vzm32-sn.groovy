@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-12-26" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2025-01-30" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM32-SN Blue Series Zigbee 2-in-1 mmWave
@@ -24,6 +24,7 @@ def getDriverDate() { return "2025-12-26" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2025-01-30(EM) Added targetInfo and targetCount attributes
 * 2025-12-26(EM) Fixing group binding input type from number to string. Change so that default settings are not cleared.
 * 2025-12-12(EM) Fixing lux reporting parameters showing up twice.
 * 2025-12-03(EM) Fixing bug in dimming method reporting.
