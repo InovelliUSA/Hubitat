@@ -1,4 +1,4 @@
-def getDriverDate() { return "2026-01-21" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2026-02-02" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW32-SN Red Series Z-Wave 2-in-1 mmWave
@@ -18,6 +18,7 @@ def getDriverDate() { return "2026-01-21" }	// **** DATE OF THE DEVICE DRIVER
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2026-02-02(EM) Updating parameter descriptions to include units.
 * 2026-01-21(EM) Adding parameter 115 to readOnlyParams() for firmware version reporting.
 * 2026-01-21(EM) Fixing bug in undefined button function logging. Fixing issue with setParameter().
 * 2025-12-20(EM) Adding getTemperature command to retrieve the internal temperature of the switch.
@@ -1191,7 +1192,7 @@ def readOnlyParams() {
     parameter101 : [
         number: 101,
         name: "mmWave Height Minimum (Floor)",
-        description: "Defines the detection area (negative values are below the switch, positive values are above)",
+        description: "Defines the detection area (negative values are below the switch, positive values are above). Values are in cm.",
         range: "-600..600",
         default: -600,
         size: 2,
@@ -1201,7 +1202,7 @@ def readOnlyParams() {
     parameter102 : [
         number: 102,
         name: "mmWave Height Maximum (Ceiling)",
-        description: "Defines the detection area (negative values are below the switch, positive values are above)",
+        description: "Defines the detection area (negative values are below the switch, positive values are above). Values are in cm.",
         range: "-600..600",
         default: 600,
         size: 2,
@@ -1211,7 +1212,7 @@ def readOnlyParams() {
     parameter103 : [
         number: 103,
         name: "mmWave Width Minimum (Left)",
-        description: "Defines the detection area (negative values are left of the switch facing away from the wall, positive values are right)",
+        description: "Defines the detection area (negative values are left of the switch facing away from the wall, positive values are right). Values are in cm.",
         range: "-600..600",
         default: -600,
         size: 2,
@@ -1221,7 +1222,7 @@ def readOnlyParams() {
     parameter104 : [
         number: 104,
         name: "mmWave Width Maximum (Right)",
-        description: "Defines the detection area (negative values are left of the switch facing away from the wall, positive values are right)",
+        description: "Defines the detection area (negative values are left of the switch facing away from the wall, positive values are right). Values are in cm.",
         range: "-600..600",
         default: 600,
         size: 2,
@@ -1231,7 +1232,7 @@ def readOnlyParams() {
     parameter105 : [
         number: 105,
         name: "mmWave Depth Minimum (Near)",
-        description: "Defines the detection area (from the switch forward)",
+        description: "Defines the detection area (from the switch forward). Values are in cm.",
         range: "0..600",
         default: 0,
         size: 2,
@@ -1241,7 +1242,7 @@ def readOnlyParams() {
     parameter106 : [
         number: 106,
         name: "mmWave Depth Maximum (Far)",
-        description: "Defines the detection area (from the switch forward)",
+        description: "Defines the detection area (from the switch forward). Values are in cm.",
         range: "0..600",
         default: 600,
         size: 2,
@@ -2149,22 +2150,22 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
                         infoMsg += " (LED Scaling " + (valueInt==0?blue("VZM-style"):red("LZW-style")) + ")"
 						break
 					case 101:	//mmWave Height Minimum (Floor)
-                        infoMsg += " (mmWave Height Min: ${valueInt}mm)"
+                        infoMsg += " (mmWave Height Min: ${valueInt}cm)"
                         break
 					case 102:	//mmWave Height Maximum (Ceiling)
-                        infoMsg += " (mmWave Height Max: ${valueInt}mm)"
+                        infoMsg += " (mmWave Height Max: ${valueInt}cm)"
                         break
 					case 103:	//mmWave Width Minimum (Left)
-                        infoMsg += " (mmWave Width Min: ${valueInt}mm)"
+                        infoMsg += " (mmWave Width Min: ${valueInt}cm)"
                         break
 					case 104:	//mmWave Width Maximum (Right)
-                        infoMsg += " (mmWave Width Max: ${valueInt}mm)"
+                        infoMsg += " (mmWave Width Max: ${valueInt}cm)"
                         break
 					case 105:	//mmWave Depth Minimum (Near)
-                        infoMsg += " (mmWave Depth Min: ${valueInt}mm)"
+                        infoMsg += " (mmWave Depth Min: ${valueInt}cm)"
                         break
 					case 106:	//mmWave Depth Maximum (Far)
-                        infoMsg += " (mmWave Depth Max: ${valueInt}mm)"
+                        infoMsg += " (mmWave Depth Max: ${valueInt}cm)"
                         break
 					case 107:	//mmWave Target Info Report
                         infoMsg += " (mmWave Target Info " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
