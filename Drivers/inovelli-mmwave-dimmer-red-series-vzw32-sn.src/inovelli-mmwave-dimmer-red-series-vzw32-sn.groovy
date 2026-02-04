@@ -18,6 +18,7 @@ def getDriverDate() { return "2026-02-04" }	// **** DATE OF THE DEVICE DRIVER
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2026-02-04(EM) Not clearing default settings or reading back reports into settings fields.
 * 2026-02-04(EM) Fixing issue in parameter 101-106 reporting. Updating size of Stay Life to 4 bytes.
 * 2026-02-02(EM) Updating parameter descriptions to include units.
 * 2026-01-21(EM) Adding parameter 115 to readOnlyParams() for firmware version reporting.
@@ -401,7 +402,7 @@ def userSettableParams() {   //controls which options are available depending on
 }
 
 def readOnlyParams() {
-	return [21,32,33,51,115,157,257]
+	return [21,32,33,51,115,116,157,257]
 }
 
 @Field static Integer shortDelay = 500		//default delay to use for zwave commands (in milliseconds)
@@ -2311,9 +2312,11 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 				if ((valueInt==getDefaultValue(attrInt))	//IF   value is the default
 				&& (!readOnlyParams().contains(attrInt))	//AND  not a read-only param
 				&& (![22,52,158,258].contains(attrInt))) {	//AND  not a key parameter
-					clearSetting(attrInt)					//THEN clear the setting (so only changed settings are displayed)
-				} else {									//ELSE update local setting
+					//clearSetting(attrInt)					//THEN clear the setting (so only changed settings are displayed)
+				} else if([115,116].contains(attrInt)) {									//ELSE update local setting
 					device.updateSetting("parameter${attrInt}",[value:"${valueInt}",type:configParams["parameter${attrInt.toString().padLeft(3,"0")}"]?.type?.toString()])
+				} else {
+					//device.updateSetting("parameter${attrInt}",[value:"${valueInt}",type:configParams["parameter${attrInt.toString().padLeft(3,"0")}"]?.type?.toString()])
 				}
 				if (settings."parameter${attrInt}"!=null) {											//IF   device setting is not null
 					state."parameter${attrInt}value" = settings."parameter${attrInt}"?.toInteger()	//THEN set state variable to device setting
