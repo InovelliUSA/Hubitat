@@ -169,7 +169,7 @@
 		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/refs/heads/master/Drivers/inovelli-mmwave-dimmer-red-series-vzw32-sn.src/inovelli-mmwave-dimmer-red-series-vzw32-sn.groovy",
 		"required": false,
 		"oauth": false,
-        "version": "26.2.4.1",
+        "version": "26.2.4.2",
 		"releaseNotes": ""
    	},
 	{

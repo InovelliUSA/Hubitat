@@ -18,7 +18,8 @@ def getDriverDate() { return "2026-02-04" }	// **** DATE OF THE DEVICE DRIVER
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
-* 2026-02-04(EM) Not clearing default settings or reading back reports into settings fields.
+* 2026-02-04(EM) Fixing comparison issue in parameter 101-106 reporting.
+* 2026-02-04(EM) Not clearing default settings or reading back reports into settings fields. Fixing issue in parameter 101-106 reporting.
 * 2026-02-04(EM) Fixing issue in parameter 101-106 reporting. Updating size of Stay Life to 4 bytes.
 * 2026-02-02(EM) Updating parameter descriptions to include units.
 * 2026-01-21(EM) Adding parameter 115 to readOnlyParams() for firmware version reporting.
@@ -1930,7 +1931,7 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 			def scaled = cmd?.scaledConfigurationValue
 			def valueInt = cmd?.size==1?(scaled<0?scaled+0x100:scaled):cmd.size==4?(scaled<0?scaled+0x100000000:scaled):scaled
 			// Some hubs report P101-106 (2-byte) as size 1; scaledConfigurationValue still has the correct signed 16-bit value
-			if (attrInt in [101,102,103,104,105,106] && cmd?.size == 1 && scaled != null) valueInt = scaled
+			if (attrInt?.toInteger() in [101,102,103,104,105,106] && cmd?.size == 1 && scaled != null) valueInt = scaled
 			def valueStr = valueInt.toString()
 			def valueHex = intTo32bitUnsignedHex(valueInt)
 			def infoDev = "${device.displayName} "
