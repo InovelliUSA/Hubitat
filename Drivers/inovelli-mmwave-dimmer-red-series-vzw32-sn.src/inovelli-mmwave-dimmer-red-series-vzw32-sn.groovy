@@ -18,6 +18,7 @@ def getDriverDate() { return "2026-02-10" }	// **** DATE OF THE DEVICE DRIVER
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2026-02-10(EM) Fixing issue with notification report handling.
 * 2026-02-10(EM) Adding mmwaveModuleCommands command and removing some other settings/commands that are not supported.
 * 2026-02-05(EM) Enabling Single LED Notifications, quick start, single tap behavior, etc.
 *                Cleaning up some code and removing Target Info Report Option (it is not supported at this time)
@@ -288,7 +289,7 @@ def motionEvent(value) {
         map.value = "inactive"
         map.descriptionText = "$device.displayName motion has stopped"
     }
-    createEvent(map)
+    sendEvent(map)
 }
 
 private getAdjustedLuminance(value) {
@@ -349,37 +350,35 @@ def zwaveEvent(hubitat.zwave.commands.sensormultilevelv5.SensorMultilevelReport 
 
 def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd) {
     if (debugEnable != false) log.debug "${device.label?device.label:device.name}: ${cmd}"
-    def result = []
     if (cmd.notificationType == 7) {
         if (infoEnable != false) log.info "${device.label?device.label:device.name}: notificationType 7 (Home Security)"
         switch (cmd.event) {
             case 0:
                 if (infoEnable != false) log.info "${device.label?device.label:device.name}: event 0 (State Idle)"
-                result << motionEvent(0)
+                motionEvent(0)
                 break
             case 1:
                 if (infoEnable != false) log.info "${device.label?device.label:device.name}: event 1 (Intrusion - location provided)"
-                result << motionEvent(1)
+                motionEvent(1)
                 break
             case 3:
                 if (infoEnable != false) log.info "${device.label?device.label:device.name}: event 3 (Tampering - product cover removed)"
-                result << createEvent(name: "tamper", value: "detected", descriptionText: "$device.displayName was moved")
-                result << createEvent(name: "acceleration", value: "active", descriptionText: "$device.displayName was moved")
+                sendEvent(name: "tamper", value: "detected", descriptionText: "$device.displayName was moved")
+                sendEvent(name: "acceleration", value: "active", descriptionText: "$device.displayName was moved")
                 break
             case 7:
                 if (infoEnable != false) log.info "${device.label?device.label:device.name}: event 7 (Motion detection - location provided)"
-                result << motionEvent(1)
+                motionEvent(1)
                 break
             case 8:
                 if (infoEnable != false) log.info "${device.label?device.label:device.name}: event 8 (Motion detection)"
-                result << motionEvent(1)
+                motionEvent(1)
                 break
         }
     } else {
         if (infoEnable != false) log.info "${device.label?device.label:device.name}: Unhandled Notification report received: ${cmd}"
-        result << createEvent(descriptionText: cmd.toString(), isStateChange: false)
+        sendEvent(descriptionText: cmd.toString(), isStateChange: false)
     }
-    result
 }
 
 def validConfigParams() {	//all valid parameters for this specific device (configParams Map contains definitions for all parameters for all devices)
@@ -1900,7 +1899,8 @@ def parse(String description) {
     hubitat.zwave.Command cmd = zwave.parse(description,[0x85:1,0x86:2])
     if (cmd) {
         if (debugEnable) log.debug "Parsed ${description} to ${cmd}"
-        zwaveEvent(cmd)
+        def result = zwaveEvent(cmd)
+        if (result != null) return result
     } else {
         if (debugEnable) log.debug "Non-parsed event: ${description}"
     }
