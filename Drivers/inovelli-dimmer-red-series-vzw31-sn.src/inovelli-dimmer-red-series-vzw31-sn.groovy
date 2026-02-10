@@ -220,9 +220,6 @@ metadata {
 						case readOnlyParams().contains(i):	
 							//read-only params are non-settable, so skip user input
 							break 
-                        case 23:
-							//special case for Quick Start is below
-							break
                         default:
                             input "parameter${i}", "number",
 								title: "${i}. " + bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name),
@@ -239,9 +236,6 @@ metadata {
 						case readOnlyParams().contains(i):	
 							//read-only params are non-settable, so skip user input
 							break 
-                        case 23:
-							//special case for Quick Start is below
-							break
                         case 22:    //Aux Type
                         case 52:    //Smart Bulb Mode
                         case 158:   //Switch Mode Zwave
@@ -266,26 +260,15 @@ metadata {
                             break
 					}
                     break
-            }
-
-            if (i==23) {  //quickStart is implemented in firmware for the fan, emulated in this driver for 2-in-1 Dimmer (experimental)
-                if (state.model?.substring(0,5)!="VZM35") {
-                    input "parameter${i}", "number",
-                        title: "${i}. " + orangeRed(bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name + " Level (experimental)")),
-                        description: orangeRed(italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description +
-                            "<br>Range=" + configParams["parameter${i.toString().padLeft(3,"0")}"].range +
-							" Default=" +  configParams["parameter${i.toString().padLeft(3,"0")}"].default)),
-                        //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
-                        range: configParams["parameter${i.toString().padLeft(3,"0")}"].range
-                } else {
-					input "parameter${i}", "number",
-						title: "${i}. " + bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name + " Duration"),
-                        description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description +
-                            "<br>Range=" + configParams["parameter${i.toString().padLeft(3,"0")}"].range +
-							" Default=" +  configParams["parameter${i.toString().padLeft(3,"0")}"].default),
-                        //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
-                        range: configParams["parameter${i.toString().padLeft(3,"0")}"].range
-				}
+                case "text":
+                    if (!readOnlyParams().contains(i)) {
+                        input "parameter${i}", "text",
+                            title: "${i}. " + bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name),
+                            description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description +
+                                "<br>Range=" + configParams["parameter${i.toString().padLeft(3,"0")}"].range +
+                                " Default=" + configParams["parameter${i.toString().padLeft(3,"0")}"].default)
+                    }
+                    break
             }
 
             if (i==95 || i==96) {
@@ -328,12 +311,12 @@ metadata {
 }
 
 def validConfigParams() {	//all valid parameters for this specific device (configParams Map contains definitions for all parameters for all devices)
-	return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,22,25,50,52,53,54,55,56,58,59,64,69,74,79,84,89,94,95,96,97,98,99,100,123,156,157,158,159,160,161,162]
+	return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,22,23,24,25,50,52,53,54,55,56,58,59,64,69,74,79,84,89,94,95,96,97,98,99,100,120,123,130,131,132,133,134,156,157,158,159,160,161,162]
 }
 
 def userSettableParams() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
-    if (state.parameter158value == 1) return [158,22,52,                  10,11,12,      15,17,18,19,20,25,50,            58,59,95,96,97,98,100,123,156,157,159,160,161,162]  //on/off mode
-    else                              return [158,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,25,50,53,54,55,56,58,59,95,96,97,98,100,123,156,157,    160,    162]  //dimmer mode
+    if (state.parameter158value == 1) return [158,22,52,                  10,11,12,      15,17,18,19,20,23,24,25,50,      58,59,95,96,97,98,100,120,123,130,131,132,133,134,156,157,159,160,161,162]  //on/off mode
+    else                              return [158,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,23,24,25,50,53,54,55,56,58,59,95,96,97,98,100,120,123,130,131,132,133,134,156,157,    160,    162]  //dimmer mode
 }
 
 def readOnlyParams() {
@@ -388,7 +371,8 @@ def debugLogsOff() {
 															 
 def calculateParameter(paramNum) {
 	paramNum = paramNum?:0
-    def value = Math.round((settings?."parameter${paramNum}"!=null?settings?."parameter${paramNum}":getDefaultValue(paramNum))?.toFloat())?.toInteger()
+    // Use toDouble() not toFloat(): Float has ~7 digits precision so large values get rounded
+    def value = Math.round((settings?."parameter${paramNum}"!=null?settings?."parameter${paramNum}":getDefaultValue(paramNum))?.toDouble())?.toInteger()
     switch (paramNum){
         case 9:     //Min Level
 			value = Math.min(Math.max(value.toInteger(),1),54)
@@ -400,7 +384,16 @@ def calculateParameter(paramNum) {
         case 14:    //Default Level (remote)
 		case 55:	//Double-Tap UP Level
 		case 56:	//Double-Tap DOWN Level
+		case 131:   //Group 7 / Fan Preset #1
+		case 132:   //Group 7 / Fan Preset #2
+		case 133:   //Group 7 / Fan Preset #3
 			value = Math.min(Math.max(value.toInteger(),0),99)
+            break
+        case 23:    //Quick Start Time (0-60, 1/60 sec)
+			value = Math.min(Math.max(value.toInteger(),0),60)
+            break
+        case 24:    //Quick Start Level (1-99)
+			value = Math.min(Math.max(value.toInteger(),1),99)
             break
         case 18:    //Active Power Reports (percent change)
         case 97:    //LED Bar Intensity(when On)
@@ -703,7 +696,6 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 			if (infoEnable) log.info "${device.displayName} ${cmd}"
 			switch(zigbee.convertToHexString(cmd.sceneNumber,2) + zigbee.convertToHexString(cmd.keyAttributes,2)) {
 				case "0200":    //Tap Up 1x
-					//if (state.model?.substring(0,5)!="VZM35") quickStart()  //If not Fan then emulate quickStart for local button push (this doesn't appear to work - not sure why)
 					buttonEvent(1, "pushed", "physical")
 					break
 				case "0203":    //Tap Up 2x
@@ -869,11 +861,11 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
                                 break
                         }
                         break
-                    case 23:    //Quick Start (in firmware on Fan, emulated in this driver for dimmer)
-                        if  (state.model?.substring(0,5)!="VZM35") 
-                            infoMsg += " (Quick Start " + (valueInt==0?red("disabled"):"${valueInt}%") + ")"
-                        else 
-                            infoMsg += " (Quick Start " + (valueInt==0?red("disabled"):"${valueInt} seconds") + ")"
+                    case 23:    //Quick Start Time (0-60 in 1/60 sec, firmware-driven)
+                        infoMsg += " (Quick Start Time " + (valueInt==0?red("disabled"):"${valueInt}/60 s") + ")"
+                        break
+                    case 24:    //Quick Start Level
+                        infoMsg += " (Quick Start Level ${valueInt}%)"
                         break
                     case 25:    //Higher Output in non-Neutral
                         infoMsg += " (non-Neutral High Output " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
@@ -1184,33 +1176,6 @@ def presetLevel(value) {
     return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
 }
 
-def quickStart() {
-    quickStartVariables()
-	def startLevel = device.currentValue("level").toInteger()
-	def cmds= []
-	if (settings.parameter23?.toInteger()>0 ) {          //only do quickStart if enabled
-		if (infoEnable) log.info "${device.displayName} quickStart(" + (state.model?.substring(0,5)!="VZM35"?"${settings.parameter23}%)":"${settings.parameter23}s)")
-		if (state.model?.substring(0,5)!="VZM35") {      //IF not the Fan switch THEN emulate quickStart 
-			//if (startLevel<state.parameter23value.toInteger()) cmds += zigbee.setLevel(state.parameter23value?.toInteger(),0,34)  //only do quickStart if currentLevel is < Quick Start Level (34ms is two sinewave cycles)
-			//cmds += zigbee.setLevel(startLevel.toInteger(),0,longDelay) 
-			if (startLevel<state.parameter23value.toInteger()) {
-			cmds += zwave.switchMultilevelV4.switchMultilevelSet(value:settings.parameter23,dimmingDuration:0)}  //only do quickStart if currentLevel is < Quick Start Level
-			cmds += zwave.switchMultilevelV4.switchMultilevelSet(value:startLevel,dimmingDuration:0)
-			cmds += zwave.switchMultilevelV4.switchMultilevelGet()
-			if (debugEnable) log.debug "${device.displayName} quickStart $cmds"
-		}
-	}
-    return delayBetween(cmds.collect{ secureCmd(it) }, 34)  //34ms is two sinewave cycles
-}
-
-def quickStartVariables() {
-    if (state.model?.substring(0,5)!="VZM35") {  //IF not the Fan switch THEN set the quickStart variables manually
-        settings.parameter23 =  (settings.parameter23!=null?settings.parameter23:getDefaultValue(23))
-        state.parameter23value = Math.round((settings.parameter23?:0).toFloat())
-        //state.parameter23level = Math.round((settings.parameter23level?:defaultQuickLevel).toFloat())
-    }
-}
-
 def refresh(option) {
     option = (option==null||option==" ")?"":option
     if (infoEnable) log.info "${device.displayName} refresh(${option})"
@@ -1222,9 +1187,6 @@ def refresh(option) {
     def cmds = []
 	cmds += zwave.versionV1.versionGet()
 	validConfigParams().each { i ->	//loop through valid parameters (z-wave returns p1 value if we ask for unsupported param)
-		//int i = it.value.number.toInteger()
-		if (i==23 && (state.model?.substring(0,5)!="VZM35")) quickStartVariables()  //quickStart is implemented in firmware for the fan, emulated in this driver for 2-in-1 Dimmer
-
 		switch (option) {
 			case "":									//option is blank or null 
 				if (([22,52,158,258].contains(i))		//refresh primary settings
@@ -1306,9 +1268,18 @@ def setLevel(value, duration) {
 def setConfigParameter(number, value, size) {	//for backward compatibility
     return delayBetween(setParameter(paramNum, value, size.toInteger()).collect{ secureCmd(it) }, shortDelay)
 }
+def setParameter(paramNum) {
+    // User interface version - wraps result in delayBetween
+    return delayBetween(setParameter(paramNum, value, null).collect{ secureCmd(it) }, shortDelay)
+}
 
 def setParameter(paramNum, value) {
-    // User interface version - wraps result in delayBetween
+    // User interface version - set then get; update preference so device screen shows the value sent
+    paramNum = paramNum?.toInteger()
+    if (value != null && value != "" && paramNum != null) {
+        def type = configParams["parameter${paramNum.toString().padLeft(3,'0')}"]?.type?.toString() ?: "number"
+        device.updateSetting("parameter${paramNum}", [value: value.toString(), type: type])
+    }
     return delayBetween(setParameter(paramNum, value, null).collect{ secureCmd(it) }, shortDelay)
 }
 
@@ -1426,12 +1397,8 @@ def toggle() {
     def cmds = []
     // emulate toggle since z-wave does not have native toggle command like zigbee
     if (device.currentValue("switch")=="off") {
-		if (settings.parameter23?.toInteger()>0) {
-			cmds += quickStart()  //IF quickStart is enabled THEN quickStart
-		} else {
-			cmds += zwave.basicV2.basicSet(value: 0xFF)
-			cmds += zwave.basicV2.basicGet()
-		}
+		cmds += zwave.basicV2.basicSet(value: 0xFF)
+		cmds += zwave.basicV2.basicGet()
 	} else {
 		cmds += zwave.basicV2.basicSet(value: 0x00)
 		cmds += zwave.basicV2.basicGet()
@@ -1479,6 +1446,7 @@ def updated(option) { // called when "Save Preferences" is requested
 					if (currentValue == null || newValue != currentValue) {
 						cmds += setParameter(i, newValue, null)				//THEN set the new value
 						nothingChanged = false
+						if ([64,69,74,79,84,89,94,99].contains(i)) clearSetting(i)	//LED notification params: clear after send so user can trigger again
 					}
 				}
 				break
@@ -1489,6 +1457,7 @@ def updated(option) { // called when "Save Preferences" is requested
 				&& (!readOnlyParams().contains(i))) {		//AND  this is not a read-only parameter
 					cmds += setParameter(i, newValue, null)				//THEN Set the new value
 					nothingChanged = false
+					if ([64,69,74,79,84,89,94,99].contains(i)) clearSetting(i)	//LED notification params: clear after send so user can trigger again
 				} else {									//ELSE this is a read-only parameter or Switch Mode parameter
 					cmds += getParameter(i)							//so Get current value from device
 				}
@@ -1496,9 +1465,6 @@ def updated(option) { // called when "Save Preferences" is requested
 			default: 
 				if (traceEnable||debugEnable) log.error "${device.displayName} Unknown option 'updated($option)'"
 				break
-		}
-        if ((i==23)&&(state.model?.substring(0,5)!="VZM35")) {  //IF not Fan switch THEN manually update the quickStart state variables since Dimmer does not store these
-            quickStartVariables()
 		}
     }
 	
@@ -1999,21 +1965,25 @@ def processAssociations(){
         size: 1,
         type: "enum"
         ],
-    parameter023 : [ //implemented in firmware for the fan, emulated in this driver for 2-in-1 Dimmer23,
-        name: "Quick Start",
-        description: "EXPERIMENTAL (hub commands only): Startup Level from OFF to ON (for LEDs that need higher level to turn on but can be dimmed lower) 0=Disabled",
-        range: "0..99",
+    parameter023 : [
+        number: 23,
+        name: "Quick Start Time",
+        description: "Duration of initial increased power output when light turns on. 0=Disabled. Unit: 1/60 seconds (e.g. 60 = 1 second).",
+        range: "0..60",
         default: 0,
         size: 1,
-        type: "number"
+        type: "number",
+        value: null
         ],
     parameter024 : [
+        number: 24,
         name: "Quick Start Level",
-        description: "Level of higher power needed to illuminate the bulb before lowering to desired brightness (0=disabled)",
-        range: "0..100",
-        default: 0,
-        size: 8,
-        type: "number"
+        description: "Level of initial increased power output when light turns on.",
+        range: "1..99",
+        default: 99,
+        size: 1,
+        type: "number",
+        value: null
         ],
     parameter025 : [
         name: "Higher Output in non-Neutral",
@@ -2168,12 +2138,14 @@ def processAssociations(){
         type: "number"
         ],
     parameter064 : [
-        name: "LED1 Notification",
-        description: "4-byte encoded LED1 Notification",
+        number: 64,
+        name: "LED #1 Notification",
+        description: "4-byte encoded LED #1 Notification (duration, level, color, effect). Enter decimal value, no commas.",
         range: "0..4294967295",
         default: 0xFF000000,
         size: 4,
-        type: "number"
+        type: "text",
+        value: null
         ],
     parameter065 : [
         name: "LED2 Color (when On)",
@@ -2208,12 +2180,14 @@ def processAssociations(){
         type: "number"
         ],
     parameter069 : [
-        name: "LED2 Notification",
-        description: "4-byte encoded LED2 Notification",
+        number: 69,
+        name: "LED #2 Notification",
+        description: "4-byte encoded LED #2 Notification (duration, level, color, effect). Enter decimal value, no commas.",
         range: "0..4294967295",
         default: 0xFF000000,
         size: 4,
-        type: "number"
+        type: "text",
+        value: null
         ],
     parameter070 : [
         name: "LED3 Color (when On)",
@@ -2248,12 +2222,14 @@ def processAssociations(){
         type: "number"
         ],
     parameter074 : [
-        name: "LED3 Notification",
-        description: "4-byte encoded LED3 Notification",
+        number: 74,
+        name: "LED #3 Notification",
+        description: "4-byte encoded LED #3 Notification (duration, level, color, effect). Enter decimal value, no commas.",
         range: "0..4294967295",
         default: 0xFF000000,
         size: 4,
-        type: "number"
+        type: "text",
+        value: null
         ],
     parameter075 : [
         name: "LED4 Color (when On)",
@@ -2288,12 +2264,14 @@ def processAssociations(){
         type: "number"
         ],
     parameter079 : [
-        name: "LED4 Notification",
-        description: "4-byte encoded LED4 Notification",
+        number: 79,
+        name: "LED #4 Notification",
+        description: "4-byte encoded LED #4 Notification (duration, level, color, effect). Enter decimal value, no commas.",
         range: "0..4294967295",
         default: 0xFF000000,
         size: 4,
-        type: "number"
+        type: "text",
+        value: null
         ],
     parameter080 : [
         name: "LED5 Color (when On)",
@@ -2328,12 +2306,14 @@ def processAssociations(){
         type: "number"
         ],
     parameter084 : [
-        name: "LED5 Notification",
-        description: "4-byte encoded LED5 Notification",
+        number: 84,
+        name: "LED #5 Notification",
+        description: "4-byte encoded LED #5 Notification (duration, level, color, effect). Enter decimal value, no commas.",
         range: "0..4294967295",
         default: 0xFF000000,
         size: 4,
-        type: "number"
+        type: "text",
+        value: null
         ],
     parameter085 : [
         name: "LED6 Color (when On)",
@@ -2368,12 +2348,14 @@ def processAssociations(){
         type: "number"
         ],
     parameter089 : [
-        name: "LED6 Notification",
-        description: "4-byte encoded LED6 Notification",
+        number: 89,
+        name: "LED #6 Notification",
+        description: "4-byte encoded LED #6 Notification (duration, level, color, effect). Enter decimal value, no commas.",
         range: "0..4294967295",
         default: 0xFF000000,
         size: 4,
-        type: "number"
+        type: "text",
+        value: null
         ],
     parameter090 : [
         name: "LED7 Color (when On)",
@@ -2408,12 +2390,14 @@ def processAssociations(){
         type: "number"
         ],
     parameter094 : [
-        name: "LED7 Notification",
-        description: "4-byte encoded LED Notification",
+        number: 94,
+        name: "LED #7 Notification",
+        description: "4-byte encoded LED #7 Notification (duration, level, color, effect). Enter decimal value, no commas.",
         range: "0..4294967295",
         default: 0xFF000000,
         size: 4,
-        type: "number"
+        type: "text",
+        value: null
         ],
     parameter095 : [
         name: "LED Bar Color (when On)",
@@ -2449,11 +2433,12 @@ def processAssociations(){
         ],
     parameter099 : [
         name: "All LED Notification",
-        description: "4-byte encoded LED Notification",
+        description: "4-byte encoded All LED Notification (duration, level, color, effect). Enter decimal value, no commas.",
         range: "0..4294967295",
         default: 0xFF000000,
         size: 4,
-        type: "number"
+        type: "text",
+        value: null
         ],
     parameter100 : [
         name: "LED Bar Scaling",
