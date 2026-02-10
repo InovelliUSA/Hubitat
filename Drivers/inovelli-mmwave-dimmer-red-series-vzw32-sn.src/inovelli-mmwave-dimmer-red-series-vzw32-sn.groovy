@@ -1,4 +1,4 @@
-def getDriverDate() { return "2026-02-05" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2026-02-10" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW32-SN Red Series Z-Wave 2-in-1 mmWave
@@ -18,7 +18,7 @@ def getDriverDate() { return "2026-02-05" }	// **** DATE OF THE DEVICE DRIVER
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
-* 2
+* 2026-02-10(EM) Adding mmwaveModuleCommands command and removing some other settings/commands that are not supported.
 * 2026-02-05(EM) Enabling Single LED Notifications, quick start, single tap behavior, etc.
 *                Cleaning up some code and removing Target Info Report Option (it is not supported at this time)
 * 2026-02-04(EM) Fixing comparison issue in parameter 101-106 reporting.
@@ -75,7 +75,6 @@ metadata {
         attribute "ledEffect", "String"			//last LED effect requested (may have timed-out and not necessarily displaying currently)
 		attribute "internalTemp", "String"		//Internal Temperature in Celsius	(read-only P32)
         //attribute "numberOfBindings", "String" //Group bindings count as 2		(read only P51)
-		attribute "areaReport", "String"			//mmWave Person in Reporting Area	(read-only P116)
 		attribute "overHeat", "String"			//Overheat Indicator				(read-only P33)
 		attribute "powerSource", "String"		//Neutral/non-Neutral				(read-only P21)
 		attribute "remoteProtection", "String"	//Enabled or Disabled				(read-only P257)
@@ -129,6 +128,9 @@ metadata {
         
         command "getTemperature",	   [[name:"Get the switch internal operating temperature"]]
 
+        command "mmwaveModuleCommands", [[name:"Command*", type:"ENUM",
+											description: "0=Restore mmWave module factory config, 1=Auto generate interference area, 3=Delete current interference area",
+											constraints: ["0=Restore factory config","1=Auto generate interference area","3=Delete current interference area"]]]
         command "ledEffectAll",        [[name:"Effect*",   type:"ENUM",
 											description:  "255=Stop,  1=Solid,  2=Fast Blink,  3=Slow Blink,  4=Pulse,  5=Chase,  6=Open/Close,  7=Small-to-Big,  8=Aurora,  9=Slow Falling,  10=Medium Falling,  11=Fast Falling,  12=Slow Rising,  13=Medium Rising,  14=Fast Rising,  15=Medium Blink,  16=Slow Chase,  17=Fast Chase,  18=Fast Siren,  19=Slow Siren,  0=LEDs off",
 											constraints: ["255=Stop","1=Solid","2=Fast Blink","3=Slow Blink","4=Pulse","5=Chase","6=Open/Close","7=Small-to-Big","8=Aurora","9=Slow Falling","10=Medium Falling","11=Fast Falling","12=Slow Rising","13=Medium Rising","14=Fast Rising","15=Medium Blink","16=Slow Chase","17=Fast Chase","18=Fast Siren","19=Slow Siren","0=LEDs off"]],
@@ -381,12 +383,12 @@ def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd) {
 }
 
 def validConfigParams() {	//all valid parameters for this specific device (configParams Map contains definitions for all parameters for all devices)
-	return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,22,23,24,25,50,52,53,54,55,56,58,59,64,69,74,79,84,89,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,118,119,120,123,130,131,132,133,134,156,157,158,159,160,161,162]
+	return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,22,23,24,25,50,52,53,54,55,56,58,59,64,69,74,79,84,89,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,112,113,114,115,116,118,119,120,123,130,131,132,133,134,156,157,158,159,160,161,162]
 }
 
 def userSettableParams() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
-    if (parameter158 == "1") return [158,22,52,                  10,11,12,      15,17,18,19,20,23,24,25,50,            58,59,64,69,74,79,84,89,94,95,96,97,98,100,101,102,103,104,105,106,108,109,110,111,112,113,114,115,116,117,118,119,120,123,130,131,132,133,134,159,160,161,162]  //on/off mode
-    else                     return [158,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,23,24,25,50,53,54,55,56,58,59,64,69,74,79,84,89,94,95,96,97,98,100,101,102,103,104,105,106,108,109,110,111,112,113,114,115,116,117,118,119,120,123,130,131,132,133,134,159,160,    162]  //dimmer mode
+    if (parameter158 == "1") return [158,22,52,                  10,11,12,      15,17,18,19,20,23,24,25,50,            58,59,64,69,74,79,84,89,94,95,96,97,98,100,101,102,103,104,105,106,108,109,110,112,113,114,115,116,117,118,119,120,123,130,131,132,133,134,159,160,161,162]  //on/off mode
+    else                     return [158,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,23,24,25,50,53,54,55,56,58,59,64,69,74,79,84,89,94,95,96,97,98,100,101,102,103,104,105,106,108,109,110,112,113,114,115,116,117,118,119,120,123,130,131,132,133,134,159,160,    162]  //dimmer mode
 }
 
 def readOnlyParams() {
@@ -1766,6 +1768,17 @@ def intTo32bitUnsignedHex(value) {
     return hexStr = zigbee.convertToHexString(value.toInteger(),8)
 }
 
+def mmwaveModuleCommands(command) {
+    // Command is the selected constraint string (e.g. "2=Get interference/detection region"); parse to get value 0-5
+    def value = command?.toString()?.contains("=") ? command.toString().split("=")[0].trim() : command
+    value = Math.min(Math.max((value != null ? value : 0).toInteger(), 0), 5)
+    if (infoEnable) log.info "${device.displayName} mmwaveModuleCommands(${value})"
+    state.lastCommandSent = "mmwaveModuleCommands(${value})"
+    state.lastCommandTime = nowFormatted()
+    def cmds = setParameter(111, value, 1)
+    return delayBetween(cmds.collect{ secureCmd(it) }, shortDelay)
+}
+
 def ledEffectAll(effect=255, color=0, level=100, duration=60) {
 	effect   = effect.toString().split(/=/)[0]
 	def effectName = "unknown($effect)"
@@ -2272,7 +2285,6 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
                         break
 					case 116:	//mmWave Person in Reporting Area
                         infoMsg += " (mmWave Person in Area: ${valueInt})"
-                        sendEvent(name: "areaReport", value: valueInt.toString())
                         break
 					case 117:	//Room Size
                         def roomSizeText = ["Custom", "X-Small", "Small", "Medium", "Large", "X-Large"]
