@@ -5,7 +5,7 @@
    "version": "20.4.30",
    "dateReleased": "2020-04-30",
    "documentationLink": "https://support.inovelli.com/portal/en/kb/inovelli",
-   "releaseNotes": "VZW32-SN: Fixing issue in parameter 101-106 reporting. Updating size of Stay Life to 4 bytes. Not clearing default settings or reading back reports into settings fields.",
+   "releaseNotes": "VZW32-SN: Adding mmwaveModuleCommands command and removing some other settings/commands that are not supported.",
    "drivers" : [
    	{
    		"id" : "405b5e34-073e-4dfa-af65-3b8da1a9fc66",
@@ -169,7 +169,7 @@
 		"location": "https://raw.githubusercontent.com/InovelliUSA/Hubitat/refs/heads/master/Drivers/inovelli-mmwave-dimmer-red-series-vzw32-sn.src/inovelli-mmwave-dimmer-red-series-vzw32-sn.groovy",
 		"required": false,
 		"oauth": false,
-        "version": "26.2.4.2",
+        "version": "26.2.10",
 		"releaseNotes": ""
    	},
 	{
