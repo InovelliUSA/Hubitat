@@ -2381,11 +2381,16 @@ def setLevel(value, duration) {
 }
 
 def setConfigParameter(number, value, size) {	//for backward compatibility
-    return delayBetween(setParameter(paramNum, value, size.toInteger()).collect{ secureCmd(it) }, shortDelay)
+    return delayBetween(setParameter(number, value, size.toInteger()).collect{ secureCmd(it) }, shortDelay)
 }
 
 def setParameter(paramNum, value) {
-    // User interface version - wraps result in delayBetween
+    // User interface version - set then get; update preference so device screen shows the value sent
+    paramNum = paramNum?.toInteger()
+    if (value != null && value != "" && paramNum != null) {
+        def type = configParams["parameter${paramNum.toString().padLeft(3,'0')}"]?.type?.toString() ?: "number"
+        device.updateSetting("parameter${paramNum}", [value: value.toString(), type: type])
+    }
     return delayBetween(setParameter(paramNum, value, null).collect{ secureCmd(it) }, shortDelay)
 }
 
