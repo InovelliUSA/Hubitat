@@ -2384,6 +2384,11 @@ def setConfigParameter(number, value, size) {	//for backward compatibility
     return delayBetween(setParameter(number, value, size.toInteger()).collect{ secureCmd(it) }, shortDelay)
 }
 
+def setParameter(paramNum) {
+    // User interface version - wraps result in delayBetween
+    return delayBetween(setParameter(paramNum, value, null).collect{ secureCmd(it) }, shortDelay)
+}
+
 def setParameter(paramNum, value) {
     // User interface version - set then get; update preference so device screen shows the value sent
     paramNum = paramNum?.toInteger()
