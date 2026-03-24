@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-12-03" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2026-03-24" }	// **** DATE OF THE DEVICE DRIVER
 //  !!!!!!!!!!!!!!!!!  UPDATE ^^^THIS^^^ DATE IF YOU MAKE ANY CHANGES  !!!!!!!!!!!!!!!!!
 /*
 * Inovelli VZM31-SN Blue Series Zigbee 2-in-1 Dimmer
@@ -7,7 +7,7 @@ def getDriverDate() { return "2025-12-03" }	// **** DATE OF THE DEVICE DRIVER
 * Contributor: Mark Amber (marka75160)
 * Platform: Hubitat
 *
-* Copyright 2025 Eric Maycock / Inovelli
+* Copyright 2026 Eric Maycock / Inovelli
 *
 * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 * in compliance with the License. You may obtain a copy of the License at:
@@ -24,6 +24,7 @@ def getDriverDate() { return "2025-12-03" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2026-03-24(EM) Add parameters 27 (dimming algorithm) and 124 (aux detection level), firmware 3.05+.
 * 2025-12-03(EM) Fixing bug in dimming method reporting.
 * 2025-10-01(EM) Adding "toggle" option to Fan Control Mode (P130) parameters (fw 3.0+). Adding fw 3.0+ fingerprint.
 *                Update default values for Switch Type (P22) and Switch Mode (P258) parameters (fw 3.0+).
@@ -1465,6 +1466,9 @@ def parsePrivateCluster(description) {
                         infoMsg += " (Dimming Method " + (valueInt==0?red("Leading Edge"):limeGreen("Trailing Edge")) + ")"
                         state.dimmingMethod = (valueInt==0?"Leading Edge":"Trailing Edge")
                         break
+                    case 27:    //Dimming algorithm (fw 3.05+)
+                        infoMsg += " (Dimming Algorithm " + (valueInt==0?red("old (v2.18)"):limeGreen("new (v3.05+)")) + ")"
+                        break
 					case 30:	//non-Neutral AUX med gear learn value
 						infoMsg += " (non-Neutral AUX medium gear)"
 						break
@@ -1591,6 +1595,9 @@ def parsePrivateCluster(description) {
 					case 123:	//Aux Switch Scenes
                         infoMsg += " (Aux Scenes " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
 						sendEvent(name: "numberOfButtons", value: valueInt?28:14)
+						break
+					case 124:	//Aux detection level (fw 3.05+)
+                        infoMsg += " (Aux Detection Level ${valueInt})"
 						break
 					case 125:	//Binding Off-to-On Sync Level
                         infoMsg += " (Send Level with Binding " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
@@ -2526,8 +2533,8 @@ def holdConfig()     {buttonEvent(13, "held", "digital")}
 def releaseConfig()  {buttonEvent(14, "released", "digital")}
 
 def userSettableParams() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
-    if (parameter258 == "1") return [258,22,52,    3,      7,    10,11,12,      15,17,      23,24,25,50,            95,96,97,98,100,    123,125,130,131,132,133,134,256,259,260,261,262]  //on/off mode
-    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,      23,24,25,50,53,54,55,56,95,96,97,98,100,120,123,125,130,131,132,133,134,256,    260,    262]  //dimmer mode
+    if (parameter258 == "1") return [258,22,52,    3,      7,    10,11,12,      15,17,      23,24,25,27,50,            95,96,97,98,100,    123,124,125,130,131,132,133,134,256,259,260,261,262]  //on/off mode
+    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,      23,24,25,27,50,53,54,55,56,95,96,97,98,100,120,123,124,125,130,131,132,133,134,256,    260,    262]  //dimmer mode
 }
 
 def readOnlyParams() {
@@ -2734,6 +2741,14 @@ def readOnlyParams() {
         description: "Select Leading Edge or Trailing Edge dimming method",
         range: ["0":"Leading (default)","1":"Trailing"],
         default:0,
+        size: 8,
+        type: "enum"
+        ],
+    parameter027 : [
+        name: "Dimming Algorithm",
+        description: "(Firmware 3.05+) Switches the dimming algorithm from old to new. When switching the algorithm, the switch will restart. Some non-neutral setups may not support the new algorithm, in which case you can use the old algorithm. 0 = old dimming algorithm (v2.18), 1 = new dimming algorithm (v3.04+) (default).",
+        range: ["0":"Old dimming algorithm (v2.18)","1":"New dimming algorithm (v3.04)"],
+        default: 1,
         size: 8,
         type: "enum"
         ],
@@ -3208,6 +3223,14 @@ def readOnlyParams() {
         default: 0,
         size: 1,
         type: "enum"
+        ],
+    parameter124 : [
+        name: "Aux Detection Level",
+        description: "(Firmware 3.05+) Aux detection level (P124). Range: 0-4, default: 1. If you are having issues with the aux function, start setting from 0 and continue until the aux function operates normally.",
+        range: "0..4",
+        default: 1,
+        size: 8,
+        type: "number"
         ],
     parameter125 : [
         name: "Binding Off-to-On Sync Level",
