@@ -1,4 +1,4 @@
-def getDriverDate() { return "2026-03-24" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2026-04-02" }	// **** DATE OF THE DEVICE DRIVER
 //  !!!!!!!!!!!!!!!!!  UPDATE ^^^THIS^^^ DATE IF YOU MAKE ANY CHANGES  !!!!!!!!!!!!!!!!!
 /*
 * Inovelli VZM31-SN Blue Series Zigbee 2-in-1 Dimmer
@@ -24,6 +24,7 @@ def getDriverDate() { return "2026-03-24" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2026-04-02(EM) Add parameter 165 (dumb detection level), firmware 3.07+.
 * 2026-03-24(EM) Add parameters 27 (dimming algorithm) and 124 (aux detection level), firmware 3.05+.
 * 2025-12-03(EM) Fixing bug in dimming method reporting.
 * 2025-10-01(EM) Adding "toggle" option to Fan Control Mode (P130) parameters (fw 3.0+). Adding fw 3.0+ fingerprint.
@@ -1675,6 +1676,9 @@ def parsePrivateCluster(description) {
                     case 263:
                         infoMsg += " (LED bar display levels: ${valueInt?:'full range'})"
                         break
+					case 165:    //Dumb detection level (fw 3.05+)
+                        infoMsg += " (Dumb Detection Level ${valueInt})"
+                        break
                     default:
 						infoMsg += " [0x${valueInt<=0xFF?valueHex.substring(6):valueInt<=0xFFFF?valueHex.substring(4):valueHex}] " + orangeRed(bold("Undefined Parameter $attrInt"))
                         break
@@ -2533,8 +2537,8 @@ def holdConfig()     {buttonEvent(13, "held", "digital")}
 def releaseConfig()  {buttonEvent(14, "released", "digital")}
 
 def userSettableParams() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
-    if (parameter258 == "1") return [258,22,52,    3,      7,    10,11,12,      15,17,      23,24,25,27,50,            95,96,97,98,100,    123,124,125,130,131,132,133,134,256,259,260,261,262]  //on/off mode
-    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,      23,24,25,27,50,53,54,55,56,95,96,97,98,100,120,123,124,125,130,131,132,133,134,256,    260,    262]  //dimmer mode
+    if (parameter258 == "1") return [258,22,52,    3,      7,    10,11,12,      15,17,      23,24,25,27,50,            95,96,97,98,100,    123,124,125,130,131,132,133,134,165,256,259,260,261,262]  //on/off mode
+    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,      23,24,25,27,50,53,54,55,56,95,96,97,98,100,120,123,124,125,130,131,132,133,134,165,256,    260,    262]  //dimmer mode
 }
 
 def readOnlyParams() {
@@ -3287,6 +3291,14 @@ def readOnlyParams() {
         description: "LED color used to display fan control mode (Firmware 2.17+)",
         range: "0..255",
         default: 212,
+        size: 8,
+        type: "number"
+        ],
+    parameter165 : [
+        name: "Dumb Detection Level",
+        description: "(Firmware 3.05+) Dumb detection level (P165). Range: 0-4, default: 0. If the dumb switch function is not working correctly, start at 0 and increase until it operates normally.",
+        range: "0..4",
+        default: 0,
         size: 8,
         type: "number"
         ],
