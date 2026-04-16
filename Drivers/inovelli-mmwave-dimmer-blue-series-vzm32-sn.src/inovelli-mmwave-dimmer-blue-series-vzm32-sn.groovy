@@ -1,4 +1,4 @@
-def getDriverDate() { return "2026-01-30" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2026-04-16" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM32-SN Blue Series Zigbee 2-in-1 mmWave
@@ -7,7 +7,7 @@ def getDriverDate() { return "2026-01-30" }	// **** DATE OF THE DEVICE DRIVER
 * Contributor: Mark Amber (marka75160)
 * Platform: Hubitat
 *
-* Copyright 2025 Eric Maycock / Inovelli
+* Copyright 2026 Eric Maycock / Inovelli
 *
 * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 * in compliance with the License. You may obtain a copy of the License at:
@@ -24,6 +24,7 @@ def getDriverDate() { return "2026-01-30" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2026-04-16(EM) Always bind to MMWave Private Cluster for Reports etc.
 * 2026-01-30(EM) Added targetInfo and targetCount attributes
 * 2025-12-26(EM) Fixing group binding input type from number to string. Change so that default settings are not cleared.
 * 2025-12-12(EM) Fixing lux reporting parameters showing up twice.
@@ -706,13 +707,8 @@ def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS A
 //	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x8022 {${device.zigbeeId}} {}"] //UnBinding Cluster
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0xFC31 {${device.zigbeeId}} {}"] //Private Cluster
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0xFC31 {${device.zigbeeId}} {}"] //Private Cluster ep2
-    if (settings?."parameter107" == "1") {
-        cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0xFC32 {${device.zigbeeId}} {}"]
-    } else {
-        cmds += ["zdo unbind ${device.deviceNetworkId} 0x01 0x01 0xFC32 {${device.zigbeeId}} {}"]
-        device.deleteCurrentState('targetInfo')
-        device.deleteCurrentState('targetCount')
-    }
+    cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0xFC32 {${device.zigbeeId}} {}"] //MMWave Private Cluster for Reports etc.
+
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0xFC57 {${device.zigbeeId}} {}"] //???? ???? (listed in fingerprint)
     if (debugEnable) log.debug "${device.displayName} configure $cmds"
 	sendHubCommand(new HubMultiAction(delayBetween(cmds, shortDelay), Protocol.ZIGBEE))
