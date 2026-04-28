@@ -1,4 +1,4 @@
-def getDriverDate() { return "2026-04-16" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2026-04-28" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM32-SN Blue Series Zigbee 2-in-1 mmWave
@@ -24,6 +24,7 @@ def getDriverDate() { return "2026-04-16" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2026-04-28(EM) Fix for bind to MMWave Private Cluster for Reports etc. Added InterferenceArea attributes
 * 2026-04-16(EM) Always bind to MMWave Private Cluster for Reports etc.
 * 2026-01-30(EM) Added targetInfo and targetCount attributes
 * 2025-12-26(EM) Fixing group binding input type from number to string. Change so that default settings are not cleared.
@@ -93,7 +94,12 @@ metadata {
 		attribute "LQI", "String"				//Link Quality Indicator
 		attribute "RSSI", "String"				//Received Signal Strength Indicator
         attribute "firmware", "String"	
-        attribute "mmWaveFirmware", "String"	
+        attribute "mmWaveFirmware", "String"
+
+        attribute "interferenceArea0", "string"
+        attribute "interferenceArea1", "string"
+        attribute "interferenceArea2", "string"
+        attribute "interferenceArea3", "string"
 
         attribute "targetInfo", "string"
         attribute "targetCount", "number"
@@ -336,7 +342,9 @@ def mmWaveSetInterferenceArea(areaid, xmin, xmax,ymin,ymax,zmin,zmax)
     Integer cmdzmax= zmax.toInteger()
     
     cmds += zigbee.command(0xfc32,0x01,["mfgCode":"0x122F"],shortDelay,"${intTo8bitUnsignedHex(cmdareaid)} ${intTo16bitHex(cmdxmin)} ${intTo16bitHex(cmdxmax)} ${intTo16bitHex(cmdymin)} ${intTo16bitHex(cmdymax)} ${intTo16bitHex(cmdzmin)} ${intTo16bitHex(cmdzmax)}")
-    log.info "${intTo8bitUnsignedHex(cmdareaid)} ${intTo16bitHex(cmdxmin)} ${intTo16bitHex(cmdxmax)} ${intTo16bitHex(cmdymin)} ${intTo16bitHex(cmdymax)} ${intTo16bitHex(cmdzmin)} ${intTo16bitHex(cmdzmax)}" 
+    cmds += "delay 2500"
+    cmds += mmWaveControlInstruction(2)
+    log.info "${intTo8bitUnsignedHex(cmdareaid)} ${intTo16bitHex(cmdxmin)} ${intTo16bitHex(cmdxmax)} ${intTo16bitHex(cmdymin)} ${intTo16bitHex(cmdymax)} ${intTo16bitHex(cmdzmin)} ${intTo16bitHex(cmdzmax)}"
     return cmds
 }
 
@@ -471,6 +479,7 @@ void ReportInterferenceAreaCommandEvent(data)
 {
         log.info "${device.displayName} InterferenceArea:${data}"
         Integer index = 1
+        state.lastInterferenceUpdate = nowFormatted()
         for(int i = 0;i < 4;i++)
         {
             int xmin = ((Integer.parseInt(data[index+1],16) & 0xFF) << 8) | (Integer.parseInt(data[index],16) & 0xFF)
@@ -491,6 +500,15 @@ void ReportInterferenceAreaCommandEvent(data)
 			ymax = (short) ymax
 			zmin = (short) zmin
 			zmax = (short) zmax
+            def areaValue = JsonOutput.toJson([
+                    xmin: xmin,
+                    xmax: xmax,
+                    ymin: ymin,
+                    ymax: ymax,
+                    zmin: zmin,
+                    zmax: zmax
+            ])
+            sendEvent(name: "interferenceArea${i}", value: areaValue, isStateChange: true)
             log.info "${device.displayName} Interference Area i:${i} xmin:$xmin xmax:$xmax ymin:$ymin ymax:$ymax zmin:$zmin zmax:$zmax"    
         }
 }
@@ -708,7 +726,10 @@ def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS A
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0xFC31 {${device.zigbeeId}} {}"] //Private Cluster
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x02 0x01 0xFC31 {${device.zigbeeId}} {}"] //Private Cluster ep2
     cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0xFC32 {${device.zigbeeId}} {}"] //MMWave Private Cluster for Reports etc.
-
+    if (settings?."parameter107" != "1") {
+        device.deleteCurrentState('targetInfo')
+        device.deleteCurrentState('targetCount')
+    }
 	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0xFC57 {${device.zigbeeId}} {}"] //???? ???? (listed in fingerprint)
     if (debugEnable) log.debug "${device.displayName} configure $cmds"
 	sendHubCommand(new HubMultiAction(delayBetween(cmds, shortDelay), Protocol.ZIGBEE))
@@ -2267,10 +2288,7 @@ def updated(option) { // called when "Save Preferences" is requested
     def cmds = []
     cmds += zigbee.configureReporting(0x0400, 0x0000, DataType.UINT16, luxMinInterval.toInteger(), luxMaxInterval.toInteger(), scaledLuxMinChange.toInteger(), [destEndpoint: 0x01])
     
-    if (settings?."parameter107" == "1") {
-        cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0xFC32 {${device.zigbeeId}} {}"]
-    } else {
-        cmds += ["zdo unbind ${device.deviceNetworkId} 0x01 0x01 0xFC32 {${device.zigbeeId}} {}"]
+    if (settings?."parameter107" != "1") {
         device.deleteCurrentState('targetInfo')
         device.deleteCurrentState('targetCount')
     }
