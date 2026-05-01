@@ -18,6 +18,7 @@ def getDriverDate() { return "2026-05-01" }	// **** DATE OF THE DEVICE DRIVER
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2026-05-01(EM) Custom attribute switchBoot: events on configuration report P240 (reboot notification).
 * 2026-05-01(EM) Adding protection settings for local and remote protection.
 * 2026-02-10(EM) Fixing issue with notification report handling.
 * 2026-02-10(EM) Adding mmwaveModuleCommands command and removing some other settings/commands that are not supported.
@@ -83,6 +84,7 @@ metadata {
         attribute "smartBulb", "String"			//Smart Bulb mode enabled or disabled
         //attribute "smartFan", "String"		//Smart Fan mode enabled or disabled
         attribute "switchMode", "String"		//Dimmer or On/Off only
+        attribute "switchBoot", "String"		//P240 configuration report value when switch reboots (read-only)
 
         // Uncomment these lines if you would like to test your scenes with digital button presses.
         /**
@@ -2368,6 +2370,10 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 					case 163:    //LED bar display levels
                     case 263:
                         infoMsg += " (LED bar display levels: ${valueInt?:'full range'})"
+                        break
+                    case 240:    // Firmware sends configuration report on reboot (boot counter / notification)
+                        infoMsg += " (Switch reboot — P240=${valueStr})"
+                        sendEvent(name: "switchBoot", value: valueStr, descriptionText: "$device.displayName reboot (parameter 240): ${valueStr}", isStateChange: true)
                         break
                     default:
 						infoMsg += " [0x${valueInt<=0xFF?valueHex.substring(6):valueInt<=0xFFFF?valueHex.substring(4):valueHex}] " + orangeRed(bold("Undefined Parameter $attrInt"))
