@@ -1,4 +1,4 @@
-def getDriverDate() { return "2026-04-28" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2026-05-16" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM32-SN Blue Series Zigbee 2-in-1 mmWave
@@ -24,7 +24,7 @@ def getDriverDate() { return "2026-04-28" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
-* 2026-04-28(EM) Fix for bind to MMWave Private Cluster for Reports etc. Added InterferenceArea attributes
+* 2026-05-16(EM) Fix for bind to MMWave Private Cluster for Reports etc. Added InterferenceArea attributes
 * 2026-04-16(EM) Always bind to MMWave Private Cluster for Reports etc.
 * 2026-01-30(EM) Added targetInfo and targetCount attributes
 * 2025-12-26(EM) Fixing group binding input type from number to string. Change so that default settings are not cleared.
@@ -400,8 +400,8 @@ void AnyoneInTheReportingAreaCommandEvent(data)
 
     boolean anyone = (a1 == 1 || a2 == 1 || a3 == 1 || a4 == 1)
 
-    // If nobody is present, clear target info immediately
-    if (!anyone) {
+    // If nobody is present, and if target info reporting is enabled, clear target info immediately
+    if (!anyone && settings?."parameter107" == "1") {
         sendEvent(name: "targetCount", value: 0, isStateChange: true)
         def payload = [
             ts     : now(),
