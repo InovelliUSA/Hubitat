@@ -1,4 +1,4 @@
-def getDriverDate() { return "2026-02-10" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2026-05-01" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW32-SN Red Series Z-Wave 2-in-1 mmWave
@@ -18,6 +18,8 @@ def getDriverDate() { return "2026-02-10" }	// **** DATE OF THE DEVICE DRIVER
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2026-05-01(EM) Custom attribute switchBoot: events on configuration report P240 (reboot notification).
+* 2026-05-01(EM) Adding protection settings for local and remote protection.
 * 2026-02-10(EM) Fixing issue with notification report handling.
 * 2026-02-10(EM) Adding mmwaveModuleCommands command and removing some other settings/commands that are not supported.
 * 2026-02-05(EM) Enabling Single LED Notifications, quick start, single tap behavior, etc.
@@ -82,6 +84,7 @@ metadata {
         attribute "smartBulb", "String"			//Smart Bulb mode enabled or disabled
         //attribute "smartFan", "String"		//Smart Fan mode enabled or disabled
         attribute "switchMode", "String"		//Dimmer or On/Off only
+        attribute "switchBoot", "String"		//P240 configuration report value when switch reboots (read-only)
 
         // Uncomment these lines if you would like to test your scenes with digital button presses.
         /**
@@ -386,8 +389,8 @@ def validConfigParams() {	//all valid parameters for this specific device (confi
 }
 
 def userSettableParams() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
-    if (parameter158 == "1") return [158,22,52,                  10,11,12,      15,17,18,19,20,23,24,25,50,            58,59,64,69,74,79,84,89,94,95,96,97,98,100,101,102,103,104,105,106,108,109,110,112,113,114,115,116,117,118,119,120,123,130,131,132,133,134,159,160,161,162]  //on/off mode
-    else                     return [158,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,23,24,25,50,53,54,55,56,58,59,64,69,74,79,84,89,94,95,96,97,98,100,101,102,103,104,105,106,108,109,110,112,113,114,115,116,117,118,119,120,123,130,131,132,133,134,159,160,    162]  //dimmer mode
+    if (parameter158 == "1") return [158,22,52,                  10,11,12,      15,17,18,19,20,23,24,25,50,            58,59,64,69,74,79,84,89,94,95,96,97,98,100,101,102,103,104,105,106,108,109,110,112,113,114,115,116,117,118,119,120,123,130,131,132,133,134,156,157,159,160,161,162]  //on/off mode
+    else                     return [158,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,23,24,25,50,53,54,55,56,58,59,64,69,74,79,84,89,94,95,96,97,98,100,101,102,103,104,105,106,108,109,110,112,113,114,115,116,117,118,119,120,123,130,131,132,133,134,156,157,159,160,    162]  //dimmer mode
 }
 
 def readOnlyParams() {
@@ -2368,6 +2371,10 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
                     case 263:
                         infoMsg += " (LED bar display levels: ${valueInt?:'full range'})"
                         break
+                    case 240:    // Firmware sends configuration report on reboot (boot counter / notification)
+                        infoMsg += " (Switch reboot — P240=${valueStr})"
+                        sendEvent(name: "switchBoot", value: valueStr, descriptionText: "$device.displayName reboot (parameter 240): ${valueStr}", isStateChange: true)
+                        break
                     default:
 						infoMsg += " [0x${valueInt<=0xFF?valueHex.substring(6):valueInt<=0xFFFF?valueHex.substring(4):valueHex}] " + orangeRed(bold("Undefined Parameter $attrInt"))
                         break
@@ -2625,9 +2632,20 @@ def setParameter(paramNum, value, size) {
 	state.lastCommandSent =    value!=null?                      "setParameter($paramNum, $value, $size)":                      "getParameter($paramNum)"
 	state.lastCommandTime = nowFormatted()
 	def cmds = []
-    if (value!=null) cmds += zwave.configurationV4.configurationSet(parameterNumber: paramNum, scaledConfigurationValue: size==1?(value<0x80?value:value-0x100):size==4?(value<0x80000000?value:value-0x100000000):value, size: size)
-
-	cmds += zwave.configurationV4.configurationGet(parameterNumber: paramNum)
+    if (paramNum == 156 && value!=null) {
+        state.localProtectionState = (value > 0 ? 1 : 0)
+        cmds += zwave.protectionV2.protectionSet(localProtectionState : value > 0 ? 1 : 0, rfProtectionState: state.rfProtectionState? state.rfProtectionState:0)
+        cmds += zwave.protectionV2.protectionGet()
+    } else if (paramNum == 157 && value!=null) {
+        state.rfProtectionState = (value > 0 ? 1 : 0)
+        cmds += zwave.protectionV2.protectionSet(rfProtectionState: value > 0 ? 1 : 0, localProtectionState: state.localProtectionState? state.localProtectionState:0)
+        cmds += zwave.protectionV2.protectionGet()
+    } else if (value!=null) {
+        cmds += zwave.configurationV4.configurationSet(parameterNumber: paramNum, scaledConfigurationValue: size==1?(value<0x80?value:value-0x100):size==4?(value<0x80000000?value:value-0x100000000):value, size: size)
+        cmds += zwave.configurationV4.configurationGet(parameterNumber: paramNum)
+    } else {
+        cmds += zwave.configurationV4.configurationGet(parameterNumber: paramNum)
+    }
     if (debugEnable) log.debug value!=null?"${device.displayName} setParameter $cmds":"${device.displayName} getParameter $cmds"
     return cmds
 }
