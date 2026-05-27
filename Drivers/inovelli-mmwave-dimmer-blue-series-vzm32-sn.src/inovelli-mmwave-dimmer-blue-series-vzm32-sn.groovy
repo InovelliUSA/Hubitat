@@ -1,4 +1,4 @@
-def getDriverDate() { return "2026-05-16" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2026-05-26" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM32-SN Blue Series Zigbee 2-in-1 mmWave
@@ -24,6 +24,7 @@ def getDriverDate() { return "2026-05-16" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2026-05-26(EM) Fix for aux switch type not being set correctly. Add parameter name to parameter reporting.
 * 2026-05-16(EM) Fix for bind to MMWave Private Cluster for Reports etc. Added InterferenceArea attributes
 * 2026-04-16(EM) Always bind to MMWave Private Cluster for Reports etc.
 * 2026-01-30(EM) Added targetInfo and targetCount attributes
@@ -414,26 +415,57 @@ void AnyoneInTheReportingAreaCommandEvent(data)
 
 void ZigbeePrivateMMWaveAttrEvent(descMap)
 {
-    def attrId=		descMap.attrId
     def attrInt=	descMap.attrInt
-    def clusterId=	descMap.clusterId!=null?descMap.clusterId:descMap.cluster
-    def clusterInt=	descMap.clusterInt
-	def clusterName=clusterLookup(clusterInt)
-    valueInt = Integer.parseInt(descMap['value'],16)
+	def paramDef = getConfigParamDef(attrInt)
+	def paramName = paramDef?.name
+    def valueInt = parseConfigParamValue(attrInt, descMap['value'])
 	def valueHex = intTo32bitUnsignedHex(valueInt)
 	def infoDev = "${device.displayName} "
 	def infoTxt = "P${attrInt}=${valueInt}"
 	def infoMsg = infoDev + infoTxt
     switch (attrInt) {
+		case 101:
+		case 102:
+		case 103:
+		case 104:
+		case 105:
+		case 106:
+			infoMsg += mmWaveAttrLogDesc(paramName)
+			break
+		case 107:
+			infoMsg += mmWaveAttrLogDesc(paramName, valueInt==0 ? "Disabled" : "Enabled")
+			break
+		case 108:
+			infoMsg += mmWaveAttrLogDesc(paramName, "Stay Life ${valueInt}")
+			break
+		case 110:
+			infoMsg += mmWaveAttrLogDesc(paramName, getConfigParamEnumLabel(attrInt, valueInt) ?: "mode $valueInt")
+			break
+		case 112:
+			infoMsg += mmWaveAttrLogDesc(paramName, valueInt==0 ? "Low" : (valueInt==1 ? "Medium" : "High"))
+			break
+		case 113:
+			infoMsg += mmWaveAttrLogDesc(paramName, valueInt==0 ? "Low" : (valueInt==1 ? "Medium" : "Fast"))
+			break
+		case 114:
+			infoMsg += mmWaveAttrLogDesc(paramName, "Timeout ${valueInt}")
+			break
         case 115:
-	        infoMsg += " mmWave Firmware Version: "
+		    infoMsg += mmWaveAttrLogDesc(paramName, "Firmware ${valueInt}")
 		    sendEvent(name:"mmWaveFirmware", value:valueInt)
-		break
+			break
+		case 117:
+			infoMsg += mmWaveAttrLogDesc(paramName, getConfigParamEnumLabel(attrInt, valueInt) ?: "preset $valueInt")
+			break
         default:
-		    infoMsg += " [0x${valueInt<=0xFF?valueHex.substring(6):valueInt<=0xFFFF?valueHex.substring(4):valueHex}] " + orangeRed(bold("Undefined Parameter $attrInt"))
+			if (paramName) {
+				infoMsg += mmWaveAttrLogDesc(paramName)
+			} else {
+				infoMsg += " [0x${valueInt<=0xFF?valueHex.substring(6):valueInt<=0xFFFF?valueHex.substring(4):valueHex}] " + orangeRed(bold("Undefined Parameter $attrInt"))
+			}
         break
     }   
-    if (infoEnable) log.info infoMsg + ((traceEnable||debugEnable)?" [Cluster: 0xfc32, Param:$attrInt Value:$valueInt Default:${getDefaultValue(attrInt)}]":"")
+    if (infoEnable) log.info infoMsg + ((traceEnable||debugEnable)?" [Param:$attrInt Value:$valueInt Default:${getDefaultValue(attrInt)}]":"")
 
 }
 
@@ -790,6 +822,39 @@ def cycleSpeed() {    // FOR FAN ONLY
 def getDefaultValue(paramNum=0) {
 	paramValue=configParams["parameter${paramNum.toString()?.padLeft(3,"0")}"]?.default?.toInteger()
 	return paramValue?:0
+}
+
+def getConfigParamDef(paramNum) {
+	def paramKey = "parameter${paramNum.toString()?.padLeft(3,"0")}"
+	def paramDef = configParams?.get(paramKey)
+	if (!paramDef) {
+		paramDef = configParams?.find { it?.value?.number?.toInteger() == paramNum?.toInteger() }?.value
+	}
+	return paramDef
+}
+
+def parseConfigParamValue(paramNum, rawHexValue) {
+	def valueInt = Integer.parseInt(rawHexValue, 16)
+	def size = getConfigParamDef(paramNum)?.size?.toInteger()
+	if (size == 17) {
+		valueInt = (short)(valueInt & 0xFFFF)
+	}
+	return valueInt
+}
+
+def getConfigParamEnumLabel(paramNum, valueInt) {
+	def range = getConfigParamDef(paramNum)?.range
+	if (range instanceof Map) {
+		return range[valueInt.toString()] ?: range["${valueInt}"]
+	}
+	return null
+}
+
+def mmWaveAttrLogDesc(paramName, valueDesc=null) {
+	if (paramName && valueDesc) return " (${paramName}) (${valueDesc})"
+	if (paramName) return " (${paramName})"
+	if (valueDesc) return " (${valueDesc})"
+	return ""
 }
 
 def getRssiLQI(){ 
@@ -1556,9 +1621,12 @@ def parse(String description) {
                         break
                     case 22:    //Aux Type
                         switch (state.model?.substring(0,5)){
+							case "VZM32":    //Blue mmWave Dimmer
+                                infoMsg += " " + (valueInt==0?"(Single Pole)":(valueInt==1?"(Aux Switch)":"(unknown type)"))
+								state.auxType =  (valueInt==0? "Single Pole": (valueInt==1? "Aux Switch": "unknown type $valueInt"))
+                                break
 							case "VZM31":    //Blue 2-in-1 Dimmer
                             case "VZW31":    //Red  2-in-1 Dimmer
-                            case "VZM32":    //Blue mmWave Dimmer
                                 infoMsg += " " + (valueInt==0?"(No Aux)":(valueInt==1?"(Dumb 3-way)":(valueInt==2?"(Smart Aux)":(valueInt==3?"(No Aux Full Wave)":"(unknown type)"))))
 								state.auxType =  (valueInt==0? "No Aux": (valueInt==1? "Dumb 3-way": (valueInt==2? "Smart Aux": (valueInt==3? "No Aux Full Wave":  "unknown type $valueInt"))))
                                 break
@@ -1801,16 +1869,21 @@ def parse(String description) {
 				if (state.model?.substring(0,5)!="VZM35" && (attrInt==21 || attrInt==22 || attrInt==158 || attrInt==258)) {  //fan does not support leading/trailing edge dimming
 					state.dimmingMethod = "Leading Edge"							//default to Leading Edge
 					if (parameter21=="1") {											//if neutral wiring then select based on remote switch type
-						if (parameter22=="0") state.dimmingMethod = "Trailing Edge"	//no aux
-						if (parameter22=="1") state.dimmingMethod = "Leading Edge"	//dumb 3-way
-						if (parameter22=="2") state.dimmingMethod = "Trailing Edge"	//smart aux
-						if (parameter22=="3") {
-							if (parameter158=="1" || parameter258=="1") {			//Switch Mode is On-Off
-								state.dimmingMethod = "Full Wave"
-							} else {												//Switch Mode is Dimmer
-								state.dimmingMethod = "Trailing Edge"
-								device.updateSetting("parameter22",[value:"0",type:"enum"])
-								state.parameter22value=0
+						if (state.model?.substring(0,5)=="VZM32") {
+							if (parameter22=="0") state.dimmingMethod = "Trailing Edge"	//single pole
+							if (parameter22=="1") state.dimmingMethod = "Leading Edge"	//aux switch
+						} else {
+							if (parameter22=="0") state.dimmingMethod = "Trailing Edge"	//no aux
+							if (parameter22=="1") state.dimmingMethod = "Leading Edge"	//dumb 3-way
+							if (parameter22=="2") state.dimmingMethod = "Trailing Edge"	//smart aux
+							if (parameter22=="3") {
+								if (parameter158=="1" || parameter258=="1") {			//Switch Mode is On-Off
+									state.dimmingMethod = "Full Wave"
+								} else {												//Switch Mode is Dimmer
+									state.dimmingMethod = "Trailing Edge"
+									device.updateSetting("parameter22",[value:"0",type:"enum"])
+									state.parameter22value=0
+								}
 							}
 						}
 					}
@@ -2885,10 +2958,10 @@ def readOnlyParams() {
     parameter022 : [
         number: 22,
         name: "Aux Switch Type",
-        description: "Set the Aux switch type (Smart Bulb Mode does not work in Dumb 3-Way Switch mode)",
-        range: ["0":"No Aux (default)", "1":"Dumb 3-Way Switch", "2":"Smart Aux Switch", "3":"No Aux Full Wave (On/Off only)"],
+        description: "Set the Aux switch type for VZM32-SN mmWave switch",
+        range: ["0":"Single Pole", "1":"Aux Switch (default)"],
         default: 0,
-        size: 8,
+        size: 1,
         type: "enum",
         value: null
         ],
