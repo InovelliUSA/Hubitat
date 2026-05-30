@@ -1590,12 +1590,6 @@ def parse(String description) {
                         infoMsg += " (Dimming Method " + (valueInt==0?red("Leading Edge"):limeGreen("Trailing Edge")) + ")"
                         state.dimmingMethod = (valueInt==0?"Leading Edge":"Trailing Edge")
                         break
-                    case 30:	//non-Neutral AUX med gear learn value
-						infoMsg += " (non-Neutral AUX medium gear)"
-						break
-					case 31:	//non-Neutral AUX low gear learn value
-						infoMsg += " (non-Neutral AUX low gear)"
-						break
                     case 32:    //Internal Temperature (read only)
 						valueInt = Math.round(valueInt*9/5+32).toInteger()	//convert Celsius to Fahrenheit
 						valueStr = "${valueInt}°F"
@@ -2847,26 +2841,6 @@ def readOnlyParams() {
         default:0,
         size: 8,
         type: "enum",
-        value: null
-        ],
-    parameter030 : [
-        number: 30,
-        name: "non-Neutral AUX medium gear learn value (read only)",
-        description: "In the case of non-neutral, to make the AUX switch better compatible.",
-        range: "0..255",
-        default: 90,
-        size: 8,
-        type: "number",
-        value: null
-        ],
-    parameter031 : [
-        number: 31,
-        name: "non-Neutral AUX low gear learn value (read only)",
-        description: "In the case of non-neutral, to make the AUX switch better compatible.",
-        range: "0..255",
-        default: 110,
-        size: 8,
-        type: "number",
         value: null
         ],
     parameter032 : [
