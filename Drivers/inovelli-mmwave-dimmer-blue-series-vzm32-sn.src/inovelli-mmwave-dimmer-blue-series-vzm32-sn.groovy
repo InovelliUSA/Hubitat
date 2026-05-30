@@ -2033,6 +2033,7 @@ def key_mmwave_preferences() {[
   112,
   113,
   114,
+  115,
   117,
 ]}
 
@@ -2589,7 +2590,7 @@ def userSettableParams() {   //controls which options are available depending on
 }
 
 def readOnlyParams() {
-	return [0,21,32,33,51,157,257]
+	return [0,21,32,33,51,115,157,257]
 }
 
 @Field static Integer shortDelay = 333		//default delay to use for zigbee commands (in milliseconds)
@@ -3377,7 +3378,7 @@ def readOnlyParams() {
         ],
     parameter115 : [
         number: 115,
-        name: "mmWave Firmware Version",
+        name: "mmWave Firmware Version (read only)",
         description: "Firmware version of the mmWave module. Read Only",
         range: "0..4294967296",
         default: 0,
