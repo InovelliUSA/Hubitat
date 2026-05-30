@@ -660,7 +660,6 @@ def calculateParameter(Integer paramNum) {
         case 13:    //Default Level (local)
         case 14:    //Default Level (remote)
         case 15:    //Level after power restored
-		case 24:	//QuickStart Level
 		case 55:	//Double-Tap UP Level
 		case 56:	//Double-Tap DOWN Level
             value = convertPercentToByte(value.toInteger())    //convert levels from percent to byte values before sending to the device
@@ -1507,7 +1506,6 @@ def parse(String description) {
 				|| (attrInt==13)
 				|| (attrInt==14)
 				|| (attrInt==15)
-				|| (attrInt==24)
 				|| (attrInt==55)
 				|| (attrInt==56)) {
 					valueInt = convertByteToPercent(valueInt) //these attributes are stored as bytes but displayed as percentages
@@ -1584,12 +1582,6 @@ def parse(String description) {
                     case 22:    //Aux Type
                         infoMsg += " " + (valueInt==0?"(Single Pole)":(valueInt==1?"(Aux Switch)":"(unknown type)"))
                         state.auxType =  (valueInt==0? "Single Pole": (valueInt==1? "Aux Switch": "unknown type $valueInt"))
-                        break
-                    case 23:    //Quick Start Time
-                            infoMsg += " (Quick Start Time " + (valueInt==0?red("disabled"):"${valueInt}") + ")"
-                        break
-                    case 24:    //Quick Start Level
-                            infoMsg += " (Quick Start Level " + (valueInt==0?red("disabled"):"${valueInt}") + ")"
                         break
                     case 25:    //Higher Output in non-Neutral
                         infoMsg += " (non-Neutral High Output " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
@@ -1834,29 +1826,6 @@ def presetLevel(value) {
     setParameter(14, scaledValue)
 }
 
-//def quickStart() {
-//    quickStartVariables()
-//	def startLevel = device.currentValue("level").toInteger()
-//	def cmds= []
-//	if (settings.parameter23?.toInteger()>0 ) {          //only do quickStart if enabled
-//		if (infoEnable) log.info "${device.displayName} quickStart(" + (state.model?.substring(0,5)!="VZM35"?"${settings.parameter23}%)":"${settings.parameter23}s)")
-//		if (state.model?.substring(0,5)!="VZM35") {      //IF not the Fan switch THEN emulate quickStart 
-//			if (startLevel<state.parameter23value) cmds += zigbee.setLevel(state.parameter23value?.toInteger(),0,34)  //only do quickStart if currentLevel is < Quick Start Level (34ms is two sinewave cycles)
-//			cmds += zigbee.setLevel(startLevel,0,longDelay) 
-//			if (debugEnable) log.debug "${device.displayName} quickStart $cmds"
-//		}
-//	}
-//    return cmds
-//}
-//
-//def quickStartVariables() {
-//    if (state.model?.substring(0,5)!="VZM35") {  //IF not the Fan switch THEN set the quickStart variables manually
-//        settings.parameter23 =  (settings.parameter23!=null?settings.parameter23:getDefaultValue(23))
-//        state.parameter23value = Math.round((settings.parameter23?:0).toFloat())
-//        //state.parameter23level = Math.round((settings.parameter23level?:defaultQuickLevel).toFloat())
-//    }
-//}
-
 def readDeviceAttributes() {
 	if (traceEnable||debugEnable) log.trace "${device.displayName} readDeviceAttributes()"
 	def cmds = []
@@ -2017,14 +1986,9 @@ def setAttribute(Integer cluster, Integer attrInt, Integer dataType, Integer val
 			case 13:    //Default Level (local)
 			case 14:    //Default Level (remote)
 			case 15:    //Level after power restored
-			case 24:	//Quick Start Level
 			case 55:	//Double-Tap UP Level
 			case 56:	//Double-Tap DOWN Level
                 infoMsg += "${value} = ${convertByteToPercent(value)}% on 255 scale"
-                break
-            case 23:
-              //  quickStartVariables()
-                infoMsg = ""
                 break
 			case 60:	//LED1 color when on
 			case 61:	//LED1 color when off
@@ -2277,7 +2241,7 @@ def updated(option) { // called when "Save Preferences" is requested
 		int i = it.value.number.toInteger()
 		newValue = calculateParameter(i).toInteger()
 		defaultValue=getDefaultValue(i).toInteger()
-		if ([9,10,13,14,15,24,55,56].contains(i)) defaultValue=convertPercentToByte(defaultValue) //convert percent values back to byte values
+		if ([9,10,13,14,15,55,56].contains(i)) defaultValue=convertPercentToByte(defaultValue) //convert percent values back to byte values
 		if ((i==95 && parameter95custom!=null)||(i==96 && parameter96custom!=null)) {                                         //IF   a custom hue value is set
 			if ((Math.round(settings?."parameter${i}custom"?.toInteger()/360*255)==settings?."parameter${i}"?.toInteger())) { //AND  custom setting is same as normal setting
 				device.removeSetting("parameter${i}custom")                                                                   //THEN clear custom hue and use normal color 
@@ -2654,7 +2618,6 @@ def readOnlyParams() {
 
 @Field static Integer shortDelay = 333		//default delay to use for zigbee commands (in milliseconds)
 @Field static Integer longDelay = 1000		//long delay to use for changing modes (in milliseconds)
-@Field static Integer defaultQuickLevel=50	//default startup level for QuickStart emulation
 @Field static Map configParams = [
     parameter001 : [
         number: 1,
@@ -2864,26 +2827,6 @@ def readOnlyParams() {
         default: 0,
         size: 1,
         type: "enum",
-        value: null
-        ],
-    parameter023 : [
-        number: 23,
-        name: "Quick Start Time",
-        description: "Duration (in 1/60 seconds) of higher power output (Parameter24) needed to illuminate the bulb before lowering to desired brightness (0=disabled)",
-        range: "0..60",
-        default: 0,
-        size: 8,
-        type: "number",
-        value: null
-        ],
-    parameter024 : [
-        number: 24,
-        name: "Quick Start Level",
-        description: "Level of higher power needed to illuminate the bulb before lowering to desired brightness (0=disabled)",
-        range: "0..100",
-        default: 0,
-        size: 8,
-        type: "number",
         value: null
         ],
     parameter025 : [
