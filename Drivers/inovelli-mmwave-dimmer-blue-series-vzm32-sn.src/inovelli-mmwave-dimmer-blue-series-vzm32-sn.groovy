@@ -1678,18 +1678,6 @@ def parse(String description) {
 						else
 							infoMsg +=  " (LED${attrInt/5-11<8?(attrInt/5-11).toInteger():" bar"} intensity sync with P98 when Off)"
 						break
-                    case 64:
-					case 69:
-					case 74:
-					case 79:
-					case 84:
-					case 89:
-					case 94:
-					case 99:	//LED(x) Notification [zwave]
-						def effectHex = valueHex.substring(0,2)
-						int effectInt = Integer.parseInt(effectHex,16)
-						infoMsg += " [0x${valueHex}] (LED${attrInt/5-11<8?(attrInt/5-11).toInteger():" bar"} Effect " + (effectInt==255?"Stop":"${effectInt}") + ")"
-						break
 					case 100:	//LED Bar Scaling
                         infoMsg += " (LED Scaling " + (valueInt==0?blue("VZM-style"):red("LZW-style")) + ")"
 						break
@@ -2977,16 +2965,6 @@ def readOnlyParams() {
         type: "number",
         value: null
         ],
-    parameter064 : [
-        number: 64,
-        name: "LED1 Notification",
-        description: "4-byte encoded LED1 Notification",
-        range: "0..4294967295",
-        default: 0,
-        size: 4,
-        type: "number",
-        value: null
-        ],
     parameter065 : [
         number: 65,
         name: "LED2 Color (when On)",
@@ -3024,16 +3002,6 @@ def readOnlyParams() {
         range: "0..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
-        ],
-    parameter069 : [
-        number: 69,
-        name: "LED2 Notification",
-        description: "4-byte encoded LED2 Notification",
-        range: "0..4294967295",
-        default: 0,
-        size: 4,
         type: "number",
         value: null
         ],
@@ -3077,16 +3045,6 @@ def readOnlyParams() {
         type: "number",
         value: null
         ],
-    parameter074 : [
-        number: 74,
-        name: "LED3 Notification",
-        description: "4-byte encoded LED3 Notification",
-        range: "0..4294967295",
-        default: 0,
-        size: 4,
-        type: "number",
-        value: null
-        ],
     parameter075 : [
         number: 75,
         name: "LED4 Color (when On)",
@@ -3124,16 +3082,6 @@ def readOnlyParams() {
         range: "0..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
-        ],
-    parameter079 : [
-        number: 79,
-        name: "LED4 Notification",
-        description: "4-byte encoded LED4 Notification",
-        range: "0..4294967295",
-        default: 0,
-        size: 4,
         type: "number",
         value: null
         ],
@@ -3177,16 +3125,6 @@ def readOnlyParams() {
         type: "number",
         value: null
         ],
-    parameter084 : [
-        number: 84,
-        name: "LED5 Notification",
-        description: "4-byte encoded LED5 Notification",
-        range: "0..4294967295",
-        default: 0,
-        size: 4,
-        type: "number",
-        value: null
-        ],
     parameter085 : [
         number: 85,
         name: "LED6 Color (when On)",
@@ -3224,16 +3162,6 @@ def readOnlyParams() {
         range: "0..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
-        ],
-    parameter089 : [
-        number: 89,
-        name: "LED6 Notification",
-        description: "4-byte encoded LED6 Notification",
-        range: "0..4294967295",
-        default: 0,
-        size: 4,
         type: "number",
         value: null
         ],
@@ -3277,16 +3205,6 @@ def readOnlyParams() {
         type: "number",
         value: null
         ],
-    parameter094 : [
-        number: 94,
-        name: "LED7 Notification",
-        description: "4-byte encoded LED Notification",
-        range: "0..4294967295",
-        default: 0,
-        size: 4,
-        type: "number",
-        value: null
-        ],
     parameter095 : [
         number: 95,
         name: "LED Bar Color (when On)",
@@ -3324,16 +3242,6 @@ def readOnlyParams() {
         range: "0..100",
         default: 3,
         size: 8,
-        type: "number",
-        value: null
-        ],
-    parameter099 : [
-        number: 99,
-        name: "All LED Notification",
-        description: "4-byte encoded LED Notification (see Inovelli LED Notification Calculator)",
-        range: "0..4294967295",
-        default: 0,
-        size: 4,
         type: "number",
         value: null
         ],
