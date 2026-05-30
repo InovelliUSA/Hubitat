@@ -438,9 +438,6 @@ void ZigbeePrivateMMWaveAttrEvent(descMap)
 		case 108:
 			infoMsg += mmWaveAttrLogDesc(paramName, "Stay Life ${valueInt}")
 			break
-		case 110:
-			infoMsg += mmWaveAttrLogDesc(paramName, getConfigParamEnumLabel(attrInt, valueInt) ?: "mode $valueInt")
-			break
 		case 112:
 			infoMsg += mmWaveAttrLogDesc(paramName, valueInt==0 ? "Low" : (valueInt==1 ? "Medium" : "High"))
 			break
@@ -461,7 +458,7 @@ void ZigbeePrivateMMWaveAttrEvent(descMap)
 			if (paramName) {
 				infoMsg += mmWaveAttrLogDesc(paramName)
 			} else {
-				infoMsg += " [0x${valueInt<=0xFF?valueHex.substring(6):valueInt<=0xFFFF?valueHex.substring(4):valueHex}] " + orangeRed(bold("Undefined Parameter $attrInt"))
+				infoMsg += " [0x${valueInt<=0xFF?valueHex.substring(6):valueInt<=0xFFFF?valueHex.substring(4):valueHex}] " + orangeRed(bold("Undefined mmWave Parameter $attrInt"))
 			}
         break
     }   
@@ -1770,6 +1767,9 @@ def parse(String description) {
 					case 100:	//LED Bar Scaling
                         infoMsg += " (LED Scaling " + (valueInt==0?blue("VZM-style"):red("LZW-style")) + ")"
 						break
+                    case 110:
+                        infoMsg +=  "(Light On Presence Behavior " + getConfigParamEnumLabel(attrInt, valueInt) ?: "mode $valueInt"
+                        break
 					case 120:	//Single-Tap Behavior
                         infoMsg += " (Single Tap Behavior: " + (valueInt==0?"on/off":"cycle") + ")"
 						break
@@ -2188,6 +2188,7 @@ def key_mmwave_preferences() {[
   105,
   106,
   107,
+  108,
   111,
   112,
   113,
