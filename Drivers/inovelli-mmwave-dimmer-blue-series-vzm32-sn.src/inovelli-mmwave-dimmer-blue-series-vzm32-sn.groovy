@@ -1697,9 +1697,6 @@ def parse(String description) {
 					case 125:	//Binding Off-to-On Sync Level
                         infoMsg += " (Send Level with Binding " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
 						break
-					case 129:	//Breeze Mode
-                        infoMsg += " (Breeze Mode encoded 4-byte value)"
-						break
 					case 130:	//Config Button Fan Control
                         infoMsg += " (EP3 Fan Control " + (valueInt==1?"multi-tap cycle":valueInt==2?"single-tap cycle":"disabled") + ")"
 						break
@@ -3413,7 +3410,7 @@ def readOnlyParams() {
         ],
     parameter120 : [
         number: 120,
-        name: "Single Tap Behavior",
+        name: "Single Tap Behavior (fan mode)",
         description: "Behavior of single tapping the on or off button. Old behavior turns the switch on or off. Single Tap cycles through the levels set by P131-133 (Firmware 1.05+). Tap Down Always Off will cycle through the speeds when pressing up, but will always turn off when tapping down. (Firmware 1.06+)",
         range: ["0":"Old Behavior (default)","1":"Single Tap Cycle","2":"Tap Down Always Off"],
         default: 0,
@@ -3423,7 +3420,7 @@ def readOnlyParams() {
         ],
     parameter121 : [
         number: 121,
-        name: "Advanced Timer Mode",
+        name: "Fan Timer Mode",
         description: "Tap Up 1x = Fan turns on<br>Tap Up 2x = 5 min.<br>Tap Up 3x = 10 min.<br>Tap Up 4x = 15 min.<br>Tap Up 5x = 30 min.<br>(Firmware 1.05+)",
         range: ["0":"Disabled (default)","1":"Enabled"],
         default: 0,
@@ -3449,16 +3446,6 @@ def readOnlyParams() {
         default: 0,
         size: 1,
         type: "enum",
-        value: null
-        ],
-    parameter129 : [
-        number: 129,
-        name: "Breeze and Wind Down Mode",
-        description: "4-byte encoded Breeze and Wind Down Mode. For now use the calculator to determine value: https://inovelli-my.sharepoint.com/:x:/p/ericm/ETQi0QfqAD5BotKTW0QyDqEB-XozdRJTkghBEkB_l9YT8Q (Firmware 1.05+)",
-        range: "0..4294967295",
-        default: 0,
-        size: 32,
-        type: "number",
         value: null
         ],
     parameter130 : [
