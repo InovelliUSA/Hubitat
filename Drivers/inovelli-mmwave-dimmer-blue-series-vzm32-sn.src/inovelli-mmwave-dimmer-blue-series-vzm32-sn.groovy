@@ -1626,12 +1626,6 @@ def parse(String description) {
                     case 56:  //Double-Tap DOWN level
                         infoMsg += " (Double-Tap Down level ${valueInt}%)"
                         break
-					case 58:  //Exclusion Behavior
-                        infoMsg += " (Exclusion: " + (valueInt==0?"LED Bar does not pulse":valueInt==1?"LED Bar pulses blue":valueInt==2?"do not Exclude":"unknown") + ")"
-						break
-					case 59:  //Association Behavior
-                        infoMsg += " (Association: " + (valueInt==0?"None":valueInt==1?"Local":valueInt==2?"Hub":"Local+Hub") + ")"
-						break
 					case 60:
 					case 65:
 					case 70:
@@ -2941,26 +2935,6 @@ def readOnlyParams() {
         default: 1,
         size: 8,
         type: "number",
-        value: null
-        ],
-    parameter058 : [
-        number: 58,
-        name: "Exclusion Behavior",
-        description: "How device behaves during Exclusion",
-        range: ["0":"LED Bar does not pulse", "1":"LED Bar pulses blue (default)", "2":"Device does not enter exclusion mode (requires factory reset to leave network or change this parameter)"],
-        default: 1,
-        size: 1,
-        type: "enum",
-        value: null
-        ],
-    parameter059 : [
-        number: 59,
-        name: "Association Behavior",
-        description: "Choose when the switch sends commands to associated devices",
-        range: ["0":"Never", "1":"Local (default)", "2":"Z-Wave", "3":"Both"],
-        default: 1,
-        size: 1,
-        type: "enum",
         value: null
         ],
     parameter060 : [
