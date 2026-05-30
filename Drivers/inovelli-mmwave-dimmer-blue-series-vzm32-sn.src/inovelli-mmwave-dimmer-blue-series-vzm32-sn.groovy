@@ -1728,9 +1728,6 @@ def parse(String description) {
                     case 260:    //Firmware Update Indicator
                         infoMsg += " (Firmware Update Indicator " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
                         break
-                    case 261:    //Relay Click
-                        infoMsg += " (Relay Click " + (valueInt==0?limeGreen("enabled"):red("disabled")) + ")"
-                        break
                     case 262:    //Double-Tap config button to clear notification
                         infoMsg += " (Double-Tap config button " + (valueInt==0?limeGreen("enabled"):red("disabled")) + ")"
                         break
@@ -2582,8 +2579,8 @@ def holdConfig()     {buttonEvent(13, "held", "digital")}
 def releaseConfig()  {buttonEvent(14, "released", "digital")}
 
 def userSettableParams() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
-    if (parameter258 == "1") return [258,22,52,                  10,11,12,      15,17,18,19,20,21,25,34,50,51,            95,96,97,98,100,101,102,103,104,105,106,107,108,112,113,114,115,110,117,120,121,123,125,130,131,132,133,256,257,259,260,261,262]  //on/off mode
-    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,25,34,50,51,53,54,55,56,95,96,97,98,100,101,102,103,104,105,106,107,108,112,113,114,115,110,117,120,121,123,125,130,131,132,133,256,257,    260,    262]  //dimmer mode
+    if (parameter258 == "1") return [258,22,52,                  10,11,12,      15,17,18,19,20,21,25,34,50,51,            95,96,97,98,100,101,102,103,104,105,106,107,108,112,113,114,115,110,117,120,121,123,125,130,131,132,133,256,257,259,260,262]  //on/off mode
+    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,25,34,50,51,53,54,55,56,95,96,97,98,100,101,102,103,104,105,106,107,108,112,113,114,115,110,117,120,121,123,125,130,131,132,133,256,257,    260,262]  //dimmer mode
 }
 
 def readOnlyParams() {
@@ -3544,16 +3541,6 @@ def readOnlyParams() {
         description: "Display firmware update progress on LED Bar",
         range: ["1":"Enabled (default)", "0":"Disabled"],
         default: 1,
-        size: 1,
-        type: "enum",
-        value: null
-        ],
-    parameter261 : [	//not valid for fan switch
-        number: 261,
-        name: "Relay Click",
-        description: "Audible Click in On/Off mode",
-        range: ["0":"Enabled (default)", "1":"Disabled"],
-        default: 0,
         size: 1,
         type: "enum",
         value: null
