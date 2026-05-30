@@ -1229,23 +1229,6 @@ def parse(String description) {
                         if (infoEnable) log.info "${device.displayName} Switch=$valueInt ($valueStr)"
                         sendEvent(name:"switch", value: valueStr)
 						def currentLevel = device.currentValue("level")==null?0:device.currentValue("level").toInteger()
-                        if (state.model?.substring(0,5)=="VZM35") { //FOR FAN ONLY 
-							if (device.currentValue("smartFan")=="Enabled") {
-								if      (currentLevel<=20)  newSpeed="low"
-								else if (currentLevel<=40)  newSpeed="medium-low"
-								else if (currentLevel<=60)  newSpeed="medium"
-								else if (currentLevel<=80)  newSpeed="medium-high"
-								else if (currentLevel<=100) newSpeed="high"
-							} else {
-								if      (currentLevel<=33)  newSpeed="low"
-								else if (currentLevel<=66)  newSpeed="medium"
-								else if (currentLevel<=100) newSpeed="high"
-								}
-                            if      (valueStr=="off")                        newSpeed="off"
-                            else if (parameter158=="1" || parameter258=="1") newSpeed="high"
-                            if (traceEnable||debugEnable) log.trace "${device.displayName} Speed=${newSpeed}"
-                            sendEvent(name:"speed", value: "${newSpeed}")   
-                        }
                     } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command:$descMap.command ") //+ descMap
                     break
                 case 0x4000:
@@ -1297,24 +1280,6 @@ def parse(String description) {
                         valueStr = percentValue.toString()+"%"
                         if (infoEnable) log.info "${device.displayName} Level=$valueInt ($valueStr)"
                         sendEvent(name:"level", value: percentValue, unit: "%")
-		                def newSpeed =""
-                        if (state.model?.substring(0,5)=="VZM35") { //FOR FAN ONLY
-							if (device.currentValue("smartFan")=="Enabled") {
-								if      (percentValue<=20)  newSpeed="low"
-								else if (percentValue<=40)  newSpeed="medium-low"
-								else if (percentValue<=60)  newSpeed="medium"
-								else if (percentValue<=80)  newSpeed="medium-high"
-								else if (percentValue<=100) newSpeed="high"
-							} else {
-								if      (percentValue<=33)  newSpeed="low"
-								else if (percentValue<=66)  newSpeed="medium"
-								else if (percentValue<=100) newSpeed="high"
-								}
-                            if (device.currentValue("switch")=="off")        newSpeed="off"
-                            else if (parameter158=="1" || parameter258=="1") newSpeed="high"
-                            if (infoEnable) log.info "${device.displayName} Speed=${newSpeed}"
-                            sendEvent(name:"speed", value: "${newSpeed}")   
-                        }
                     } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command:$descMap.command ") //+ descMap
 					break
                 case 0x0001:
@@ -1617,25 +1582,8 @@ def parse(String description) {
 						sendEvent(name:"powerSource", value:valueInt==0?"Non-Neutral":"Neutral")
                         break
                     case 22:    //Aux Type
-                        switch (state.model?.substring(0,5)){
-							case "VZM32":    //Blue mmWave Dimmer
-                                infoMsg += " " + (valueInt==0?"(Single Pole)":(valueInt==1?"(Aux Switch)":"(unknown type)"))
-								state.auxType =  (valueInt==0? "Single Pole": (valueInt==1? "Aux Switch": "unknown type $valueInt"))
-                                break
-							case "VZM31":    //Blue 2-in-1 Dimmer
-                            case "VZW31":    //Red  2-in-1 Dimmer
-                                infoMsg += " " + (valueInt==0?"(No Aux)":(valueInt==1?"(Dumb 3-way)":(valueInt==2?"(Smart Aux)":(valueInt==3?"(No Aux Full Wave)":"(unknown type)"))))
-								state.auxType =  (valueInt==0? "No Aux": (valueInt==1? "Dumb 3-way": (valueInt==2? "Smart Aux": (valueInt==3? "No Aux Full Wave":  "unknown type $valueInt"))))
-                                break
-                            case "VZM35":    //Fan Switch
-                                infoMsg += " " + (valueInt==0?"(No Aux)":"(Smart Aux)")
-                                state.auxType =   valueInt==0? "No Aux":  "Smart Aux"
-                                break
-                            default:
-                                infoMsg = infoDev + indianRed(infoTxt + " unknown model $state.model")
-                                state.auxType = "unknown model ${state.model}"
-                                break
-                        }
+                        infoMsg += " " + (valueInt==0?"(Single Pole)":(valueInt==1?"(Aux Switch)":"(unknown type)"))
+                        state.auxType =  (valueInt==0? "Single Pole": (valueInt==1? "Aux Switch": "unknown type $valueInt"))
                         break
                     case 23:    //Quick Start Time
                             infoMsg += " (Quick Start Time " + (valueInt==0?red("disabled"):"${valueInt}") + ")"
@@ -1673,14 +1621,9 @@ def parse(String description) {
                         infoMsg += " (Bindings)"
                         sendEvent(name:"numberOfBindings", value:valueInt)
                         break
-                    case 52:    //Smart Bulb/Fan Mode
-                        if (state.model?.substring(0,5)=="VZM35") {
-                            infoMsg += " (SFM " + (valueInt==0?red("disabled)"):limeGreen("enabled)"))
-                            sendEvent(name:"smartFan", value:valueInt==0?"Disabled":"Enabled")
-						} else {
-                            infoMsg += " (SBM " + (valueInt==0?red("disabled)"):limeGreen("enabled)")) + ")"
-                            sendEvent(name:"smartBulb", value:valueInt==0?"Disabled":"Enabled")
-						}
+                    case 52:    //Smart Bulb Mode
+                        infoMsg += " (SBM " + (valueInt==0?red("disabled)"):limeGreen("enabled)")) + ")"
+                        sendEvent(name:"smartBulb", value:valueInt==0?"Disabled":"Enabled")
                         break
                     case 53:  //Double-Tap UP
                         infoMsg += " (Double-Tap Up " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
@@ -1801,60 +1744,29 @@ def parse(String description) {
 					case 134:	//EP3 LED Bar Color
                         infoMsg += " (" + hue(valueInt,"EP3 LED Bar Color") + ")"
 						break
-                    case 156:    //Local Protection
-					case 256:
+					case 256:    //Local Protection
                         infoMsg += " (Local Control " + (valueInt==0?limeGreen("enabled"):red("disabled")) + ")"
                         break
-                    case 157:    //Remote Protection
-					case 257:
+					case 257:    //Remote Protection
                         infoMsg += " (Remote Control " + (valueInt==0?limeGreen("enabled"):red("disabled")) + ")"
                         break
-                    case 158:    //Switch Mode
-					case 258:
-                        switch (state.model?.substring(0,5)){
-                            case "VZM31":    //Blue 2-in-1 Dimmer
-                            case "VZW31":    //Red  2-in-1 Dimmer
-                            case "VZM32":    //Blue mmWave Dimmer
-                                infoMsg += " " + (valueInt==0?"(Dimmer mode)":"(On/Off mode)")
-                                sendEvent(name:"switchMode", value:valueInt==0?"Dimmer":"On/Off")
-                                break
-                            case "VZM35":	//Fan Switch
-								infoMsg += " " + (valueInt==0?"(Multi-Speed mode)":"(On/Off mode)")
-								sendEvent(name:"switchMode", value:valueInt==0?"Multi-Speed":"On/Off")
-								break
-							case "VZM36":	//Canopy Module
-								if (endpointInt==1) {
-									infoMsg += " " + (valueInt==0?"(Dimmer mode)":"(On/Off mode)")
-									sendEvent(name:"switchMode", value:valueInt==0?"Dimmer":"On/Off")
-								} else {
-									infoMsg += " " + (valueInt==0?"(Multi-Speed mode)":"(On/Off mode)")
-									sendEvent(name:"switchMode", value:valueInt==0?"Multi-Speed":"On/Off")
-								}
-								break
-                            default:
-                                infoMsg += " " + red(" unknown model $state.model")
-                                sendEvent(name:"switchMode", value:"unknown model")
-                                break
-                        }
-						break
-                    case 159:    //On-Off LED
-					case 259:
+					case 258:    //Switch Mode
+                        infoMsg += " " + (valueInt==0?"(Dimmer mode)":"(On/Off mode)")
+                        sendEvent(name:"switchMode", value:valueInt==0?"Dimmer":"On/Off")
+                        break
+					case 259:    //On-Off LED
                         infoMsg += " (On-Off LED mode: " + (valueInt==0?"All)":"One)")
                         break
-					case 160:    //Firmware Update Indicator
-                    case 260:
+                    case 260:    //Firmware Update Indicator
                         infoMsg += " (Firmware Update Indicator " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
                         break
-					case 161:    //Relay Click
-                    case 261:
+                    case 261:    //Relay Click
                         infoMsg += " (Relay Click " + (valueInt==0?limeGreen("enabled"):red("disabled")) + ")"
                         break
-					case 162:    //Double-Tap config button to clear notification
-                    case 262:
+                    case 262:    //Double-Tap config button to clear notification
                         infoMsg += " (Double-Tap config button " + (valueInt==0?limeGreen("enabled"):red("disabled")) + ")"
                         break
-					case 163:    //LED bar display levels
-                    case 263:
+                    case 263:    //LED bar display levels
                         infoMsg += " (LED bar display levels: ${valueInt?:'full range'})"
                         break
                     default:
@@ -1866,26 +1778,11 @@ def parse(String description) {
                     device.updateSetting("parameter${attrInt}custom",[value:"${Math.round(valueInt/255*360)}",type:configParams["parameter${attrInt.toString().padLeft(3,"0")}"].type?.toString()])
                     state."parameter${attrInt}custom" = Math.round(valueInt/255*360)
                 }
-				if (state.model?.substring(0,5)!="VZM35" && (attrInt==21 || attrInt==22 || attrInt==158 || attrInt==258)) {  //fan does not support leading/trailing edge dimming
+				if (attrInt==21 || attrInt==22) {
 					state.dimmingMethod = "Leading Edge"							//default to Leading Edge
 					if (parameter21=="1") {											//if neutral wiring then select based on remote switch type
-						if (state.model?.substring(0,5)=="VZM32") {
-							if (parameter22=="0") state.dimmingMethod = "Trailing Edge"	//single pole
-							if (parameter22=="1") state.dimmingMethod = "Leading Edge"	//aux switch
-						} else {
-							if (parameter22=="0") state.dimmingMethod = "Trailing Edge"	//no aux
-							if (parameter22=="1") state.dimmingMethod = "Leading Edge"	//dumb 3-way
-							if (parameter22=="2") state.dimmingMethod = "Trailing Edge"	//smart aux
-							if (parameter22=="3") {
-								if (parameter158=="1" || parameter258=="1") {			//Switch Mode is On-Off
-									state.dimmingMethod = "Full Wave"
-								} else {												//Switch Mode is Dimmer
-									state.dimmingMethod = "Trailing Edge"
-									device.updateSetting("parameter22",[value:"0",type:"enum"])
-									state.parameter22value=0
-								}
-							}
-						}
+                        if (parameter22=="0") state.dimmingMethod = "Trailing Edge"	//single pole
+                        if (parameter22=="1") state.dimmingMethod = "Leading Edge"	//aux switch
 					}
 					if (infoEnable||traceEnable||debugEnable) log.info "${device.displayName} Dimming Method = ${state.dimmingMethod}"
 				}
