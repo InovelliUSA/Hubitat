@@ -1614,6 +1614,9 @@ def parse(String description) {
                         infoMsg += " (Overheat: " + (valueInt==0?limeGreen("False"):valueInt==1?red("TRUE"):"undefined") + ")"
                         sendEvent(name:"overHeat",value:valueInt==0?"False":valueInt==1?"TRUE":"undefined")
                         break
+                    case 34:    //OTA Image Type
+                        infoMsg += " (OTA Image: " + (valueInt==0?"Zigbee (259)":valueInt==1?"mmWave (260)":valueInt==2?"Alternating (259 & 260) - Default":"unknown") + ")"
+                        break
                     case 50:    //Button Press Delay
                         infoMsg += " (${valueInt*100}ms Button Delay)"
 						break
