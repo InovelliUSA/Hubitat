@@ -95,7 +95,7 @@ metadata {
 		attribute "LQI", "String"				//Link Quality Indicator
 		attribute "RSSI", "String"				//Received Signal Strength Indicator
         attribute "firmware", "String"	
-        attribute "mmWaveFirmware", "String"
+        attribute "mmWaveFirmware", "String"    //mmWave firmware version           (read-only P115)
 
         attribute "interferenceArea0", "string"
         attribute "interferenceArea1", "string"
@@ -164,7 +164,7 @@ metadata {
         
         command "refresh",             [[name:"Option",    type:"ENUM",   description:"blank=current states and user-changed settings, All=refresh all settings", constraints: [" ","All"]]]
 		
-		command "remoteControl",	   [[name:"Option*",   type:"ENUM",   description:"ability to control the switch remotely", constraints: [" ","Enabled","Disabled"]]]
+		command "remoteControl",	   [[name:"Option*",   type:"ENUM",   description:"Ability to control the switch remotely. This command updates parameter 257 and is enabled by default.", constraints: [" ","Enabled","Disabled"]]]
 
         command "resetEnergyMeter"		//Fan does not support power/energy reporting but Dimmer does
 
@@ -223,52 +223,44 @@ metadata {
 
     preferences {
         (userSettableParams() + [301, 302, 303]).each{ i ->
-            switch(configParams["parameter${i.toString().padLeft(3,"0")}"].type){
-                case "number":
-                    switch(i){
-						case readOnlyParams().contains(i):	
-							//read-only params are non-settable, so skip user input
-							break
-                        default:
-                            input "parameter${i}", "number",
-								title: "${i}. " + bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name),
-                                description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description +
-                                    "<br>Range=" + configParams["parameter${i.toString().padLeft(3,"0")}"].range +
-				    	    	    " Default=" +  configParams["parameter${i.toString().padLeft(3,"0")}"].default),
-                                //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
-                                range: configParams["parameter${i.toString().padLeft(3,"0")}"].range
-                            break
-                    }
-                    break
-                case "enum":
-                    switch(i){
-						case readOnlyParams().contains(i):	
-							//read-only params are non-settable, so skip user input
-							break
-                        case 22:    //Aux Type
-                        case 52:    //Smart Bulb Mode
-                        case 158:   //Switch Mode Zwave
-                        case 258:   //Switch Mode Zigbee
-							//these are important parameters so display in red to draw attention
-                            input "parameter${i}", "enum",
-                                title: "${i}. " + indianRed(bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name)),
-                                description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description),
-                                defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
-                                options: configParams["parameter${i.toString().padLeft(3,"0")}"].range
-                            break
-                        case 95:
-                        case 96:
-							//special case for custom color is below
-                            break
-                        default:
-                            input "parameter${i}", "enum",
-                                title: "${i}. " + bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name),
-                                description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description),
-                                //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
-                                options: configParams["parameter${i.toString().padLeft(3,"0")}"].range
-                            break
-					}
-                    break
+            if(!readOnlyParams().contains(i)) { //read-only params are non-settable, so skip user input
+                switch(configParams["parameter${i.toString().padLeft(3,"0")}"].type){
+                    case "number":
+                        input "parameter${i}", "number",
+                            title: "${i}. " + bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name),
+                            description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description +
+                                "<br>Range=" + configParams["parameter${i.toString().padLeft(3,"0")}"].range +
+                                " Default=" +  configParams["parameter${i.toString().padLeft(3,"0")}"].default),
+                            //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
+                            range: configParams["parameter${i.toString().padLeft(3,"0")}"].range
+                        break
+                    case "enum":
+                        switch(i){
+                            case 22:    //Aux Type
+                            case 52:    //Smart Bulb Mode
+                            case 158:   //Switch Mode Zwave
+                            case 258:   //Switch Mode Zigbee
+                                //these are important parameters so display in red to draw attention
+                                input "parameter${i}", "enum",
+                                    title: "${i}. " + indianRed(bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name)),
+                                    description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description),
+                                    defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
+                                    options: configParams["parameter${i.toString().padLeft(3,"0")}"].range
+                                break
+                            case 95:
+                            case 96:
+                                //special case for custom color is below
+                                break
+                            default:
+                                input "parameter${i}", "enum",
+                                    title: "${i}. " + bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name),
+                                    description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description),
+                                    //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
+                                    options: configParams["parameter${i.toString().padLeft(3,"0")}"].range
+                                break
+                        }
+                        break
+                }
             }
 
             if (i==95 || i==96) {
@@ -2579,12 +2571,12 @@ def holdConfig()     {buttonEvent(13, "held", "digital")}
 def releaseConfig()  {buttonEvent(14, "released", "digital")}
 
 def userSettableParams() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
-    if (parameter258 == "1") return [258,22,52,                  10,11,12,      15,17,18,19,20,21,25,34,50,51,            95,96,97,98,100,117,101,102,103,104,105,106,107,108,112,113,114,115,110,120,121,123,125,130,131,132,133,256,257,259,260,262]  //on/off mode
-    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,25,34,50,51,53,54,55,56,95,96,97,98,100,117,101,102,103,104,105,106,107,108,112,113,114,115,110,120,121,123,125,130,131,132,133,256,257,    260,262]  //dimmer mode
+    if (parameter258 == "1") return [258,22,52,                  10,11,12,      15,17,18,19,20,25,34,50,            95,96,97,98,100,117,101,102,103,104,105,106,107,108,112,113,114,110,120,121,123,125,130,131,132,133,256,259,260,262]  //on/off mode
+    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,25,34,50,53,54,55,56,95,96,97,98,100,117,101,102,103,104,105,106,107,108,112,113,114,110,120,121,123,125,130,131,132,133,256,    260,262]  //dimmer mode
 }
 
 def readOnlyParams() {
-	return [0,21,32,33,51,115,157,257]
+	return [0,21,32,33,51,115,257]
 }
 
 @Field static Integer shortDelay = 333		//default delay to use for zigbee commands (in milliseconds)
