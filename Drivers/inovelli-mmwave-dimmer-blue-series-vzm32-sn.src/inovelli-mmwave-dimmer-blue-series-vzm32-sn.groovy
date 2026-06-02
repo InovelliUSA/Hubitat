@@ -95,7 +95,7 @@ metadata {
 		attribute "LQI", "String"				//Link Quality Indicator
 		attribute "RSSI", "String"				//Received Signal Strength Indicator
         attribute "firmware", "String"	
-        attribute "mmWaveFirmware", "String"
+        attribute "mmWaveFirmware", "String"    //mmWave firmware version           (read-only P115)
 
         attribute "interferenceArea0", "string"
         attribute "interferenceArea1", "string"
@@ -164,7 +164,7 @@ metadata {
         
         command "refresh",             [[name:"Option",    type:"ENUM",   description:"blank=current states and user-changed settings, All=refresh all settings", constraints: [" ","All"]]]
 		
-		command "remoteControl",	   [[name:"Option*",   type:"ENUM",   description:"ability to control the switch remotely", constraints: [" ","Enabled","Disabled"]]]
+		command "remoteControl",	   [[name:"Option*",   type:"ENUM",   description:"Ability to control the switch remotely. This command updates parameter 257 and is enabled by default.", constraints: [" ","Enabled","Disabled"]]]
 
         command "resetEnergyMeter"		//Fan does not support power/energy reporting but Dimmer does
 
@@ -223,52 +223,44 @@ metadata {
 
     preferences {
         (userSettableParams() + [301, 302, 303]).each{ i ->
-            switch(configParams["parameter${i.toString().padLeft(3,"0")}"].type){
-                case "number":
-                    switch(i){
-						case readOnlyParams().contains(i):	
-							//read-only params are non-settable, so skip user input
-							break
-                        default:
-                            input "parameter${i}", "number",
-								title: "${i}. " + bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name),
-                                description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description +
-                                    "<br>Range=" + configParams["parameter${i.toString().padLeft(3,"0")}"].range +
-				    	    	    " Default=" +  configParams["parameter${i.toString().padLeft(3,"0")}"].default),
-                                //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
-                                range: configParams["parameter${i.toString().padLeft(3,"0")}"].range
-                            break
-                    }
-                    break
-                case "enum":
-                    switch(i){
-						case readOnlyParams().contains(i):	
-							//read-only params are non-settable, so skip user input
-							break
-                        case 22:    //Aux Type
-                        case 52:    //Smart Bulb Mode
-                        case 158:   //Switch Mode Zwave
-                        case 258:   //Switch Mode Zigbee
-							//these are important parameters so display in red to draw attention
-                            input "parameter${i}", "enum",
-                                title: "${i}. " + indianRed(bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name)),
-                                description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description),
-                                defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
-                                options: configParams["parameter${i.toString().padLeft(3,"0")}"].range
-                            break
-                        case 95:
-                        case 96:
-							//special case for custom color is below
-                            break
-                        default:
-                            input "parameter${i}", "enum",
-                                title: "${i}. " + bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name),
-                                description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description),
-                                //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
-                                options: configParams["parameter${i.toString().padLeft(3,"0")}"].range
-                            break
-					}
-                    break
+            if(!readOnlyParams().contains(i)) { //read-only params are non-settable, so skip user input
+                switch(configParams["parameter${i.toString().padLeft(3,"0")}"].type){
+                    case "number":
+                        input "parameter${i}", "number",
+                            title: "${i}. " + bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name),
+                            description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description +
+                                "<br>Range=" + configParams["parameter${i.toString().padLeft(3,"0")}"].range +
+                                " Default=" +  configParams["parameter${i.toString().padLeft(3,"0")}"].default),
+                            //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
+                            range: configParams["parameter${i.toString().padLeft(3,"0")}"].range
+                        break
+                    case "enum":
+                        switch(i){
+                            case 22:    //Aux Type
+                            case 52:    //Smart Bulb Mode
+                            case 158:   //Switch Mode Zwave
+                            case 258:   //Switch Mode Zigbee
+                                //these are important parameters so display in red to draw attention
+                                input "parameter${i}", "enum",
+                                    title: "${i}. " + indianRed(bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name)),
+                                    description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description),
+                                    defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
+                                    options: configParams["parameter${i.toString().padLeft(3,"0")}"].range
+                                break
+                            case 95:
+                            case 96:
+                                //special case for custom color is below
+                                break
+                            default:
+                                input "parameter${i}", "enum",
+                                    title: "${i}. " + bold(configParams["parameter${i.toString().padLeft(3,"0")}"].name),
+                                    description: italic(configParams["parameter${i.toString().padLeft(3,"0")}"].description),
+                                    //defaultValue: configParams["parameter${i.toString().padLeft(3,"0")}"].default,
+                                    options: configParams["parameter${i.toString().padLeft(3,"0")}"].range
+                                break
+                        }
+                        break
+                }
             }
 
             if (i==95 || i==96) {
@@ -438,9 +430,6 @@ void ZigbeePrivateMMWaveAttrEvent(descMap)
 		case 108:
 			infoMsg += mmWaveAttrLogDesc(paramName, "Stay Life ${valueInt}")
 			break
-		case 110:
-			infoMsg += mmWaveAttrLogDesc(paramName, getConfigParamEnumLabel(attrInt, valueInt) ?: "mode $valueInt")
-			break
 		case 112:
 			infoMsg += mmWaveAttrLogDesc(paramName, valueInt==0 ? "Low" : (valueInt==1 ? "Medium" : "High"))
 			break
@@ -461,7 +450,7 @@ void ZigbeePrivateMMWaveAttrEvent(descMap)
 			if (paramName) {
 				infoMsg += mmWaveAttrLogDesc(paramName)
 			} else {
-				infoMsg += " [0x${valueInt<=0xFF?valueHex.substring(6):valueInt<=0xFFFF?valueHex.substring(4):valueHex}] " + orangeRed(bold("Undefined Parameter $attrInt"))
+				infoMsg += " [0x${valueInt<=0xFF?valueHex.substring(6):valueInt<=0xFFFF?valueHex.substring(4):valueHex}] " + orangeRed(bold("Undefined mmWave Parameter $attrInt"))
 			}
         break
     }   
@@ -663,7 +652,6 @@ def calculateParameter(Integer paramNum) {
         case 13:    //Default Level (local)
         case 14:    //Default Level (remote)
         case 15:    //Level after power restored
-		case 24:	//QuickStart Level
 		case 55:	//Double-Tap UP Level
 		case 56:	//Double-Tap DOWN Level
             value = convertPercentToByte(value.toInteger())    //convert levels from percent to byte values before sending to the device
@@ -734,7 +722,7 @@ def configure(option) {    //THIS GETS CALLED AUTOMATICALLY WHEN NEW DEVICE IS A
     if (infoEnable) log.info "${device.displayName} configure($option)"
     state.lastCommandSent =                        "configure($option)"
     state.lastCommandTime = nowFormatted()
-    sendEvent(name: "numberOfButtons", value: settings.parmeter23?28:14)
+    sendEvent(name: "numberOfButtons", value: settings.parmeter123?28:14)
     def cmds = []
 	if (infoEnable) log.info "${device.displayName} re-establish lifeline bindings to hub"
 //	cmds += ["zdo bind ${device.deviceNetworkId} 0x01 0x01 0x0000 {${device.zigbeeId}} {}"] //Basic Cluster
@@ -1232,23 +1220,6 @@ def parse(String description) {
                         if (infoEnable) log.info "${device.displayName} Switch=$valueInt ($valueStr)"
                         sendEvent(name:"switch", value: valueStr)
 						def currentLevel = device.currentValue("level")==null?0:device.currentValue("level").toInteger()
-                        if (state.model?.substring(0,5)=="VZM35") { //FOR FAN ONLY 
-							if (device.currentValue("smartFan")=="Enabled") {
-								if      (currentLevel<=20)  newSpeed="low"
-								else if (currentLevel<=40)  newSpeed="medium-low"
-								else if (currentLevel<=60)  newSpeed="medium"
-								else if (currentLevel<=80)  newSpeed="medium-high"
-								else if (currentLevel<=100) newSpeed="high"
-							} else {
-								if      (currentLevel<=33)  newSpeed="low"
-								else if (currentLevel<=66)  newSpeed="medium"
-								else if (currentLevel<=100) newSpeed="high"
-								}
-                            if      (valueStr=="off")                        newSpeed="off"
-                            else if (parameter158=="1" || parameter258=="1") newSpeed="high"
-                            if (traceEnable||debugEnable) log.trace "${device.displayName} Speed=${newSpeed}"
-                            sendEvent(name:"speed", value: "${newSpeed}")   
-                        }
                     } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command:$descMap.command ") //+ descMap
                     break
                 case 0x4000:
@@ -1300,24 +1271,6 @@ def parse(String description) {
                         valueStr = percentValue.toString()+"%"
                         if (infoEnable) log.info "${device.displayName} Level=$valueInt ($valueStr)"
                         sendEvent(name:"level", value: percentValue, unit: "%")
-		                def newSpeed =""
-                        if (state.model?.substring(0,5)=="VZM35") { //FOR FAN ONLY
-							if (device.currentValue("smartFan")=="Enabled") {
-								if      (percentValue<=20)  newSpeed="low"
-								else if (percentValue<=40)  newSpeed="medium-low"
-								else if (percentValue<=60)  newSpeed="medium"
-								else if (percentValue<=80)  newSpeed="medium-high"
-								else if (percentValue<=100) newSpeed="high"
-							} else {
-								if      (percentValue<=33)  newSpeed="low"
-								else if (percentValue<=66)  newSpeed="medium"
-								else if (percentValue<=100) newSpeed="high"
-								}
-                            if (device.currentValue("switch")=="off")        newSpeed="off"
-                            else if (parameter158=="1" || parameter258=="1") newSpeed="high"
-                            if (infoEnable) log.info "${device.displayName} Speed=${newSpeed}"
-                            sendEvent(name:"speed", value: "${newSpeed}")   
-                        }
                     } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command:$descMap.command ") //+ descMap
 					break
                 case 0x0001:
@@ -1545,7 +1498,6 @@ def parse(String description) {
 				|| (attrInt==13)
 				|| (attrInt==14)
 				|| (attrInt==15)
-				|| (attrInt==24)
 				|| (attrInt==55)
 				|| (attrInt==56)) {
 					valueInt = convertByteToPercent(valueInt) //these attributes are stored as bytes but displayed as percentages
@@ -1620,31 +1572,8 @@ def parse(String description) {
 						sendEvent(name:"powerSource", value:valueInt==0?"Non-Neutral":"Neutral")
                         break
                     case 22:    //Aux Type
-                        switch (state.model?.substring(0,5)){
-							case "VZM32":    //Blue mmWave Dimmer
-                                infoMsg += " " + (valueInt==0?"(Single Pole)":(valueInt==1?"(Aux Switch)":"(unknown type)"))
-								state.auxType =  (valueInt==0? "Single Pole": (valueInt==1? "Aux Switch": "unknown type $valueInt"))
-                                break
-							case "VZM31":    //Blue 2-in-1 Dimmer
-                            case "VZW31":    //Red  2-in-1 Dimmer
-                                infoMsg += " " + (valueInt==0?"(No Aux)":(valueInt==1?"(Dumb 3-way)":(valueInt==2?"(Smart Aux)":(valueInt==3?"(No Aux Full Wave)":"(unknown type)"))))
-								state.auxType =  (valueInt==0? "No Aux": (valueInt==1? "Dumb 3-way": (valueInt==2? "Smart Aux": (valueInt==3? "No Aux Full Wave":  "unknown type $valueInt"))))
-                                break
-                            case "VZM35":    //Fan Switch
-                                infoMsg += " " + (valueInt==0?"(No Aux)":"(Smart Aux)")
-                                state.auxType =   valueInt==0? "No Aux":  "Smart Aux"
-                                break
-                            default:
-                                infoMsg = infoDev + indianRed(infoTxt + " unknown model $state.model")
-                                state.auxType = "unknown model ${state.model}"
-                                break
-                        }
-                        break
-                    case 23:    //Quick Start Time
-                            infoMsg += " (Quick Start Time " + (valueInt==0?red("disabled"):"${valueInt}") + ")"
-                        break
-                    case 24:    //Quick Start Level
-                            infoMsg += " (Quick Start Level " + (valueInt==0?red("disabled"):"${valueInt}") + ")"
+                        infoMsg += " " + (valueInt==0?"(Single Pole)":(valueInt==1?"(Aux Switch)":"(unknown type)"))
+                        state.auxType =  (valueInt==0? "Single Pole": (valueInt==1? "Aux Switch": "unknown type $valueInt"))
                         break
                     case 25:    //Higher Output in non-Neutral
                         infoMsg += " (non-Neutral High Output " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
@@ -1653,12 +1582,6 @@ def parse(String description) {
                         infoMsg += " (Dimming Method " + (valueInt==0?red("Leading Edge"):limeGreen("Trailing Edge")) + ")"
                         state.dimmingMethod = (valueInt==0?"Leading Edge":"Trailing Edge")
                         break
-                    case 30:	//non-Neutral AUX med gear learn value
-						infoMsg += " (non-Neutral AUX medium gear)"
-						break
-					case 31:	//non-Neutral AUX low gear learn value
-						infoMsg += " (non-Neutral AUX low gear)"
-						break
                     case 32:    //Internal Temperature (read only)
 						valueInt = Math.round(valueInt*9/5+32).toInteger()	//convert Celsius to Fahrenheit
 						valueStr = "${valueInt}°F"
@@ -1669,6 +1592,9 @@ def parse(String description) {
                         infoMsg += " (Overheat: " + (valueInt==0?limeGreen("False"):valueInt==1?red("TRUE"):"undefined") + ")"
                         sendEvent(name:"overHeat",value:valueInt==0?"False":valueInt==1?"TRUE":"undefined")
                         break
+                    case 34:    //OTA Image Type
+                        infoMsg += " (OTA Image: " + (valueInt==0?"Zigbee (259)":valueInt==1?"mmWave (260)":valueInt==2?"Alternating (259 & 260) - Default":"unknown") + ")"
+                        break
                     case 50:    //Button Press Delay
                         infoMsg += " (${valueInt*100}ms Button Delay)"
 						break
@@ -1676,14 +1602,9 @@ def parse(String description) {
                         infoMsg += " (Bindings)"
                         sendEvent(name:"numberOfBindings", value:valueInt)
                         break
-                    case 52:    //Smart Bulb/Fan Mode
-                        if (state.model?.substring(0,5)=="VZM35") {
-                            infoMsg += " (SFM " + (valueInt==0?red("disabled)"):limeGreen("enabled)"))
-                            sendEvent(name:"smartFan", value:valueInt==0?"Disabled":"Enabled")
-						} else {
-                            infoMsg += " (SBM " + (valueInt==0?red("disabled)"):limeGreen("enabled)")) + ")"
-                            sendEvent(name:"smartBulb", value:valueInt==0?"Disabled":"Enabled")
-						}
+                    case 52:    //Smart Bulb Mode
+                        infoMsg += " (SBM " + (valueInt==0?red("disabled)"):limeGreen("enabled)")) + ")"
+                        sendEvent(name:"smartBulb", value:valueInt==0?"Disabled":"Enabled")
                         break
                     case 53:  //Double-Tap UP
                         infoMsg += " (Double-Tap Up " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
@@ -1697,12 +1618,6 @@ def parse(String description) {
                     case 56:  //Double-Tap DOWN level
                         infoMsg += " (Double-Tap Down level ${valueInt}%)"
                         break
-					case 58:  //Exclusion Behavior
-                        infoMsg += " (Exclusion: " + (valueInt==0?"LED Bar does not pulse":valueInt==1?"LED Bar pulses blue":valueInt==2?"do not Exclude":"unknown") + ")"
-						break
-					case 59:  //Association Behavior
-                        infoMsg += " (Association: " + (valueInt==0?"None":valueInt==1?"Local":valueInt==2?"Hub":"Local+Hub") + ")"
-						break
 					case 60:
 					case 65:
 					case 70:
@@ -1755,21 +1670,12 @@ def parse(String description) {
 						else
 							infoMsg +=  " (LED${attrInt/5-11<8?(attrInt/5-11).toInteger():" bar"} intensity sync with P98 when Off)"
 						break
-                    case 64:
-					case 69:
-					case 74:
-					case 79:
-					case 84:
-					case 89:
-					case 94:
-					case 99:	//LED(x) Notification [zwave]
-						def effectHex = valueHex.substring(0,2)
-						int effectInt = Integer.parseInt(effectHex,16)
-						infoMsg += " [0x${valueHex}] (LED${attrInt/5-11<8?(attrInt/5-11).toInteger():" bar"} Effect " + (effectInt==255?"Stop":"${effectInt}") + ")"
-						break
 					case 100:	//LED Bar Scaling
                         infoMsg += " (LED Scaling " + (valueInt==0?blue("VZM-style"):red("LZW-style")) + ")"
 						break
+                    case 110:
+                        infoMsg +=  "(Light On Presence Behavior " + getConfigParamEnumLabel(attrInt, valueInt) ?: "mode $valueInt"
+                        break
 					case 120:	//Single-Tap Behavior
                         infoMsg += " (Single Tap Behavior: " + (valueInt==0?"on/off":"cycle") + ")"
 						break
@@ -1782,9 +1688,6 @@ def parse(String description) {
 						break
 					case 125:	//Binding Off-to-On Sync Level
                         infoMsg += " (Send Level with Binding " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
-						break
-					case 129:	//Breeze Mode
-                        infoMsg += " (Breeze Mode encoded 4-byte value)"
 						break
 					case 130:	//Config Button Fan Control
                         infoMsg += " (EP3 Fan Control " + (valueInt==1?"multi-tap cycle":valueInt==2?"single-tap cycle":"disabled") + ")"
@@ -1801,60 +1704,26 @@ def parse(String description) {
 					case 134:	//EP3 LED Bar Color
                         infoMsg += " (" + hue(valueInt,"EP3 LED Bar Color") + ")"
 						break
-                    case 156:    //Local Protection
-					case 256:
+					case 256:    //Local Protection
                         infoMsg += " (Local Control " + (valueInt==0?limeGreen("enabled"):red("disabled")) + ")"
                         break
-                    case 157:    //Remote Protection
-					case 257:
+					case 257:    //Remote Protection
                         infoMsg += " (Remote Control " + (valueInt==0?limeGreen("enabled"):red("disabled")) + ")"
                         break
-                    case 158:    //Switch Mode
-					case 258:
-                        switch (state.model?.substring(0,5)){
-                            case "VZM31":    //Blue 2-in-1 Dimmer
-                            case "VZW31":    //Red  2-in-1 Dimmer
-                            case "VZM32":    //Blue mmWave Dimmer
-                                infoMsg += " " + (valueInt==0?"(Dimmer mode)":"(On/Off mode)")
-                                sendEvent(name:"switchMode", value:valueInt==0?"Dimmer":"On/Off")
-                                break
-                            case "VZM35":	//Fan Switch
-								infoMsg += " " + (valueInt==0?"(Multi-Speed mode)":"(On/Off mode)")
-								sendEvent(name:"switchMode", value:valueInt==0?"Multi-Speed":"On/Off")
-								break
-							case "VZM36":	//Canopy Module
-								if (endpointInt==1) {
-									infoMsg += " " + (valueInt==0?"(Dimmer mode)":"(On/Off mode)")
-									sendEvent(name:"switchMode", value:valueInt==0?"Dimmer":"On/Off")
-								} else {
-									infoMsg += " " + (valueInt==0?"(Multi-Speed mode)":"(On/Off mode)")
-									sendEvent(name:"switchMode", value:valueInt==0?"Multi-Speed":"On/Off")
-								}
-								break
-                            default:
-                                infoMsg += " " + red(" unknown model $state.model")
-                                sendEvent(name:"switchMode", value:"unknown model")
-                                break
-                        }
-						break
-                    case 159:    //On-Off LED
-					case 259:
+					case 258:    //Switch Mode
+                        infoMsg += " " + (valueInt==0?"(Dimmer mode)":"(On/Off mode)")
+                        sendEvent(name:"switchMode", value:valueInt==0?"Dimmer":"On/Off")
+                        break
+					case 259:    //On-Off LED
                         infoMsg += " (On-Off LED mode: " + (valueInt==0?"All)":"One)")
                         break
-					case 160:    //Firmware Update Indicator
-                    case 260:
+                    case 260:    //Firmware Update Indicator
                         infoMsg += " (Firmware Update Indicator " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
                         break
-					case 161:    //Relay Click
-                    case 261:
-                        infoMsg += " (Relay Click " + (valueInt==0?limeGreen("enabled"):red("disabled")) + ")"
-                        break
-					case 162:    //Double-Tap config button to clear notification
-                    case 262:
+                    case 262:    //Double-Tap config button to clear notification
                         infoMsg += " (Double-Tap config button " + (valueInt==0?limeGreen("enabled"):red("disabled")) + ")"
                         break
-					case 163:    //LED bar display levels
-                    case 263:
+                    case 263:    //LED bar display levels
                         infoMsg += " (LED bar display levels: ${valueInt?:'full range'})"
                         break
                     default:
@@ -1866,26 +1735,11 @@ def parse(String description) {
                     device.updateSetting("parameter${attrInt}custom",[value:"${Math.round(valueInt/255*360)}",type:configParams["parameter${attrInt.toString().padLeft(3,"0")}"].type?.toString()])
                     state."parameter${attrInt}custom" = Math.round(valueInt/255*360)
                 }
-				if (state.model?.substring(0,5)!="VZM35" && (attrInt==21 || attrInt==22 || attrInt==158 || attrInt==258)) {  //fan does not support leading/trailing edge dimming
+				if (attrInt==21 || attrInt==22) {
 					state.dimmingMethod = "Leading Edge"							//default to Leading Edge
 					if (parameter21=="1") {											//if neutral wiring then select based on remote switch type
-						if (state.model?.substring(0,5)=="VZM32") {
-							if (parameter22=="0") state.dimmingMethod = "Trailing Edge"	//single pole
-							if (parameter22=="1") state.dimmingMethod = "Leading Edge"	//aux switch
-						} else {
-							if (parameter22=="0") state.dimmingMethod = "Trailing Edge"	//no aux
-							if (parameter22=="1") state.dimmingMethod = "Leading Edge"	//dumb 3-way
-							if (parameter22=="2") state.dimmingMethod = "Trailing Edge"	//smart aux
-							if (parameter22=="3") {
-								if (parameter158=="1" || parameter258=="1") {			//Switch Mode is On-Off
-									state.dimmingMethod = "Full Wave"
-								} else {												//Switch Mode is Dimmer
-									state.dimmingMethod = "Trailing Edge"
-									device.updateSetting("parameter22",[value:"0",type:"enum"])
-									state.parameter22value=0
-								}
-							}
-						}
+                        if (parameter22=="0") state.dimmingMethod = "Trailing Edge"	//single pole
+                        if (parameter22=="1") state.dimmingMethod = "Leading Edge"	//aux switch
 					}
 					if (infoEnable||traceEnable||debugEnable) log.info "${device.displayName} Dimming Method = ${state.dimmingMethod}"
 				}
@@ -1933,29 +1787,6 @@ def presetLevel(value) {
     setParameter(13, scaledValue)
     setParameter(14, scaledValue)
 }
-
-//def quickStart() {
-//    quickStartVariables()
-//	def startLevel = device.currentValue("level").toInteger()
-//	def cmds= []
-//	if (settings.parameter23?.toInteger()>0 ) {          //only do quickStart if enabled
-//		if (infoEnable) log.info "${device.displayName} quickStart(" + (state.model?.substring(0,5)!="VZM35"?"${settings.parameter23}%)":"${settings.parameter23}s)")
-//		if (state.model?.substring(0,5)!="VZM35") {      //IF not the Fan switch THEN emulate quickStart 
-//			if (startLevel<state.parameter23value) cmds += zigbee.setLevel(state.parameter23value?.toInteger(),0,34)  //only do quickStart if currentLevel is < Quick Start Level (34ms is two sinewave cycles)
-//			cmds += zigbee.setLevel(startLevel,0,longDelay) 
-//			if (debugEnable) log.debug "${device.displayName} quickStart $cmds"
-//		}
-//	}
-//    return cmds
-//}
-//
-//def quickStartVariables() {
-//    if (state.model?.substring(0,5)!="VZM35") {  //IF not the Fan switch THEN set the quickStart variables manually
-//        settings.parameter23 =  (settings.parameter23!=null?settings.parameter23:getDefaultValue(23))
-//        state.parameter23value = Math.round((settings.parameter23?:0).toFloat())
-//        //state.parameter23level = Math.round((settings.parameter23level?:defaultQuickLevel).toFloat())
-//    }
-//}
 
 def readDeviceAttributes() {
 	if (traceEnable||debugEnable) log.trace "${device.displayName} readDeviceAttributes()"
@@ -2117,14 +1948,9 @@ def setAttribute(Integer cluster, Integer attrInt, Integer dataType, Integer val
 			case 13:    //Default Level (local)
 			case 14:    //Default Level (remote)
 			case 15:    //Level after power restored
-			case 24:	//Quick Start Level
 			case 55:	//Double-Tap UP Level
 			case 56:	//Double-Tap DOWN Level
                 infoMsg += "${value} = ${convertByteToPercent(value)}% on 255 scale"
-                break
-            case 23:
-              //  quickStartVariables()
-                infoMsg = ""
                 break
 			case 60:	//LED1 color when on
 			case 61:	//LED1 color when off
@@ -2188,10 +2014,12 @@ def key_mmwave_preferences() {[
   105,
   106,
   107,
+  108,
   111,
   112,
   113,
   114,
+  115,
   117,
 ]}
 
@@ -2376,7 +2204,7 @@ def updated(option) { // called when "Save Preferences" is requested
 		int i = it.value.number.toInteger()
 		newValue = calculateParameter(i).toInteger()
 		defaultValue=getDefaultValue(i).toInteger()
-		if ([9,10,13,14,15,24,55,56].contains(i)) defaultValue=convertPercentToByte(defaultValue) //convert percent values back to byte values
+		if ([9,10,13,14,15,55,56].contains(i)) defaultValue=convertPercentToByte(defaultValue) //convert percent values back to byte values
 		if ((i==95 && parameter95custom!=null)||(i==96 && parameter96custom!=null)) {                                         //IF   a custom hue value is set
 			if ((Math.round(settings?."parameter${i}custom"?.toInteger()/360*255)==settings?."parameter${i}"?.toInteger())) { //AND  custom setting is same as normal setting
 				device.removeSetting("parameter${i}custom")                                                                   //THEN clear custom hue and use normal color 
@@ -2743,17 +2571,16 @@ def holdConfig()     {buttonEvent(13, "held", "digital")}
 def releaseConfig()  {buttonEvent(14, "released", "digital")}
 
 def userSettableParams() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
-    if (parameter258 == "1") return [258,22,52,                  10,11,12,      15,17,18,19,20,21,25,34,50,51,            95,96,97,98,100,101,102,103,104,105,106,107,108,112,113,114,115,110,117,120,121,123,125,130,131,132,133,256,257,259,260,261,262]  //on/off mode
-    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,25,34,50,51,53,54,55,56,95,96,97,98,100,101,102,103,104,105,106,107,108,112,113,114,115,110,117,120,121,123,125,130,131,132,133,256,257,    260,    262]  //dimmer mode
+    if (parameter258 == "1") return [258,22,52,                  10,11,12,      15,17,18,19,20,25,34,50,            95,96,97,98,100,117,101,102,103,104,105,106,107,108,112,113,114,110,120,121,123,125,130,131,132,133,256,259,260,262]  //on/off mode
+    else                     return [258,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,25,34,50,53,54,55,56,95,96,97,98,100,117,101,102,103,104,105,106,107,108,112,113,114,110,120,121,123,125,130,131,132,133,256,    260,262]  //dimmer mode
 }
 
 def readOnlyParams() {
-	return [0,21,32,33,51,157,257]
+	return [0,21,32,33,51,115,257]
 }
 
 @Field static Integer shortDelay = 333		//default delay to use for zigbee commands (in milliseconds)
 @Field static Integer longDelay = 1000		//long delay to use for changing modes (in milliseconds)
-@Field static Integer defaultQuickLevel=50	//default startup level for QuickStart emulation
 @Field static Map configParams = [
     parameter001 : [
         number: 1,
@@ -2965,26 +2792,6 @@ def readOnlyParams() {
         type: "enum",
         value: null
         ],
-    parameter023 : [
-        number: 23,
-        name: "Quick Start Time",
-        description: "Duration (in 1/60 seconds) of higher power output (Parameter24) needed to illuminate the bulb before lowering to desired brightness (0=disabled)",
-        range: "0..60",
-        default: 0,
-        size: 8,
-        type: "number",
-        value: null
-        ],
-    parameter024 : [
-        number: 24,
-        name: "Quick Start Level",
-        description: "Level of higher power needed to illuminate the bulb before lowering to desired brightness (0=disabled)",
-        range: "0..100",
-        default: 0,
-        size: 8,
-        type: "number",
-        value: null
-        ],
     parameter025 : [
         number: 25,
         name: "Higher Output in non-Neutral",
@@ -3003,26 +2810,6 @@ def readOnlyParams() {
         default:0,
         size: 8,
         type: "enum",
-        value: null
-        ],
-    parameter030 : [
-        number: 30,
-        name: "non-Neutral AUX medium gear learn value (read only)",
-        description: "In the case of non-neutral, to make the AUX switch better compatible.",
-        range: "0..255",
-        default: 90,
-        size: 8,
-        type: "number",
-        value: null
-        ],
-    parameter031 : [
-        number: 31,
-        name: "non-Neutral AUX low gear learn value (read only)",
-        description: "In the case of non-neutral, to make the AUX switch better compatible.",
-        range: "0..255",
-        default: 110,
-        size: 8,
-        type: "number",
         value: null
         ],
     parameter032 : [
@@ -3125,26 +2912,6 @@ def readOnlyParams() {
         type: "number",
         value: null
         ],
-    parameter058 : [
-        number: 58,
-        name: "Exclusion Behavior",
-        description: "How device behaves during Exclusion",
-        range: ["0":"LED Bar does not pulse", "1":"LED Bar pulses blue (default)", "2":"Device does not enter exclusion mode (requires factory reset to leave network or change this parameter)"],
-        default: 1,
-        size: 1,
-        type: "enum",
-        value: null
-        ],
-    parameter059 : [
-        number: 59,
-        name: "Association Behavior",
-        description: "Choose when the switch sends commands to associated devices",
-        range: ["0":"Never", "1":"Local (default)", "2":"Z-Wave", "3":"Both"],
-        default: 1,
-        size: 1,
-        type: "enum",
-        value: null
-        ],
     parameter060 : [
         number: 60,
         name: "LED1 Color (when On)",
@@ -3182,16 +2949,6 @@ def readOnlyParams() {
         range: "0..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
-        ],
-    parameter064 : [
-        number: 64,
-        name: "LED1 Notification",
-        description: "4-byte encoded LED1 Notification",
-        range: "0..4294967295",
-        default: 0,
-        size: 4,
         type: "number",
         value: null
         ],
@@ -3235,16 +2992,6 @@ def readOnlyParams() {
         type: "number",
         value: null
         ],
-    parameter069 : [
-        number: 69,
-        name: "LED2 Notification",
-        description: "4-byte encoded LED2 Notification",
-        range: "0..4294967295",
-        default: 0,
-        size: 4,
-        type: "number",
-        value: null
-        ],
     parameter070 : [
         number: 70,
         name: "LED3 Color (when On)",
@@ -3282,16 +3029,6 @@ def readOnlyParams() {
         range: "0..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
-        ],
-    parameter074 : [
-        number: 74,
-        name: "LED3 Notification",
-        description: "4-byte encoded LED3 Notification",
-        range: "0..4294967295",
-        default: 0,
-        size: 4,
         type: "number",
         value: null
         ],
@@ -3335,16 +3072,6 @@ def readOnlyParams() {
         type: "number",
         value: null
         ],
-    parameter079 : [
-        number: 79,
-        name: "LED4 Notification",
-        description: "4-byte encoded LED4 Notification",
-        range: "0..4294967295",
-        default: 0,
-        size: 4,
-        type: "number",
-        value: null
-        ],
     parameter080 : [
         number: 80,
         name: "LED5 Color (when On)",
@@ -3382,16 +3109,6 @@ def readOnlyParams() {
         range: "0..101",
         default: 101,
         size: 8,
-        type: "number",
-        value: null
-        ],
-    parameter084 : [
-        number: 84,
-        name: "LED5 Notification",
-        description: "4-byte encoded LED5 Notification",
-        range: "0..4294967295",
-        default: 0,
-        size: 4,
         type: "number",
         value: null
         ],
@@ -3435,16 +3152,6 @@ def readOnlyParams() {
         type: "number",
         value: null
         ],
-    parameter089 : [
-        number: 89,
-        name: "LED6 Notification",
-        description: "4-byte encoded LED6 Notification",
-        range: "0..4294967295",
-        default: 0,
-        size: 4,
-        type: "number",
-        value: null
-        ],
     parameter090 : [
         number: 90,
         name: "LED7 Color (when On)",
@@ -3485,16 +3192,6 @@ def readOnlyParams() {
         type: "number",
         value: null
         ],
-    parameter094 : [
-        number: 94,
-        name: "LED7 Notification",
-        description: "4-byte encoded LED Notification",
-        range: "0..4294967295",
-        default: 0,
-        size: 4,
-        type: "number",
-        value: null
-        ],
     parameter095 : [
         number: 95,
         name: "LED Bar Color (when On)",
@@ -3532,16 +3229,6 @@ def readOnlyParams() {
         range: "0..100",
         default: 3,
         size: 8,
-        type: "number",
-        value: null
-        ],
-    parameter099 : [
-        number: 99,
-        name: "All LED Notification",
-        description: "4-byte encoded LED Notification (see Inovelli LED Notification Calculator)",
-        range: "0..4294967295",
-        default: 0,
-        size: 4,
         type: "number",
         value: null
         ],
@@ -3677,7 +3364,7 @@ def readOnlyParams() {
         ],
     parameter115 : [
         number: 115,
-        name: "mmWave Firmware Version",
+        name: "mmWave Firmware Version (read only)",
         description: "Firmware version of the mmWave module. Read Only",
         range: "0..4294967296",
         default: 0,
@@ -3712,7 +3399,7 @@ def readOnlyParams() {
         ],
     parameter120 : [
         number: 120,
-        name: "Single Tap Behavior",
+        name: "Single Tap Behavior (fan mode)",
         description: "Behavior of single tapping the on or off button. Old behavior turns the switch on or off. Single Tap cycles through the levels set by P131-133 (Firmware 1.05+). Tap Down Always Off will cycle through the speeds when pressing up, but will always turn off when tapping down. (Firmware 1.06+)",
         range: ["0":"Old Behavior (default)","1":"Single Tap Cycle","2":"Tap Down Always Off"],
         default: 0,
@@ -3722,7 +3409,7 @@ def readOnlyParams() {
         ],
     parameter121 : [
         number: 121,
-        name: "Advanced Timer Mode",
+        name: "Fan Timer Mode",
         description: "Tap Up 1x = Fan turns on<br>Tap Up 2x = 5 min.<br>Tap Up 3x = 10 min.<br>Tap Up 4x = 15 min.<br>Tap Up 5x = 30 min.<br>(Firmware 1.05+)",
         range: ["0":"Disabled (default)","1":"Enabled"],
         default: 0,
@@ -3748,16 +3435,6 @@ def readOnlyParams() {
         default: 0,
         size: 1,
         type: "enum",
-        value: null
-        ],
-    parameter129 : [
-        number: 129,
-        name: "Breeze and Wind Down Mode",
-        description: "4-byte encoded Breeze and Wind Down Mode. For now use the calculator to determine value: https://inovelli-my.sharepoint.com/:x:/p/ericm/ETQi0QfqAD5BotKTW0QyDqEB-XozdRJTkghBEkB_l9YT8Q (Firmware 1.05+)",
-        range: "0..4294967295",
-        default: 0,
-        size: 32,
-        type: "number",
         value: null
         ],
     parameter130 : [
@@ -3856,16 +3533,6 @@ def readOnlyParams() {
         description: "Display firmware update progress on LED Bar",
         range: ["1":"Enabled (default)", "0":"Disabled"],
         default: 1,
-        size: 1,
-        type: "enum",
-        value: null
-        ],
-    parameter261 : [	//not valid for fan switch
-        number: 261,
-        name: "Relay Click",
-        description: "Audible Click in On/Off mode",
-        range: ["0":"Enabled (default)", "1":"Disabled"],
-        default: 0,
         size: 1,
         type: "enum",
         value: null
