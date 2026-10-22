@@ -1,4 +1,4 @@
-def getDriverDate() { return "2026-05-01" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2026-10-22" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE THIS DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /**
 * Inovelli VZW32-SN Red Series Z-Wave 2-in-1 mmWave
@@ -18,6 +18,7 @@ def getDriverDate() { return "2026-05-01" }	// **** DATE OF THE DEVICE DRIVER
 * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 * for the specific language governing permissions and limitations under the License.
 *
+* 2026-10-22(EM) Update P107 to "mmWave Report Bit Mask" (fw 2.04+): bit 1 = target info, bit 2 = P116 (person in area). Re-expose P107 as a user setting.
 * 2026-05-01(EM) Custom attribute switchBoot: events on configuration report P240 (reboot notification).
 * 2026-05-01(EM) Adding protection settings for local and remote protection.
 * 2026-02-10(EM) Fixing issue with notification report handling.
@@ -389,8 +390,8 @@ def validConfigParams() {	//all valid parameters for this specific device (confi
 }
 
 def userSettableParams() {   //controls which options are available depending on whether the device is configured as a switch or a dimmer.
-    if (parameter158 == "1") return [158,22,52,                  10,11,12,      15,17,18,19,20,23,24,25,50,            58,59,64,69,74,79,84,89,94,95,96,97,98,100,101,102,103,104,105,106,108,109,110,112,113,114,115,116,117,118,119,120,123,130,131,132,133,134,156,157,159,160,161,162]  //on/off mode
-    else                     return [158,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,23,24,25,50,53,54,55,56,58,59,64,69,74,79,84,89,94,95,96,97,98,100,101,102,103,104,105,106,108,109,110,112,113,114,115,116,117,118,119,120,123,130,131,132,133,134,156,157,159,160,    162]  //dimmer mode
+    if (parameter158 == "1") return [158,22,52,                  10,11,12,      15,17,18,19,20,23,24,25,50,            58,59,64,69,74,79,84,89,94,95,96,97,98,100,101,102,103,104,105,106,107,108,109,110,112,113,114,115,116,117,118,119,120,123,130,131,132,133,134,156,157,159,160,161,162]  //on/off mode
+    else                     return [158,22,52,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,23,24,25,50,53,54,55,56,58,59,64,69,74,79,84,89,94,95,96,97,98,100,101,102,103,104,105,106,107,108,109,110,112,113,114,115,116,117,118,119,120,123,130,131,132,133,134,156,157,159,160,    162]  //dimmer mode
 }
 
 def readOnlyParams() {
@@ -1255,10 +1256,13 @@ def readOnlyParams() {
         ],
     parameter107 : [
         number: 107,
-        name: "mmWave Target Info Report",
-        description: "Enable/disable mmWave target information reporting",
+        name: "mmWave Report Bit Mask",
+        description: "(Firmware 2.04+) Bitmask controlling mmWave reporting. Bit 1 (value 1) reports mmWave target information. Bit 2 (value 2) reports P116 (Person in the Reporting Area). "+
+                     "Note: as of fw 2.04 P116 reporting is disabled by default because it duplicates the motion notification and adds network traffic every few seconds; set bit 2 to re-enable it, but basing automations off \"motion\" is recommended instead.",
         range: ["0":"Disabled",
-                "1":"Enabled"],
+                "1":"Target info",
+                "2":"Person in area (P116)",
+                "3":"Target info + Person in area (P116)"],
         default: 0,
         size: 1,
         type: "enum",
@@ -2254,8 +2258,9 @@ void zwaveEvent(hubitat.zwave.Command cmd) {
 					case 106:	//mmWave Depth Maximum (Far)
                         infoMsg += " (mmWave Depth Max: ${valueInt}cm)"
                         break
-					case 107:	//mmWave Target Info Report
-                        infoMsg += " (mmWave Target Info " + (valueInt==0?red("disabled"):limeGreen("enabled")) + ")"
+					case 107:	//mmWave Report Bit Mask
+                        def p107Text = ["disabled","target info","person in area (P116)","target info + person in area (P116)"]
+                        infoMsg += " (mmWave Report: " + (valueInt<p107Text.size()?p107Text[valueInt]:"${valueInt}") + ")"
                         break
 					case 108:	//mmWave Stay Life
                         infoMsg += " (mmWave Stay Life: ${valueInt}s)"
