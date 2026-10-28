@@ -1,4 +1,4 @@
-def getDriverDate() { return "2026-01-21" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2026-10-27" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM35-SN Blue Series Zigbee Fan Switch
@@ -24,6 +24,7 @@ def getDriverDate() { return "2026-01-21" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2026-10-27(EM) Fix logging of Unknown Attribute when trace logging is turned on.
 * 2026-01-21(EM) Fixing bug in undefined button function logging.
 * 2025-10-17(EM) Adding fingerprint for VZM35-SN with firmware 1.07.
 * 2025-08-22(EM) Fixing power and energy monitoring reporting configuration to disable reporting if any parameter is 0.
@@ -857,7 +858,7 @@ def parse(String description) {
 					state.fwVersion = valueStr
                     break
                 default:
-                    log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Attribute:$attrInt ") //+ descMap
+                    if (traceEnable) log.trace "${device.displayName} " + fireBrick("${clusterName} Unknown Attribute:$attrInt ") //+ descMap
                     break
             }
             break

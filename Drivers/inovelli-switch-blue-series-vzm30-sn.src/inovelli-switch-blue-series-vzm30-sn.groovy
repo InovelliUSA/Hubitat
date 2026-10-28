@@ -1,4 +1,4 @@
-def getDriverDate() { return "2025-08-26" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2026-10-27" }	// **** DATE OF THE DEVICE DRIVER
 //  !!!!!!!!!!!!!!!!!  UPDATE ^^^THIS^^^ DATE IF YOU MAKE ANY CHANGES  !!!!!!!!!!!!!!!!!
 /*
 * Inovelli VZM30-SN Blue Series Zigbee Switch
@@ -7,7 +7,7 @@ def getDriverDate() { return "2025-08-26" }	// **** DATE OF THE DEVICE DRIVER
 * Contributor: Mark Amber (marka75160)
 * Platform: Hubitat
 *
-* Copyright 2025 Eric Maycock / Inovelli
+* Copyright 2026 Eric Maycock / Inovelli
 *
 * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 * in compliance with the License. You may obtain a copy of the License at:
@@ -24,6 +24,7 @@ def getDriverDate() { return "2025-08-26" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2026-10-27(EM) Fixing energy reporting configuration to use Long.parseLong() instead of Integer.parseInt() to prevent overflow errors.
 * 2025-08-26(EM) Updating temperature and humidity reporting configuration parameters description to 0.01°C and 0.01% units.
 *                Updating default values to 50 (0.5°C and 0.5%) for temperature and humidity reporting configuration parameters.
 * 2025-08-22(EM) Fixing power and energy monitoring reporting configuration to disable reporting if any parameter is 0.
@@ -1111,9 +1112,8 @@ def parse(String description) {
             switch (attrInt) {
                 case 0x0000:
                     if (descMap.command == "01" || descMap.command == "0A" || descMap.command == "0B"){
-                        valueInt = Integer.parseInt(descMap['value'],16)
-                        float energy
-                        energy = valueInt/100
+                        Long energyRaw = Long.parseLong(descMap['value'],16)
+                        float energy = energyRaw/100
                         if (infoEnable) log.info "${device.displayName} Energy=${energy}kWh"
                         sendEvent(name:"energy",value:energy ,unit: "kWh")
                     } else log.warn "${device.displayName} " + fireBrick("${clusterName} Unknown Command:$descMap.command ") //+ descMap		  													  

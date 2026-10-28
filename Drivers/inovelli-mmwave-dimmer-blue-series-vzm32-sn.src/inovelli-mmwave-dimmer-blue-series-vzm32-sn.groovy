@@ -1,4 +1,4 @@
-def getDriverDate() { return "2026-07-10" }	// **** DATE OF THE DEVICE DRIVER
+def getDriverDate() { return "2026-10-27" }	// **** DATE OF THE DEVICE DRIVER
 //  ^^^^^^^^^^  UPDATE DRIVER DATE IF YOU MAKE ANY CHANGES  ^^^^^^^^^^
 /*
 * Inovelli VZM32-SN Blue Series Zigbee 2-in-1 mmWave
@@ -24,6 +24,7 @@ def getDriverDate() { return "2026-07-10" }	// **** DATE OF THE DEVICE DRIVER
 * !!                                                                 !!
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
+* 2026-10-27(EM) Fix logging of Reporting Area when no logging is turned on.
 * 2026-07-10(EM) Fixing firmware update command.
 * 2026-05-26(EM) Fix for aux switch type not being set correctly. Add parameter name to parameter reporting.
 * 2026-05-16(EM) Fix for bind to MMWave Private Cluster for Reports etc. Added InterferenceArea attributes
@@ -384,7 +385,7 @@ def mmWaveSetDetectionArea(areaid, xmin, xmax,ymin,ymax,zmin,zmax)
 //def lastUpdateFwRemove() {if (state?.lastUpdateFw) state.remove("lastUpdateFw")}
 void AnyoneInTheReportingAreaCommandEvent(data)
 {
-    log.info "${device.displayName} ReportingArea:${data}"
+    if (infoEnable) log.info "${device.displayName} ReportingArea:${data}"
 
     // data[0..3] = area1..area4
     Integer a1 = Integer.parseInt(data[0], 16)
