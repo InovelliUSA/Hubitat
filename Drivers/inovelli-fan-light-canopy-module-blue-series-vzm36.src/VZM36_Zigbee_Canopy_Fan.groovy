@@ -812,6 +812,10 @@ def parse(String description) {
                     break
                 default:
                     if (attrInt==null && descMap.messageType=="00" && descMap.direction=="01") {
+						if ((descMap.data?.size() ?: 0) < 3) {  // no group id in payload (e.g. Remove All Groups); avoids NumberFormatException on "null.."
+							if (traceEnable||debugEnable) log.debug "${device.displayName} ignoring short Group cluster message: ${descMap.data}"
+							break
+						}
 						def groupNumHex = descMap.data[2]+descMap.data[1]
 						def groupNumInt = zigbee.convertHexToInt(groupNumHex)
 						switch (descMap.command) {
